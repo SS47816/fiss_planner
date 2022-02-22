@@ -1,2 +1,3 @@
-# fiss_planner
-FISS Planner: A General Trajectory Planning Framework using Fast Iterative Search and Sampling Strategy for Autonomous Driving
+# FISS Planner: A General Trajectory Planning Framework using Fast Iterative Search and Sampling Strategy for Autonomous Driving
+
+Code will be released here soon...
