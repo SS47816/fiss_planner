@@ -14,7 +14,7 @@
   * nav_msgs
   * geometry_msgs
   * autoware_msgs
-  * message_generation
+  * visualization_msgs
   * dynamic_reconfigure
 
 ## Installation
@@ -51,4 +51,4 @@ and [ROS C++ Style Guide](http://wiki.ros.org/CppStyleGuide)
 
 
 ## License
-[Apache 2 License](https://github.com/SS47816/fiss_planner/blob/main/LICENSE)
+[Apache License 2.0](https://github.com/SS47816/fiss_planner/blob/main/LICENSE)

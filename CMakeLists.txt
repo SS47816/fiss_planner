@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   geometry_msgs
   autoware_msgs
+  visualization_msgs
   dynamic_reconfigure
   tf
   tf2_ros
@@ -55,9 +56,6 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 # add_message_files(
 #   FILES
-#   LaneInfo.msg
-#   SpecialWaypointArray.msg
-#   Waypoint.msg
 # )
 
 ## Generate services in the 'srv' folder
@@ -75,12 +73,14 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-  geometry_msgs
-  nav_msgs
-)
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs
+#   nav_msgs
+#   geometry_msgs
+#   autoware_msgs
+#   visualization_msgs
+# )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -113,7 +113,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES fiss_planner
-  CATKIN_DEPENDS roscpp rospy std_msgs #message_runtime
+  CATKIN_DEPENDS roscpp rospy std_msgs 
   DEPENDS system_lib
 )
 
@@ -130,10 +130,6 @@ include_directories(
 )
 
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/fiss_planner.cpp
-# )
-
 add_library(${PROJECT_NAME}
   include/${PROJECT_NAME}/frenet.h
   include/${PROJECT_NAME}/frenet.cc
