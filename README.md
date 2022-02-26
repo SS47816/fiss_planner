@@ -1,8 +1,6 @@
 # FISS Planner: A General Trajectory Planning Framework using Fast Iterative Search and Sampling Strategy for Autonomous Driving
 
-We are in the progress of removing sensitive infomation from our code...
-
-![image](./pics/micron_0.png "Demo 1")
+![image](https://github.com/SS47816/fiss_planner/blob/main/media/demo.png "Demo")
 
 ## Dependencies
 * C++11 above
@@ -50,6 +48,7 @@ We are following:
 [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html), 
 [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#main), 
 and [ROS C++ Style Guide](http://wiki.ros.org/CppStyleGuide)
+
 
 ## License
 [Apache 2 License](https://github.com/SS47816/fiss_planner/blob/main/LICENSE)

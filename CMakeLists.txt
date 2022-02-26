@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(frenet_optimal_planner)
+project(fiss_planner)
 add_compile_options(-std=c++11)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
@@ -15,7 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   geometry_msgs
   autoware_msgs
-  message_generation
+  # message_generation
   dynamic_reconfigure
   tf
   tf2_ros
@@ -55,12 +55,12 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  LaneInfo.msg
-  SpecialWaypointArray.msg
-  Waypoint.msg
-)
+# add_message_files(
+#   FILES
+#   LaneInfo.msg
+#   SpecialWaypointArray.msg
+#   Waypoint.msg
+# )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -100,7 +100,7 @@ generate_messages(
 
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
 generate_dynamic_reconfigure_options(
-  cfg/frenet_optimal_planner.cfg
+  cfg/fiss_planner.cfg
 )
 
 ###################################
@@ -114,8 +114,8 @@ generate_dynamic_reconfigure_options(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES frenet_optimal_planner
-  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
+  LIBRARIES fiss_planner
+  CATKIN_DEPENDS roscpp rospy std_msgs #message_runtime
   DEPENDS system_lib
 )
 
@@ -133,7 +133,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/frenet_optimal_planner.cpp
+#   src/${PROJECT_NAME}/fiss_planner.cpp
 # )
 
 add_library(${PROJECT_NAME}
@@ -169,7 +169,7 @@ add_library(${PROJECT_NAME}
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}) #${PROJECT_NAME}_generate_messages_cpp)
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
@@ -248,7 +248,7 @@ add_dependencies(${PROJECT_NAME}_node
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_frenet_optimal_planner.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_fiss_planner.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
