@@ -7,7 +7,7 @@
 
 #include "quartic_polynomial.h"
 
-namespace fop
+namespace fiss
 {
 
 QuarticPolynomial::QuarticPolynomial(const std::vector<double> &start, const std::vector<double> &end, double T)
@@ -72,4 +72,4 @@ double QuarticPolynomial::calculateThirdDerivative(double t)
   return 6*coefficients[3] + 24*coefficients[4]*t;
 }
 
-} // namespace fop
+} // namespace fiss

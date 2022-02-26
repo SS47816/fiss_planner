@@ -12,12 +12,11 @@
 
 #include <tf/tf.h>
 #include <nav_msgs/Path.h>
-#include <frenet_optimal_planner/LaneInfo.h>
 
 #include "math_utils.h"
 #include "vehicle_state.h"
 
-namespace fop
+namespace fiss
 {
 
 // enum class WaypointType
@@ -67,9 +66,8 @@ struct LanePoint
 class Lane
 {
  public:
-  // constructors
+  // Constructors
   Lane(){};
-  // Lane(const frenet_optimal_planner::LaneInfo::ConstPtr& lane_info);
   Lane(const nav_msgs::Path::ConstPtr& ref_path, const double left_width, const double right_width, const double far_left_width, const double far_right_width);
   // Destructor
   virtual ~Lane() {};
@@ -107,6 +105,6 @@ int nextWaypoint(VehicleState current_state, const Lane& map);
 int lastWaypoint(VehicleState current_state, const Path& path);
 int lastWaypoint(VehicleState current_state, const Lane& map);
 
-}  // end of namespace fop
+}  // end of namespace fiss
 
 #endif // LANE_H_

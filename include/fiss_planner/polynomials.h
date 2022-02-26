@@ -12,7 +12,7 @@
 
 using Eigen::VectorXd;
 
-namespace fop
+namespace fiss
 {
 
 // Evaluate a polynomial.
@@ -20,6 +20,6 @@ double polyeval(const VectorXd &coeffs, double x);
 // Fit a polynomial.
 VectorXd polyfit(const VectorXd &xvals, const VectorXd &yvals, int order);
 
-} // end of namespace fop
+} // end of namespace fiss
 
 #endif // POLYNOMIALS_H_

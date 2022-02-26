@@ -4,7 +4,7 @@
 #include "math_utils.h"
 #include "Eigen/Core"
 
-namespace fop
+namespace fiss
 {
 enum LINK_TYPE
 {
@@ -35,6 +35,6 @@ class Vehicle
   static double max_curvature_rear();
 };
 
-}  // namespace fop
+}  // namespace fiss
 
 #endif  // VEHICLE_H_

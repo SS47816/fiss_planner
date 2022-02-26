@@ -1,6 +1,6 @@
 #include "vehicle.h"
 
-namespace fop
+namespace fiss
 {
   Eigen::Vector3d Vehicle::bbox_size()
   {
@@ -27,4 +27,4 @@ namespace fop
   double Vehicle::max_steering_rate() { return max_steering_angle()/3.0; }; 
   double Vehicle::max_curvature_front() { return std::sin(max_steering_angle())/L(); };
   double Vehicle::max_curvature_rear() { return std::tan(max_steering_angle())/L(); };
-} // namespace fop
+} // namespace fiss

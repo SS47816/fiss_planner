@@ -12,7 +12,7 @@
 #include <cmath>
 #include <geometry_msgs/Pose.h>
 
-namespace fop
+namespace fiss
 {
 
 // Return PI
@@ -47,6 +47,6 @@ double magnitude(const double x, const double y, const double z);
 // Check if a value is legal (not nan or inf)
 bool isLegal(const double x);
 
-} // end of namespace fop
+} // end of namespace fiss
 
 #endif // MATH_UTILS_H_

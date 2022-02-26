@@ -7,7 +7,7 @@
 
 #include "math_utils.h"
 
-namespace fop
+namespace fiss
 {
 
 // Return PI
@@ -72,4 +72,4 @@ bool isLegal(const double x)
   return (std::isnan(x) || std::isinf(x))? false : true;
 }
 
-} // end of namespace fop
+} // end of namespace fiss

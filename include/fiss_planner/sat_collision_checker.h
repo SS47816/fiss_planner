@@ -10,7 +10,7 @@
 
 
 
-namespace fop
+namespace fiss
 {
 class SATCollisionChecker
 {
@@ -60,7 +60,7 @@ private:
   geometry_msgs::Polygon rotate_and_translate_rect(geometry_msgs::Polygon rect, double centre_x, double centre_y, double yaw);
 
 };
-}  // namespace fop
+}  // namespace fiss
 
 
 #endif  // SAT_COLLISION_CHECKER_H_

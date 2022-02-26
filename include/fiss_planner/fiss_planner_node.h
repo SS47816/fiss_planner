@@ -1,5 +1,5 @@
 
-/* frenet_optimal_planner_node.h
+/* fiss_planner_node.h
 
   Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore
 
@@ -42,25 +42,25 @@
 #include <autoware_msgs/DetectedObjectArray.h>
 
 #include <dynamic_reconfigure/server.h>
-#include <frenet_optimal_planner/frenet_optimal_planner_Config.h>
+#include <fiss_planner/fiss_planner_Config.h>
 
-#include "frenet_optimal_planner/pid.hpp"
-#include "frenet_optimal_planner/visualization.cpp"
-#include "frenet_optimal_planner/frenet_optimal_trajectory_planner.h"
+#include "fiss_planner/pid.hpp"
+#include "fiss_planner/visualization.cpp"
+#include "fiss_planner/fiss_planner.h"
 
-namespace fop
+namespace fiss
 {
 
-class FrenetOptimalPlannerNode
+class FissPlannerNode
 {
  public:
   // Constructor
-  FrenetOptimalPlannerNode();
+  FissPlannerNode();
   // Destructor
-  virtual ~FrenetOptimalPlannerNode(){};
+  virtual ~FissPlannerNode(){};
 
   // Planning algorithm instance
-  FrenetOptimalTrajectoryPlanner frenet_planner_;
+  FissPlanner frenet_planner_;
 
  private:
   // Regnerate path flag
@@ -111,8 +111,8 @@ class FrenetOptimalPlannerNode
   ros::NodeHandle nh;
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener;
-  dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_planner_Config> server;
-  dynamic_reconfigure::Server<frenet_optimal_planner::frenet_optimal_planner_Config>::CallbackType f;
+  dynamic_reconfigure::Server<fiss_planner::fiss_planner_Config> server;
+  dynamic_reconfigure::Server<fiss_planner::fiss_planner_Config>::CallbackType f;
 
   // ###################################### Private Functions ######################################
 
@@ -146,4 +146,4 @@ class FrenetOptimalPlannerNode
   bool calculateControlOutput(const int next_wp_id, const VehicleState& frontaxle_state);
 };
 
-} // namespace fop
+} // namespace fiss

@@ -1,4 +1,4 @@
-/* frenet_optimal_trajectory_planner.h
+/* fiss_planner.h
 
   Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore & Micron Technology
 
@@ -6,8 +6,8 @@
   Using the algorithm described in this paper, https://ieeexplore.ieee.org/document/5509799
 */
 
-#ifndef FRENET_OPTIMAL_TRAJECTORY_PLANNER_H_
-#define FRENET_OPTIMAL_TRAJECTORY_PLANNER_H_
+#ifndef FISS_PLANNER_H_
+#define FISS_PLANNER_H_
 
 #include <cmath>
 #include <vector>
@@ -28,10 +28,10 @@
 #include "sat_collision_checker.h"
 
 
-namespace fop
+namespace fiss
 {
 
-class FrenetOptimalTrajectoryPlanner
+class FissPlanner
 {
  public:
   struct Setting
@@ -108,11 +108,11 @@ class FrenetOptimalTrajectoryPlanner
   /* --------------------------------- Methods -------------------------------- */
 
   // Constructors
-  FrenetOptimalTrajectoryPlanner();
-  FrenetOptimalTrajectoryPlanner(const Setting& settings);
+  FissPlanner();
+  FissPlanner(const Setting& settings);
 
   // Destructor
-  virtual ~FrenetOptimalTrajectoryPlanner() {};
+  virtual ~FissPlanner() {};
 
   // Public Functions
   void updateSettings(const Setting& settings);
@@ -161,6 +161,6 @@ class FrenetOptimalTrajectoryPlanner
                                           const autoware_msgs::DetectedObjectArray& obstacles, const double margin_lon, const double margin_lat);
 };
 
-}  // namespace fop
+}  // namespace fiss
 
-#endif  // FRENET_OPTIMAL_TRAJECTORY_PLANNER_H_
+#endif  // FISS_PLANNER_H_

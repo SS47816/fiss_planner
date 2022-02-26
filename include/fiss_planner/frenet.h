@@ -18,7 +18,7 @@
 #include "math_utils.h"
 #include "vehicle_state.h"
 
-namespace fop
+namespace fiss
 {
 
 class FrenetState
@@ -91,7 +91,7 @@ class FrenetPath
 FrenetState getFrenet(const VehicleState& current_state, const Lane& lane);
 FrenetState getFrenet(const VehicleState& current_state, const Path& path);
 
-}  // end of namespace fop
+}  // end of namespace fiss
 
 
 #endif  // FRENET_H_

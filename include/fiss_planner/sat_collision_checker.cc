@@ -6,7 +6,7 @@
 
 
 
-namespace fop
+namespace fiss
 {
 /**
  * @brief Get the directions of the edges of a polygon
@@ -306,4 +306,4 @@ geometry_msgs::Polygon SATCollisionChecker::remove_top_layer(geometry_msgs::Poly
   return new_polygon;
 }
 
-} //namespace fop
+} //namespace fiss

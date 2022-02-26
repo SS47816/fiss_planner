@@ -1,4 +1,4 @@
-/* frenet_optimal_planner_node.cpp
+/* fiss_planner_node.cpp
 
   Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore
 
@@ -6,13 +6,13 @@
   Using the algorithm described in this paper, https://ieeexplore.ieee.org/document/5509799
 */
 
-#include "frenet_optimal_planner/frenet_optimal_planner_node.h"
+#include "fiss_planner/fiss_planner_node.h"
 
-namespace fop
+namespace fiss
 {
 
-// FrenetOptimalTrajectoryPlanner settings
-FrenetOptimalTrajectoryPlanner::Setting SETTINGS = FrenetOptimalTrajectoryPlanner::Setting();
+// FissPlanner settings
+FissPlanner::Setting SETTINGS = FissPlanner::Setting();
 
 // Constants values used as thresholds (Not for tuning)
 const double WP_MAX_SEP = 3.0;                                    // Maximum allowable waypoint separation
@@ -45,7 +45,7 @@ bool USE_HEURISTIC;
 bool SETTINGS_UPDATED = false;
 
 // Dynamic parameter server callback function
-void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config& config, uint32_t level)
+void dynamicParamCallback(fiss_planner::fiss_planner_Config& config, uint32_t level)
 {
   // General Settings
   CHECK_COLLISION = config.check_collision;
@@ -108,7 +108,7 @@ void dynamicParamCallback(frenet_optimal_planner::frenet_optimal_planner_Config&
 }
 
 // Constructor
-FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
+FissPlannerNode::FissPlannerNode() : tf_listener(tf_buffer)
 {
   // topics
   std::string odom_topic;
@@ -139,13 +139,13 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   ROS_ASSERT(private_nh.getParam("candidate_trajs_topic", candidate_trajs_topic));
   ROS_ASSERT(private_nh.getParam("vehicle_cmd_topic", vehicle_cmd_topic));
 
-  // Instantiate FrenetOptimalTrajectoryPlanner
-  frenet_planner_ = FrenetOptimalTrajectoryPlanner(SETTINGS);
+  // Instantiate FissPlanner
+  frenet_planner_ = FissPlanner(SETTINGS);
 
   // Subscribe & Advertise
-  odom_sub = nh.subscribe(odom_topic, 1, &FrenetOptimalPlannerNode::odomCallback, this);
-  lane_info_sub = nh.subscribe(lane_info_topic, 1, &FrenetOptimalPlannerNode::laneInfoCallback, this);
-  obstacles_sub = nh.subscribe(obstacles_topic, 1, &FrenetOptimalPlannerNode::obstaclesCallback, this);
+  odom_sub = nh.subscribe(odom_topic, 1, &FissPlannerNode::odomCallback, this);
+  lane_info_sub = nh.subscribe(lane_info_topic, 1, &FissPlannerNode::laneInfoCallback, this);
+  obstacles_sub = nh.subscribe(obstacles_topic, 1, &FissPlannerNode::obstaclesCallback, this);
   
   ref_path_pub = nh.advertise<nav_msgs::Path>(ref_path_topic, 1);
   curr_traj_pub = nh.advertise<nav_msgs::Path>(curr_traj_topic, 1);
@@ -162,14 +162,14 @@ FrenetOptimalPlannerNode::FrenetOptimalPlannerNode() : tf_listener(tf_buffer)
   pid_ = control::PID(0.1, Vehicle::max_acceleration(), Vehicle::max_deceleration(), PID_Kp, PID_Ki, PID_Kd);
 };
 
-void FrenetOptimalPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path)
+void FissPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path)
 {
   lane_ = Lane(global_path, LANE_WIDTH/2, LANE_WIDTH/2, LANE_WIDTH/2 + LEFT_LANE_WIDTH, LANE_WIDTH/2 + RIGHT_LANE_WIDTH);
   ROS_INFO("Local Planner: Lane Info Received, with %d points, filtered to %d points", int(lane_.points.size()), int(lane_.points.size()));
 }
 
 // Update vehicle current state from the tf transform
-void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg)
+void FissPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg)
 {
   current_state_.v = magnitude(odom_msg->twist.twist.linear.x, odom_msg->twist.twist.linear.y, odom_msg->twist.twist.linear.z);
 
@@ -198,7 +198,7 @@ void FrenetOptimalPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& 
   m.getRPY(roll, pitch, current_state_.yaw);
 }
 
-void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray::ConstPtr& input_obstacles)
+void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray::ConstPtr& input_obstacles)
 {
   // Start a timing for the main algorithm
   const auto start_time = std::chrono::high_resolution_clock::now();
@@ -280,7 +280,7 @@ void FrenetOptimalPlannerNode::obstaclesCallback(const autoware_msgs::DetectedOb
   ROS_INFO("Local Planner: Planning took %f ms, (or %f Hz)", elapsed_time.count(), 1000/elapsed_time.count());
 }
 
-void FrenetOptimalPlannerNode::transformObjects(autoware_msgs::DetectedObjectArray& output_objects, const autoware_msgs::DetectedObjectArray& input_objects)
+void FissPlannerNode::transformObjects(autoware_msgs::DetectedObjectArray& output_objects, const autoware_msgs::DetectedObjectArray& input_objects)
 {
   output_objects.header = input_objects.header;
   output_objects.header.stamp = ros::Time::now();
@@ -331,7 +331,7 @@ void FrenetOptimalPlannerNode::transformObjects(autoware_msgs::DetectedObjectArr
 }
 
 // Publish the reference spline (for Rviz only)
-void FrenetOptimalPlannerNode::publishRefSpline(const Path& path)
+void FissPlannerNode::publishRefSpline(const Path& path)
 {
   nav_msgs::Path ref_path_msg;
   ref_path_msg.header.stamp = ros::Time::now();
@@ -352,7 +352,7 @@ void FrenetOptimalPlannerNode::publishRefSpline(const Path& path)
 }
 
 // Publish the current path (for Rviz and MPC)
-void FrenetOptimalPlannerNode::publishCurrTraj(const Path& path)
+void FissPlannerNode::publishCurrTraj(const Path& path)
 {
   nav_msgs::Path curr_trajectory_msg;
   curr_trajectory_msg.header.stamp = ros::Time::now();
@@ -373,7 +373,7 @@ void FrenetOptimalPlannerNode::publishCurrTraj(const Path& path)
 }
 
 // Publish the best next path (for Rviz only)
-void FrenetOptimalPlannerNode::publishNextTraj(const FrenetPath& next_traj)
+void FissPlannerNode::publishNextTraj(const FrenetPath& next_traj)
 {
   nav_msgs::Path curr_trajectory_msg;
   curr_trajectory_msg.header.stamp = ros::Time::now();
@@ -393,7 +393,7 @@ void FrenetOptimalPlannerNode::publishNextTraj(const FrenetPath& next_traj)
   next_traj_pub.publish(curr_trajectory_msg);
 }
 
-void FrenetOptimalPlannerNode::publishSampleSpace(const Path& ref_path)
+void FissPlannerNode::publishSampleSpace(const Path& ref_path)
 {
   int marker_id = 0;
   const auto sample_space_marker = CollisionDetectorVisualization::visualizePredictedTrajectory(
@@ -401,7 +401,7 @@ void FrenetOptimalPlannerNode::publishSampleSpace(const Path& ref_path)
   sample_space_pub.publish(sample_space_marker);
 }
 
-void FrenetOptimalPlannerNode::publishVisTraj(const Path& current_traj, const FrenetPath& next_traj)
+void FissPlannerNode::publishVisTraj(const Path& current_traj, const FrenetPath& next_traj)
 {
   int marker_id = 0;
   Path vis_traj = current_traj;
@@ -424,14 +424,14 @@ void FrenetOptimalPlannerNode::publishVisTraj(const Path& current_traj, const Fr
  * @brief publish candidate trajs for visualization in rviz
  * 
  */
-void FrenetOptimalPlannerNode::publishCandidateTrajs(const std::vector<FrenetPath>& candidate_trajs)
+void FissPlannerNode::publishCandidateTrajs(const std::vector<FrenetPath>& candidate_trajs)
 {
   const auto candidate_paths_markers = LocalPlannerVisualization::visualizeCandidateTrajs(candidate_trajs, map_height_, Vehicle::max_speed());
   candidate_paths_pub.publish(std::move(candidate_paths_markers));
 }
 
 // Publish empty trajs (for Rviz only)
-void FrenetOptimalPlannerNode::publishEmptyTrajsAndStop()
+void FissPlannerNode::publishEmptyTrajsAndStop()
 {
   // Publish empty trajs
   publishRefSpline(Path());
@@ -441,7 +441,7 @@ void FrenetOptimalPlannerNode::publishEmptyTrajsAndStop()
 }
 
 // Update the vehicle front axle state (used in odomcallback)
-void FrenetOptimalPlannerNode::updateVehicleFrontAxleState()
+void FissPlannerNode::updateVehicleFrontAxleState()
 {
   // Current XY of robot (map frame)
   frontaxle_state_.x = current_state_.x + (Vehicle::L() * std::cos(current_state_.yaw));
@@ -451,7 +451,7 @@ void FrenetOptimalPlannerNode::updateVehicleFrontAxleState()
 }
 
 // Feed map waypoints into local map
-bool FrenetOptimalPlannerNode::feedWaypoints()
+bool FissPlannerNode::feedWaypoints()
 {
   if (lane_.points.empty())
   {
@@ -547,7 +547,7 @@ bool FrenetOptimalPlannerNode::feedWaypoints()
 }
 
 // Update the vehicle start state in frenet
-void FrenetOptimalPlannerNode::updateStartState()
+void FissPlannerNode::updateStartState()
 {
   // Ensure the reference spline exists
   if (local_lane_.points.empty())
@@ -610,7 +610,7 @@ void FrenetOptimalPlannerNode::updateStartState()
 }
 
 // Calculate the sampling width for the planner
-std::vector<double> FrenetOptimalPlannerNode::getSamplingWidthFromTargetLane(const int lane_id, const double vehicle_width, const double current_lane_width,
+std::vector<double> FissPlannerNode::getSamplingWidthFromTargetLane(const int lane_id, const double vehicle_width, const double current_lane_width,
                                                                              const double left_lane_width, const double right_lane_width)
 {
   double left_bound, right_bound;
@@ -649,7 +649,7 @@ std::vector<double> FrenetOptimalPlannerNode::getSamplingWidthFromTargetLane(con
 }
 
 // Select the ideal lane to proceed
-FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<FrenetPath>& best_traj_list, const int current_lane)
+FrenetPath FissPlannerNode::selectLane(const std::vector<FrenetPath>& best_traj_list, const int current_lane)
 {
   FrenetPath best_traj;
   bool change_lane_flag;
@@ -723,7 +723,7 @@ FrenetPath FrenetOptimalPlannerNode::selectLane(const std::vector<FrenetPath>& b
 }
 
 // Concatenate the best next path to the current path
-void FrenetOptimalPlannerNode::concatPath(const FrenetPath& next_traj, const int traj_max_size, const int traj_min_size, const double wp_max_seperation, const double wp_min_seperation)
+void FissPlannerNode::concatPath(const FrenetPath& next_traj, const int traj_max_size, const int traj_min_size, const double wp_max_seperation, const double wp_min_seperation)
 {
   size_t diff = 0;
   if (curr_trajectory_.x.size() <= traj_min_size)
@@ -798,7 +798,7 @@ void FrenetOptimalPlannerNode::concatPath(const FrenetPath& next_traj, const int
 }
 
 // Steering Help Function
-bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, const VehicleState& frontaxle_state)
+bool FissPlannerNode::calculateControlOutput(const int next_wp_id, const VehicleState& frontaxle_state)
 {
   const double wp_id = next_wp_id + NUM_WP_LOOK_AHEAD;
 
@@ -859,7 +859,7 @@ bool FrenetOptimalPlannerNode::calculateControlOutput(const int next_wp_id, cons
 }
 
 // Publish the resulted steering angle (Stanley)
-void FrenetOptimalPlannerNode::publishVehicleCmd(const double accel, const double angle)
+void FissPlannerNode::publishVehicleCmd(const double accel, const double angle)
 {
   autoware_msgs::VehicleCmd vehicle_cmd;
   vehicle_cmd.twist_cmd.twist.linear.x = accel/Vehicle::max_acceleration();  // [pct]
@@ -868,12 +868,12 @@ void FrenetOptimalPlannerNode::publishVehicleCmd(const double accel, const doubl
   vehicle_cmd_pub.publish(vehicle_cmd);
 }
 
-} // namespace fop
+} // namespace fiss
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "frenet_optimal_planner_node");
-  fop::FrenetOptimalPlannerNode frenet_optimal_planner_node;
+  ros::init(argc, argv, "fiss_planner_node");
+  fiss::FissPlannerNode fiss_planner_node;
   ros::spin();  // spin the ros node.
   return 0;
 }

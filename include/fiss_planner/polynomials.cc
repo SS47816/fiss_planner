@@ -7,7 +7,7 @@
 
 #include "polynomials.h"
 
-namespace fop
+namespace fiss
 {
 
 double polyeval(const VectorXd &coeffs, double x)
@@ -47,4 +47,4 @@ VectorXd polyfit(const VectorXd &xvals, const VectorXd &yvals, int order)
   return result;
 }
 
-} // end namespace fop
+} // end namespace fiss

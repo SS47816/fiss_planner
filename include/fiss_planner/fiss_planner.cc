@@ -1,4 +1,4 @@
-/* frenet_optimal_trajectory_planner.cc
+/* fiss_planner.cc
 
   Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore & Micron Technology
 
@@ -6,12 +6,12 @@
   Using the algorithm described in this paper, https://ieeexplore.ieee.org/document/5509799
 */
 
-#include "frenet_optimal_trajectory_planner.h"
+#include "fiss_planner.h"
 
-namespace fop
+namespace fiss
 {
 
-FrenetOptimalTrajectoryPlanner::TestResult::TestResult() : count(0), total_fix_cost(0.0), total_dyn_cost(0.0), total_dist(0)
+FissPlanner::TestResult::TestResult() : count(0), total_fix_cost(0.0), total_dyn_cost(0.0), total_dist(0)
 {
   this->numbers = std::vector<int>(5, int(0));
   this->numbers_min = std::vector<int>(5, int(100000));
@@ -34,7 +34,7 @@ FrenetOptimalTrajectoryPlanner::TestResult::TestResult() : count(0), total_fix_c
   this->total_time.shrink_to_fit();
 }
 
-FrenetOptimalTrajectoryPlanner::TestResult::TestResult(const int length) : length(length), count(0), total_fix_cost(0.0), total_dyn_cost(0.0), total_dist(0)
+FissPlanner::TestResult::TestResult(const int length) : length(length), count(0), total_fix_cost(0.0), total_dyn_cost(0.0), total_dist(0)
 {
   this->numbers = std::vector<int>(length, int(0));
   this->numbers_min = std::vector<int>(length, int(100000));
@@ -57,7 +57,7 @@ FrenetOptimalTrajectoryPlanner::TestResult::TestResult(const int length) : lengt
   this->total_time.shrink_to_fit();
 }
 
-void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
+void FissPlanner::TestResult::updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
                                                              const double fix_cost, const double dyn_cost, const int dist)
 {
   if (numbers.size() != this->length || timestamps.size() != this->length+1)
@@ -103,7 +103,7 @@ void FrenetOptimalTrajectoryPlanner::TestResult::updateCount(const std::vector<i
   total_dist += dist;
 }
 
-void FrenetOptimalTrajectoryPlanner::TestResult::printSummary()
+void FissPlanner::TestResult::printSummary()
 {
   const int count = std::max(1, this->count);
   // Print Summary for this iteration
@@ -151,24 +151,24 @@ void FrenetOptimalTrajectoryPlanner::TestResult::printSummary()
   std::cout << "Dist   : Distance to History Best" << this->total_dist << std::endl;
 }
 
-FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner()
+FissPlanner::FissPlanner()
 {
   this->settings_ = Setting();
   this->test_result_ = TestResult(5);
 }
 
-FrenetOptimalTrajectoryPlanner::FrenetOptimalTrajectoryPlanner(const Setting& settings)
+FissPlanner::FissPlanner(const Setting& settings)
 {
   this->settings_ = settings;
   this->test_result_ = TestResult(5);
 }
 
-void FrenetOptimalTrajectoryPlanner::updateSettings(const Setting& settings)
+void FissPlanner::updateSettings(const Setting& settings)
 {
   this->settings_ = settings;
 }
 
-std::pair<Path, Spline2D> FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const Lane& lane)
+std::pair<Path, Spline2D> FissPlanner::generateReferenceCurve(const Lane& lane)
 {
   Path ref_path = Path();
   auto cubic_spline = Spline2D(lane);
@@ -191,7 +191,7 @@ std::pair<Path, Spline2D> FrenetOptimalTrajectoryPlanner::generateReferenceCurve
 }
 
 std::vector<FrenetPath> 
-FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& start_state, const int lane_id,
+FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& start_state, const int lane_id,
                                                       const double left_width, const double right_width, const double current_speed, 
                                                       const autoware_msgs::DetectedObjectArray& obstacles, 
                                                       const bool check_collision, const bool use_async, const bool use_heuristic)
@@ -234,7 +234,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
       if (!findInitGuess(trajs_3d, best_idx))
       {
         // all samples have been searched and no feasible candidate found
-        std::cout << "FOP: Searched through all trajectories, found no suitable candidate" << std::endl;
+        std::cout << "fiss: Searched through all trajectories, found no suitable candidate" << std::endl;
         break;
       }
     }
@@ -247,8 +247,8 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
     bool converged = false;
     while (!converged)
     {
-      // std::cout << "FOP: Search iteration " << num_iter << " convergence: " << converged << std::endl;
-      // std::cout << "FOP: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
+      // std::cout << "fiss: Search iteration " << num_iter << " convergence: " << converged << std::endl;
+      // std::cout << "fiss: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
 
       // Perform a search for the real best trajectory using gradients
       converged = findNextBest(trajs_3d, best_idx, num_trajs_generated);
@@ -258,7 +258,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
     timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
     // ################################ Validation Process #####################################
-    std::cout << "FOP: Validating Candiate Trajectory" << std::endl;
+    std::cout << "fiss: Validating Candiate Trajectory" << std::endl;
     
     if (!candidate_trajs_.empty())
     {
@@ -292,7 +292,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
       {
         best_traj_found = true;
         best_traj_ = std::move(candidate_traj);
-        std::cout << "FOP: Best Traj Found" << std::endl;
+        std::cout << "fiss: Best Traj Found" << std::endl;
         break;
       }
     }
@@ -315,7 +315,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
     }
   }
   
-  std::cout << "FOP: Search Done in " << num_iter << " iterations" << std::endl;
+  std::cout << "fiss: Search Done in " << num_iter << " iterations" << std::endl;
   numbers.emplace_back(num_trajs_validated);
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
   numbers.emplace_back(num_collision_checks);
@@ -343,7 +343,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, co
 }
 
 std::vector<std::vector<std::vector<FrenetPath>>>
-FrenetOptimalTrajectoryPlanner::sampleEndStates(const int lane_id, const double left_bound, const double right_bound, 
+FissPlanner::sampleEndStates(const int lane_id, const double left_bound, const double right_bound, 
                                                 const double current_speed, const bool use_heuristic)
 {
   // list of frenet end states sampled
@@ -419,7 +419,7 @@ FrenetOptimalTrajectoryPlanner::sampleEndStates(const int lane_id, const double 
  * @param idx the index of the lowest estimated cost trajectory
  * @return true if there are still trajs not searched before, false otherwise
  */
-bool FrenetOptimalTrajectoryPlanner::findInitGuess(const std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx)
+bool FissPlanner::findInitGuess(const std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx)
 {
   double min_cost = std::numeric_limits<double>::max();
   bool found = false;
@@ -446,7 +446,7 @@ bool FrenetOptimalTrajectoryPlanner::findInitGuess(const std::vector<std::vector
   return found;
 }
 
-bool FrenetOptimalTrajectoryPlanner::findNextBest(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx, int& num_traj)
+bool FissPlanner::findNextBest(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx, int& num_traj)
 {
   if (trajs[idx(0)][idx(1)][idx(2)].is_searched)
   {
@@ -476,7 +476,7 @@ bool FrenetOptimalTrajectoryPlanner::findNextBest(std::vector<std::vector<std::v
   }
 }
 
-Eigen::Vector3d FrenetOptimalTrajectoryPlanner::findGradients(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, int& num_traj)
+Eigen::Vector3d FissPlanner::findGradients(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, int& num_traj)
 {
   const Eigen::Vector3i sizes = {int(trajs.size()), int(trajs[0].size()), int(trajs[0][0].size())};
   const Eigen::Vector3i directions = findDirection(sizes, idx);
@@ -511,7 +511,7 @@ Eigen::Vector3d FrenetOptimalTrajectoryPlanner::findGradients(std::vector<std::v
   return gradients;
 }
 
-Eigen::Vector3i FrenetOptimalTrajectoryPlanner::findDirection(const Eigen::Vector3i& sizes, const Eigen::Vector3i& idx)
+Eigen::Vector3i FissPlanner::findDirection(const Eigen::Vector3i& sizes, const Eigen::Vector3i& idx)
 {
   Eigen::Vector3i directions;
   for (int dim = 0; dim < 3; dim++)
@@ -529,7 +529,7 @@ Eigen::Vector3i FrenetOptimalTrajectoryPlanner::findDirection(const Eigen::Vecto
   return directions;
 }
 
-double FrenetOptimalTrajectoryPlanner::getTrajAndRealCost(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, int& num_traj)
+double FissPlanner::getTrajAndRealCost(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, int& num_traj)
 {
   const int i = idx(0);  // width dimension
   const int j = idx(1);  // speed dimension
@@ -592,7 +592,7 @@ double FrenetOptimalTrajectoryPlanner::getTrajAndRealCost(std::vector<std::vecto
   }
 }
 
-void FrenetOptimalTrajectoryPlanner::convertToGlobalFrame(FrenetPath& traj, Spline2D& cubic_spline)
+void FissPlanner::convertToGlobalFrame(FrenetPath& traj, Spline2D& cubic_spline)
 {
   // calculate global positions
   for (int j = 0; j < traj.s.size(); j++)
@@ -637,7 +637,7 @@ void FrenetOptimalTrajectoryPlanner::convertToGlobalFrame(FrenetPath& traj, Spli
  * @param traj the trajectory to be checked
  * @return true if trajectory satisfies constraints
  */
-bool FrenetOptimalTrajectoryPlanner::checkConstraints(FrenetPath& traj)
+bool FissPlanner::checkConstraints(FrenetPath& traj)
 {
   bool passed = true;
   for (int i = 0; i < traj.c.size(); i++)
@@ -673,7 +673,7 @@ bool FrenetOptimalTrajectoryPlanner::checkConstraints(FrenetPath& traj)
   return passed;
 }
 
-std::vector<Path> FrenetOptimalTrajectoryPlanner::predictTrajectories(const autoware_msgs::DetectedObjectArray& obstacles)
+std::vector<Path> FissPlanner::predictTrajectories(const autoware_msgs::DetectedObjectArray& obstacles)
 {
   std::vector<Path> obstacle_trajs;
 
@@ -707,13 +707,13 @@ std::vector<Path> FrenetOptimalTrajectoryPlanner::predictTrajectories(const auto
   return obstacle_trajs;
 }
 
-bool FrenetOptimalTrajectoryPlanner::checkCollisions(FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, 
+bool FissPlanner::checkCollisions(FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, 
                                                      const autoware_msgs::DetectedObjectArray& obstacles, 
                                                      const bool use_async, int& num_checks)
 {
   if (use_async)
   {
-    std::future<std::pair<bool, int>> collision_check = std::async(std::launch::async, &FrenetOptimalTrajectoryPlanner::checkTrajCollision, this, 
+    std::future<std::pair<bool, int>> collision_check = std::async(std::launch::async, &FissPlanner::checkTrajCollision, this, 
                                                                    ego_traj, obstacle_trajs, obstacles, settings_.safety_margin_lon, settings_.safety_margin_lat);
     const auto result = collision_check.get();
     ego_traj.collision_passed = result.first;
@@ -737,7 +737,7 @@ bool FrenetOptimalTrajectoryPlanner::checkCollisions(FrenetPath& ego_traj, const
  * @param margin collision margin in [m]
  * @return false if there is a collision along the path. Otherwise, true
  */
-std::pair<bool, int> FrenetOptimalTrajectoryPlanner::checkTrajCollision(const FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs,
+std::pair<bool, int> FissPlanner::checkTrajCollision(const FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs,
                                                                         const autoware_msgs::DetectedObjectArray& obstacles,
                                                                         const double margin_lon, const double margin_lat)
 {
@@ -768,4 +768,4 @@ std::pair<bool, int> FrenetOptimalTrajectoryPlanner::checkTrajCollision(const Fr
   return std::pair<bool, int>{true, num_checks};
 }
 
-}  // namespace fop
+}  // namespace fiss

@@ -8,10 +8,10 @@
   <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="log" />
 
   <!-- Rviz -->
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find frenet_optimal_planner)/rviz/lgsvl.rviz" output="log" respawn="true" />
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find fiss_planner)/rviz/lgsvl.rviz" output="log" respawn="true" />
 
   <!-- Local Planner -->
-  <node name="frenet_optimal_planner_node" pkg="frenet_optimal_planner" type="frenet_optimal_planner_node" output="screen">
+  <node name="fiss_planner_node" pkg="fiss_planner" type="fiss_planner_node" output="screen">
     <!-- Input Topic Names -->
     <param name="odom_topic"                    value="simulator/ground_truth/odom"/>
     <param name="obstacles_topic"               value="lgsvl_utils/ground_truth/objects"/>

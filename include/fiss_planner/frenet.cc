@@ -8,7 +8,7 @@
 
 #include "frenet.h"
 
-namespace fop
+namespace fiss
 {
 
 FrenetPath::FrenetPath() {}
@@ -149,13 +149,13 @@ FrenetState getFrenet(const VehicleState& current_state, const Path& path)
 
   // get the normal std::vector d
   const double wp_yaw = path.yaw[prev_wp_id];
-  const double delta_yaw = fop::unifyAngleRange(current_state.yaw - wp_yaw);
+  const double delta_yaw = fiss::unifyAngleRange(current_state.yaw - wp_yaw);
 
   // std::cout << "getFrenet() Break 3" << std::endl;
 
   // find the yaw of std::vector x
   const double x_yaw = atan2(x_y, x_x);
-  const double yaw_x_n = fop::unifyAngleRange(x_yaw - wp_yaw);
+  const double yaw_x_n = fiss::unifyAngleRange(x_yaw - wp_yaw);
 
   if (yaw_x_n < 0.0)
   {
@@ -182,4 +182,4 @@ FrenetState getFrenet(const VehicleState& current_state, const Path& path)
   return state;
 }
 
-}  // end of namespace fop
+}  // end of namespace fiss

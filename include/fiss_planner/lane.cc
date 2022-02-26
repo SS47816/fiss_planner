@@ -7,7 +7,7 @@
 
 #include "lane.h"
 
-namespace fop
+namespace fiss
 {
 
 Waypoint::Waypoint() {}
@@ -156,4 +156,4 @@ int lastWaypoint(VehicleState current_state, const Lane& lane)
   return nextWaypoint(current_state, lane) - 1;
 }
 
-}  // end of namespace fop
+}  // end of namespace fiss

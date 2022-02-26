@@ -16,10 +16,10 @@
 
 #include "frenet.h"
 #include "vehicle_state.h"
-#include "behaviour.h"
+// #include "behaviour.h"
 
 
-namespace fop
+namespace fiss
 {
 double MARKER_DISPLAY_DURATION = 0.1;
 
@@ -368,7 +368,7 @@ public:
     return candidate_trajs_markers;
   }
 
-  static visualization_msgs::Marker frenetPathToMarker(const fop::FrenetPath& traj, int& marker_id, const std::string ns, const std_msgs::ColorRGBA color, 
+  static visualization_msgs::Marker frenetPathToMarker(const fiss::FrenetPath& traj, int& marker_id, const std::string ns, const std_msgs::ColorRGBA color, 
                                                        const double z_map, const double max_speed)
   {
     visualization_msgs::Marker traj_marker = initializeMarker(marker_id, ns, color, CANDIDATE_PATH_MARKER_SCALE, visualization_msgs::Marker::LINE_STRIP);
@@ -648,105 +648,105 @@ public:
   }
 };
 
-class BehaviourPlannerVisualization : public Visualization
-{
-public:
-  static visualization_msgs::MarkerArray
-  visualizeBehaviour(std::vector<Behaviour> candidate_behaviours,
-                     Behaviour final_behaviour, VehicleState current_state)
-  {
-    int marker_id = 0;
+// class BehaviourPlannerVisualization : public Visualization
+// {
+// public:
+//   static visualization_msgs::MarkerArray
+//   visualizeBehaviour(std::vector<Behaviour> candidate_behaviours,
+//                      Behaviour final_behaviour, VehicleState current_state)
+//   {
+//     int marker_id = 0;
 
-    double marker_height = BEHAVIOUR_MARKER_HEIGHT;
+//     double marker_height = BEHAVIOUR_MARKER_HEIGHT;
 
-    visualization_msgs::MarkerArray behaviour_markers;
+//     visualization_msgs::MarkerArray behaviour_markers;
 
-    for (auto behaviour : candidate_behaviours)
-    {
-      behaviour_markers.markers.push_back(
-          behaviourToMarker(behaviour, current_state, marker_id, marker_height, "behaviour/candidates", false));
-    }
+//     for (auto behaviour : candidate_behaviours)
+//     {
+//       behaviour_markers.markers.push_back(
+//           behaviourToMarker(behaviour, current_state, marker_id, marker_height, "behaviour/candidates", false));
+//     }
 
-    behaviour_markers.markers.push_back(
-        behaviourToMarker(final_behaviour, current_state, marker_id, marker_height, "behaviour/final", true));
+//     behaviour_markers.markers.push_back(
+//         behaviourToMarker(final_behaviour, current_state, marker_id, marker_height, "behaviour/final", true));
 
-    behaviour_markers.markers.push_back(
-        generateStopWallMarker(marker_id, final_behaviour.getTargetSpeed() == 0, current_state));
+//     behaviour_markers.markers.push_back(
+//         generateStopWallMarker(marker_id, final_behaviour.getTargetSpeed() == 0, current_state));
 
-    return behaviour_markers;
-  }
+//     return behaviour_markers;
+//   }
 
-  static visualization_msgs::Marker behaviourToMarker(Behaviour behaviour,
-                                                      VehicleState current_state, int& marker_id, double& marker_height,
-                                                      std::string ns, bool is_final)
-  {
-    COLOR marker_color;
-    double marker_scale;
-    std::string marker_text;
-    geometry_msgs::Point marker_pos;
+//   static visualization_msgs::Marker behaviourToMarker(Behaviour behaviour,
+//                                                       VehicleState current_state, int& marker_id, double& marker_height,
+//                                                       std::string ns, bool is_final)
+//   {
+//     COLOR marker_color;
+//     double marker_scale;
+//     std::string marker_text;
+//     geometry_msgs::Point marker_pos;
 
-    if (behaviour.isStopping())
-    {
-      marker_color = RED;
-    }
-    else if (behaviour.isSlowing())
-    {
-      marker_color = YELLOW;
-    }
-    else
-    {
-      marker_color = WHITE;
-    }
+//     if (behaviour.isStopping())
+//     {
+//       marker_color = RED;
+//     }
+//     else if (behaviour.isSlowing())
+//     {
+//       marker_color = YELLOW;
+//     }
+//     else
+//     {
+//       marker_color = WHITE;
+//     }
 
-    marker_text = (is_final ? "[FINAL] " : "") + behaviour.toString();
-    marker_scale = (is_final ? 1.5 : 1) * BEHAVIOUR_MARKER_SCALE;
-    marker_pos.x = current_state.x;
-    marker_pos.y = current_state.y;
-    marker_pos.z = marker_height;
+//     marker_text = (is_final ? "[FINAL] " : "") + behaviour.toString();
+//     marker_scale = (is_final ? 1.5 : 1) * BEHAVIOUR_MARKER_SCALE;
+//     marker_pos.x = current_state.x;
+//     marker_pos.y = current_state.y;
+//     marker_pos.z = marker_height;
 
-    visualization_msgs::Marker behaviour_marker =
-        stringToMarker(marker_text, marker_pos, marker_id, marker_color, ns, marker_scale);
+//     visualization_msgs::Marker behaviour_marker =
+//         stringToMarker(marker_text, marker_pos, marker_id, marker_color, ns, marker_scale);
 
-    marker_height += BEHAVIOUR_MARKER_SCALE;
+//     marker_height += BEHAVIOUR_MARKER_SCALE;
 
-    return behaviour_marker;
-  }
+//     return behaviour_marker;
+//   }
 
-  /**
-   * @brief This method seems quite useless, but leaving it here anyway
-   *
-   * @param marker_id
-   * @param stopwall_flag
-   * @param current_state
-   * @return visualization_msgs::Marker
-   */
-  static visualization_msgs::Marker generateStopWallMarker(int& marker_id, bool stopwall_flag,
-                                                           VehicleState current_state)
-  {
-    double marker_height = 1.5;
+//   /**
+//    * @brief This method seems quite useless, but leaving it here anyway
+//    *
+//    * @param marker_id
+//    * @param stopwall_flag
+//    * @param current_state
+//    * @return visualization_msgs::Marker
+//    */
+//   static visualization_msgs::Marker generateStopWallMarker(int& marker_id, bool stopwall_flag,
+//                                                            VehicleState current_state)
+//   {
+//     double marker_height = 1.5;
 
-    geometry_msgs::Vector3 marker_scale;
-    marker_scale.x = 0.1;
-    marker_scale.y = marker_height;
-    marker_scale.z = 3.0;
+//     geometry_msgs::Vector3 marker_scale;
+//     marker_scale.x = 0.1;
+//     marker_scale.y = marker_height;
+//     marker_scale.z = 3.0;
 
-    COLOR marker_color = stopwall_flag ? TRANSLUCENT_RED : TRANSPARENT;
+//     COLOR marker_color = stopwall_flag ? TRANSLUCENT_RED : TRANSPARENT;
 
-    visualization_msgs::Marker stopwall_marker =
-        initializeMarker(marker_id, "stopwall", marker_color, marker_scale, visualization_msgs::Marker::CUBE);
+//     visualization_msgs::Marker stopwall_marker =
+//         initializeMarker(marker_id, "stopwall", marker_color, marker_scale, visualization_msgs::Marker::CUBE);
 
-    double front_x = current_state.x + cos(current_state.yaw) * 2.7;
-    double front_y = current_state.y + sin(current_state.yaw) * 2.7;
+//     double front_x = current_state.x + cos(current_state.yaw) * 2.7;
+//     double front_y = current_state.y + sin(current_state.yaw) * 2.7;
 
-    stopwall_marker.pose.position.x = front_x;
-    stopwall_marker.pose.position.y = front_y;
-    stopwall_marker.pose.position.z = marker_height / 2;
+//     stopwall_marker.pose.position.x = front_x;
+//     stopwall_marker.pose.position.y = front_y;
+//     stopwall_marker.pose.position.z = marker_height / 2;
 
-    stopwall_marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(1.57, 0, current_state.yaw);
+//     stopwall_marker.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(1.57, 0, current_state.yaw);
 
-    return stopwall_marker;
-  }
-};
+//     return stopwall_marker;
+//   }
+// };
 
 class LanePublisherVisualization : public Visualization
 {
@@ -812,7 +812,7 @@ public:
     marker_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(1.57, 0, -2.7);
 
     visualization_msgs::Marker end_point_marker = meshToMarker(
-        "package://frenet_optimal_planner/meshes/endpoint.stl", marker_pose, marker_id, RED, "end_point", END_POINT_MARKER_SCALE, true);
+        "package://fiss_planner/meshes/endpoint.stl", marker_pose, marker_id, RED, "end_point", END_POINT_MARKER_SCALE, true);
 
     return end_point_marker;
   }
@@ -827,4 +827,4 @@ public:
     return marker_arr;
   }
 };
-}  // namespace fop
+}  // namespace fiss

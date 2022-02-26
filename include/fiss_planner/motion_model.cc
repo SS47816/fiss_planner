@@ -7,7 +7,7 @@
 
 #include "motion_model.h"
 
-namespace fop
+namespace fiss
 {
 
 // Get the next state std::vector of the bicycle vehicle kinematic model
@@ -39,4 +39,4 @@ VehicleState getNextKinematicModelState(const VehicleState &state, const Actuato
   return next_state;
 }
 
-} // end of namespace fop
+} // end of namespace fiss

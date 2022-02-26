@@ -7,7 +7,7 @@
 
 #include "spline.h"
 
-namespace fop
+namespace fiss
 {
 
 /****************************************************************************
@@ -234,4 +234,4 @@ std::vector<double> Spline2D::calculate_s(const Lane& ref_wps)
   return s;
 };
 
-}  // namespace fop
+}  // namespace fiss

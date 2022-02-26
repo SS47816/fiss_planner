@@ -13,7 +13,7 @@
 #include <iostream>
 #include "math_utils.h"
 
-namespace fop
+namespace fiss
 {
 
 struct VehicleState
@@ -44,6 +44,6 @@ class ActuatorState
   double max_angle;         // max steering angle [rad]
 };
 
-}  // namespace fop
+}  // namespace fiss
 
 #endif  // VEHICLE_STATE_H_

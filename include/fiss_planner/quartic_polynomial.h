@@ -12,7 +12,7 @@
 #include "Eigen/Dense"
 #include "frenet.h"
 
-namespace fop
+namespace fiss
 {
 
 class QuarticPolynomial
@@ -38,6 +38,6 @@ class QuarticPolynomial
 	std::vector<double> coefficients;
 };
 
-} // namespace fop
+} // namespace fiss
 
 #endif //QUARTIC_POLYNOMIAL_H_

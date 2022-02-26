@@ -16,7 +16,7 @@
 #include "math_utils.h"
 
 
-namespace fop
+namespace fiss
 {
 class Spline
 {
@@ -94,6 +94,6 @@ private:
   std::vector<double> calculate_s(const Lane& ref_wps);
 };
 
-}  // namespace fop
+}  // namespace fiss
 
 #endif  // SPLINE_H_

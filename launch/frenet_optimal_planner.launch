@@ -14,7 +14,7 @@
   </node>
 
   <!-- Local Planner -->
-  <node name="frenet_optimal_planner_node" pkg="frenet_optimal_planner" type="frenet_optimal_planner_node" output="screen">
+  <node name="fiss_planner_node" pkg="fiss_planner" type="fiss_planner_node" output="screen">
     <!-- Input Topic Names -->
     <param name="odom_topic"                    value="simulator/ground_truth/odom"/>
     <param name="obstacles_topic"               value="lgsvl_utils/ground_truth/objects"/>

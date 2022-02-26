@@ -7,7 +7,7 @@
 
 #include "vehicle_state.h"
 
-namespace fop
+namespace fiss
 {
 
 VehicleState::VehicleState() {};
@@ -28,7 +28,7 @@ void ActuatorState::setAccel(const double a)
 
 void ActuatorState::setAngle(const double delta)
 {
-  this->angle = fop::limitWithinRange(delta, -max_angle, max_angle);
+  this->angle = fiss::limitWithinRange(delta, -max_angle, max_angle);
 }
 
-}  // namespace fop
+}  // namespace fiss
