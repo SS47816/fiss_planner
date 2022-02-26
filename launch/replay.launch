@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<launch>
+
+  <param name="/use_sim_time" value="true" />
+
+  <!-- Robot Model -->
+  <param name="robot_description"               textfile="$(find lgsvl_utils)/urdf/lexus.urdf" />
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="log" />
+
+  <!-- Rviz -->
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find frenet_optimal_planner)/rviz/lgsvl.rviz" output="log" respawn="true" />
+
+  <!-- Local Planner -->
+  <node name="frenet_optimal_planner_node" pkg="frenet_optimal_planner" type="frenet_optimal_planner_node" output="screen">
+    <!-- Input Topic Names -->
+    <param name="odom_topic"                    value="simulator/ground_truth/odom"/>
+    <param name="obstacles_topic"               value="lgsvl_utils/ground_truth/objects"/>
+    <param name="lane_info_topic"               value="planning/mission_planning/global_path"/>
+    <!-- Output Topic Names -->
+    <param name="ref_path_topic"                value="local_planner/ref_path"/>
+    <param name="curr_traj_topic"               value="local_planner/current_trajectory"/>
+    <param name="next_traj_topic"               value="local_planner/next_trajectory"/>
+    <param name="sample_space_topic"            value="local_planner/sample_space"/>
+    <param name="final_traj_topic"              value="local_planner/final_trajectory"/>
+    <param name="candidate_trajs_topic"         value="local_planner/candidate_trajs"/>
+    <param name="vehicle_cmd_topic"             value="auto_vehicle_cmd"/>
+  </node>
+
+  <!-- Autoware Object Visualizer -->
+  <node ns="local_planner" pkg="lgsvl_utils" type="detected_objects_visualizer" name="autoware_objects_visualizer" output="log" respawn="true" />
+
+  <!-- Dynamic Reconfigure GUI -->
+  <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" output="screen" />
+
+</launch>
