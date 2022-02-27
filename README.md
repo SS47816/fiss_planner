@@ -64,4 +64,5 @@ and [ROS C++ Style Guide](http://wiki.ros.org/CppStyleGuide)
 
 ## License
 Our `fiss_planner` ROS package is licensed under [Apache License 2.0](https://github.com/SS47816/fiss_planner/blob/main/LICENSE)
+
 The included Eigen Library follows its own [Mozilla Public License v. 2.0](http://mozilla.org/MPL/2.0/)
