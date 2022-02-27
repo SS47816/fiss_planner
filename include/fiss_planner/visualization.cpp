@@ -1,5 +1,7 @@
 /** visualization.cpp
  *
+ * Copyright (C) 2022 SS47816 & Advanced Robotics Center, National University of Singapore
+ * 
  * Methods for visualization in rviz
  */
 

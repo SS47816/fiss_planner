@@ -1,9 +1,8 @@
-/* fiss_planner_node.cpp
-
-  Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore
-
-  Local Planner ROS Node
-  Using the algorithm described in this paper, https://ieeexplore.ieee.org/document/5509799
+/** fiss_planner_node.cpp
+ * 
+ * Copyright (C) 2022 SS47816 & Advanced Robotics Center, National University of Singapore
+ * 
+ * Local Planner ROS Node
 */
 
 #include "fiss_planner/fiss_planner_node.h"
