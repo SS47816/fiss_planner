@@ -1,28 +1,15 @@
 
-/* fiss_planner_node.h
-
-  Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore
-
-  Local Planner ROS Node
-  Using the algorithm described in this paper
-*/
-
-/**
- * |              |              |
- * |LB +  0  - RB |              |
- * |<--*     *----|------------->|
- * |   +-----+    |              |
- * |   |     |    |              |
- * |   |  *  |    |              |
- * |   |     |    |              |
- * |   +-----+    |              |
- * |   Buggy W    |              |
- *     <----->    |              |
- * |              |              |
- * | L Lane Width | R Lane Width |
- * |<------------>|<------------>|
- * |              |              |
+/** fiss_planner_node.h
+ * 
+ * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
+ * 
+ * Apache License 2.0 https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Local Planner ROS Node
  */
+
+#ifndef FISS_PLANNER_NODE_H_
+#define FISS_PLANNER_NODE_H_
 
 #include <cmath>
 #include <vector>
@@ -45,7 +32,7 @@
 #include <fiss_planner/fiss_planner_Config.h>
 
 #include "fiss_planner/pid.hpp"
-#include "fiss_planner/visualization.cpp"
+#include "fiss_planner/visualization.hpp"
 #include "fiss_planner/fiss_planner.h"
 
 namespace fiss
@@ -147,3 +134,4 @@ class FissPlannerNode
 };
 
 } // namespace fiss
+#endif  // FISS_PLANNER_NODE_H_

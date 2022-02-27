@@ -5,6 +5,15 @@
  * Helper functions related to lanes
  */
 
+/** frenet.cc
+ * 
+ * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
+ * 
+ * Apache License 2.0 https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Implementation of Waypoints and Lanes
+ */
+
 #include "lane.h"
 
 namespace fiss

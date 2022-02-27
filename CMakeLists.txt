@@ -153,7 +153,7 @@ add_library(${PROJECT_NAME}
   include/${PROJECT_NAME}/vehicle.cc
   include/${PROJECT_NAME}/sat_collision_checker.h
   include/${PROJECT_NAME}/sat_collision_checker.cc
-  include/${PROJECT_NAME}/visualization.cpp
+  include/${PROJECT_NAME}/visualization.hpp
   include/${PROJECT_NAME}/fiss_planner.h
   include/${PROJECT_NAME}/fiss_planner.cc
 )

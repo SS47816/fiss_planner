@@ -1,3 +1,12 @@
+/** sat_collision_checker.h
+ * 
+ * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
+ * 
+ * Apache License 2.0 https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Defination of the Seperating Axis Theorem (SAT) Algorithm
+ */
+
 #ifndef SAT_COLLISION_CHECKER_H_
 #define SAT_COLLISION_CHECKER_H_
 
@@ -7,8 +16,6 @@
 #include <geometry_msgs/Polygon.h>
 #include <geometry_msgs/Vector3.h>
 #include <geometry_msgs/Point32.h>
-
-
 
 namespace fiss
 {

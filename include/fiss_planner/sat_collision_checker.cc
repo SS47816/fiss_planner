@@ -1,11 +1,13 @@
-/*
-* For Seperating Axis Theorem(SAT) related functions, refer to SAT algorithm online for more explaination.
-*/
+/** sat_collision_checker.cc
+ * 
+ * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
+ * 
+ * Apache License 2.0 https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Implementation of the Seperating Axis Theorem (SAT) Algorithm
+ */
 
 #include "sat_collision_checker.h"
-
-
-
 namespace fiss
 {
 /**

@@ -1,18 +1,17 @@
 /** spline.cc
  * 
- * Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore & Micron Technology
+ * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
  * 
- * Class for constructing and solving 2D Splines
-*/
+ * Apache License 2.0 https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Implementation of 1D & 2D Splines
+ */
 
 #include "spline.h"
 
 namespace fiss
 {
 
-/****************************************************************************
- * Spline
- ****************************************************************************/
 Spline::Spline(const std::vector<double>& x, const std::vector<double>& y)
 {
   x_ = x;
@@ -146,9 +145,6 @@ int Spline::searchIndex(double x)
 }
 
 
-/****************************************************************************
- * 2D Spline
- ****************************************************************************/
 Spline2D::Spline2D(const Lane& ref_wps)
 {
   s_ = calculate_s(ref_wps);

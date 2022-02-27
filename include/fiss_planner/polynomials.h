@@ -1,8 +1,10 @@
 /** polynomials.h
  * 
- * Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore & Micron Technology
+ * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
  * 
- * Helper functions related to polynomials
+ * Apache License 2.0 https://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Defination of generic polynomials
  */
 
 #ifndef POLYNOMIALS_H_

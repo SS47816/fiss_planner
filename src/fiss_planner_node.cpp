@@ -1,9 +1,11 @@
 /** fiss_planner_node.cpp
  * 
- * Copyright (C) 2022 SS47816 & Advanced Robotics Center, National University of Singapore
+ * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
+ * 
+ * Apache License 2.0 https://www.apache.org/licenses/LICENSE-2.0
  * 
  * Local Planner ROS Node
-*/
+ */
 
 #include "fiss_planner/fiss_planner_node.h"
 

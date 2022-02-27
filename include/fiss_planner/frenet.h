@@ -1,7 +1,9 @@
 /** frenet.h
- *
- * Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore & Micron Technology
- *
+ * 
+ * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
+ * 
+ * Apache License 2.0 https://www.apache.org/licenses/LICENSE-2.0
+ * 
  * Construction of frenet coordinates
  * Conversion between Frenet frame and Cartesian frame
  */
