@@ -1,10 +1,10 @@
-/** frenet.h
+/** lane.h
  * 
  * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
  * 
  * Apache License 2.0 https://www.apache.org/licenses/LICENSE-2.0
  * 
- * Defination of Waypoints and Lanes
+ * Implementation of Waypoints and Lanes
  */
 
 #ifndef LANE_H_

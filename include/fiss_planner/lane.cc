@@ -1,11 +1,4 @@
 /** lane.cc
- *
- * Copyright (C) 2019 SS47816 & Advanced Robotics Center, National University of Singapore & Micron Technology
- *
- * Helper functions related to lanes
- */
-
-/** frenet.cc
  * 
  * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
  * 

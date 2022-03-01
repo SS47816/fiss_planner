@@ -1,4 +1,4 @@
-/** vehicle_state.cc
+/** vehicle_state.h
  * 
  * Copyright (C) 2022 Shuo SUN & Advanced Robotics Center, National University of Singapore
  * 
