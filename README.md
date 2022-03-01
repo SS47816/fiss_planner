@@ -10,8 +10,9 @@
 ![ROS](https://img.shields.io/badge/Tools-ROS-informational?style=flat&logo=ROS&logoColor=white&color=2bbc8a)
 ![C++](https://img.shields.io/badge/Code-C++-informational?style=flat&logo=c%2B%2B&logoColor=white&color=2bbc8a)
 
+## Demo 
 ![cover_image](media/demo.gif)
-
+### Demo Video []()
 ## Dependencies
 Our package is only based on standard ROS pkgs, with no other external dependencies:
 * C++11 above
@@ -63,6 +64,6 @@ and [ROS C++ Style Guide](http://wiki.ros.org/CppStyleGuide)
 
 
 ## License
-Our `fiss_planner` ROS package is licensed under [Apache License 2.0](https://github.com/SS47816/fiss_planner/blob/main/LICENSE)
+Our [`fiss_planner`](https://github.com/SS47816/fiss_planner) ROS package is licensed under [Apache License 2.0](https://github.com/SS47816/fiss_planner/blob/main/LICENSE)
 
 The included Eigen Library follows its own [Mozilla Public License v. 2.0](http://mozilla.org/MPL/2.0/)
