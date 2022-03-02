@@ -151,11 +151,18 @@ FissPlannerNode::FissPlannerNode() : tf_listener(tf_buffer)
   ref_path_pub = nh.advertise<nav_msgs::Path>(ref_path_topic, 1);
   curr_traj_pub = nh.advertise<nav_msgs::Path>(curr_traj_topic, 1);
   next_traj_pub = nh.advertise<nav_msgs::Path>(next_traj_topic, 1);
+
   sample_space_pub = nh.advertise<visualization_msgs::Marker>(sample_space_topic, 1);
   final_traj_pub = nh.advertise<visualization_msgs::Marker>(final_traj_topic, 1);
   candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>(candidate_trajs_topic, 1);
+
   vehicle_cmd_pub = nh.advertise<autoware_msgs::VehicleCmd>(vehicle_cmd_topic, 1);
-  obstacles_pub = nh.advertise<autoware_msgs::DetectedObjectArray>("local_planner/objects", 1);
+  obstacles_pub = nh.advertise<autoware_msgs::DetectedObjectArray>("fiss_planner/objects", 1);
+
+  run_time_pub = nh.advertise<std_msgs::Float32>("fiss_planner/run_time", 1);
+  freqency_pub = nh.advertise<std_msgs::Float32>("fiss_planner/freqency", 1);
+  iteration_pub = nh.advertise<std_msgs::Float32>("fiss_planner/iteration", 1);
+  cost_pub = nh.advertise<std_msgs::Float32>("fiss_planner/cost", 1);
 
   // Initializing states
   regenerate_flag_ = false;
@@ -250,9 +257,12 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
   roi_boundaries_ = getSamplingWidthFromTargetLane(target_lane_id_, SETTINGS.vehicle_width, LANE_WIDTH, LEFT_LANE_WIDTH, RIGHT_LANE_WIDTH);
 
   // Get the planning result 
-  std::vector<FrenetPath> best_traj_list = frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
+  const auto planning_results = frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
                                                                                       roi_boundaries_[0], roi_boundaries_[1], current_state_.v, 
                                                                                       *obstacles, CHECK_COLLISION, USE_ASYNC, USE_HEURISTIC);
+  std::vector<FrenetPath> best_traj_list = planning_results.first;
+  publishStats(planning_results.second);
+  
   ROS_INFO("Local Planner: Frenet Optimal Planning Done");
   publishCandidateTrajs(frenet_planner_.all_trajs_);
   if (best_traj_list.empty())
@@ -431,6 +441,19 @@ void FissPlannerNode::publishCandidateTrajs(const std::vector<FrenetPath>& candi
   candidate_paths_pub.publish(std::move(candidate_paths_markers));
 }
 
+void FissPlannerNode::publishStats(std::vector<double> stats)
+{
+  std_msgs::Float32 run_time, frequency, iteration, cost;
+  run_time.data = stats[0];
+  frequency.data = stats[1];
+  iteration.data = stats[2];
+  cost.data = stats[3];
+  run_time_pub.publish(run_time);
+  freqency_pub.publish(frequency);
+  iteration_pub.publish(iteration);
+  cost_pub.publish(cost);
+}
+
 // Publish empty trajs (for Rviz only)
 void FissPlannerNode::publishEmptyTrajsAndStop()
 {
@@ -588,7 +611,7 @@ void FissPlannerNode::updateStartState()
   }
 
   // Ensure the speed is above the minimum planning speed
-  // start_state_.s_d = std::max(start_state_.s_d, 1.0);
+  start_state_.s_d = std::max(start_state_.s_d, 1.0);
 
   // Update current lane
   if (std::abs(start_state_.d) <= LANE_WIDTH/2)

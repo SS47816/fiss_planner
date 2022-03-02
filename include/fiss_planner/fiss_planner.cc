@@ -58,13 +58,13 @@ FissPlanner::TestResult::TestResult(const int length) : length(length), count(0)
   this->total_time.shrink_to_fit();
 }
 
-void FissPlanner::TestResult::updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
-                                                             const double fix_cost, const double dyn_cost, const int dist)
+std::vector<double> FissPlanner::TestResult::updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
+                                                         const double fix_cost, const double dyn_cost, const int dist)
 {
   if (numbers.size() != this->length || timestamps.size() != this->length+1)
   {
     std::cout << "Recorded TestResult for this planning iteration is invalid" << std::endl;
-    return;
+    return std::vector<double>{4, 0.0};
   }
   
   this->count++;
@@ -102,6 +102,13 @@ void FissPlanner::TestResult::updateCount(const std::vector<int> numbers, const 
   total_fix_cost += fix_cost;
   total_dyn_cost += dyn_cost;
   total_dist += dist;
+
+  std::vector<double> stats;
+  stats.push_back(this->time[5]);
+  stats.push_back(std::round(1000/this->time[5]));
+  stats.push_back(double(this->numbers[2]));
+  stats.push_back(fix_cost + dyn_cost);
+  return stats;
 }
 
 void FissPlanner::TestResult::printSummary()
@@ -191,11 +198,11 @@ std::pair<Path, Spline2D> FissPlanner::generateReferenceCurve(const Lane& lane)
   return std::pair<Path, Spline2D>{ref_path, cubic_spline};
 }
 
-std::vector<FrenetPath> 
+std::pair<std::vector<FrenetPath>, std::vector<double>>
 FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& start_state, const int lane_id,
-                                                      const double left_width, const double right_width, const double current_speed, 
-                                                      const autoware_msgs::DetectedObjectArray& obstacles, 
-                                                      const bool check_collision, const bool use_async, const bool use_heuristic)
+                                   const double left_width, const double right_width, const double current_speed,
+                                   const autoware_msgs::DetectedObjectArray& obstacles,
+                                   const bool check_collision, const bool use_async, const bool use_heuristic)
 {
   // Initialize a series of results to be recorded
   std::vector<int> numbers;
@@ -259,7 +266,7 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
     timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
     // ################################ Validation Process #####################################
-    std::cout << "fiss: Validating Candiate Trajectory" << std::endl;
+    // std::cout << "fiss: Validating Candiate Trajectory" << std::endl;
     
     if (!candidate_trajs_.empty())
     {
@@ -321,7 +328,7 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
   numbers.emplace_back(num_collision_checks);
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
-  test_result_.updateCount(numbers, timestamps, fix_cost, dyn_cost, dist);
+  const auto stats = test_result_.updateCount(numbers, timestamps, fix_cost, dyn_cost, dist);
   test_result_.printSummary();
   /* --------------------------------- Construction Zone -------------------------------- */
 
@@ -331,16 +338,14 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
     convertToGlobalFrame(traj, cubic_spline);
   }
 
+  std::vector<FrenetPath> result;
   if (best_traj_found)
   {
     prev_best_traj_ = best_traj_;
+    result.emplace_back(best_traj_);
+  }
 
-    return std::vector<FrenetPath>{1, best_traj_};
-  }
-  else
-  {
-    return std::vector<FrenetPath>{};
-  }
+  return std::pair<std::vector<FrenetPath>, std::vector<double>>{result, stats};
 }
 
 std::vector<std::vector<std::vector<FrenetPath>>>

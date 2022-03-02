@@ -22,6 +22,7 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <std_msgs/Float32.h>
 #include <nav_msgs/Path.h>
 #include <nav_msgs/Odometry.h>
 
@@ -93,6 +94,10 @@ class FissPlannerNode
   ros::Publisher candidate_paths_pub;
   ros::Publisher obstacles_pub;
   ros::Publisher vehicle_cmd_pub;
+  ros::Publisher run_time_pub;
+  ros::Publisher freqency_pub;
+  ros::Publisher iteration_pub;
+  ros::Publisher cost_pub;
 
   // ROS
   ros::NodeHandle nh;
@@ -117,6 +122,7 @@ class FissPlannerNode
   void publishVisTraj(const Path& current_traj, const FrenetPath& next_traj);
   void publishCandidateTrajs(const std::vector<FrenetPath>& candidate_trajs);
   void publishVehicleCmd(const double accel, const double angle);
+  void publishStats(std::vector<double> stats);
 
   // Planner Helper Functions
   bool feedWaypoints();

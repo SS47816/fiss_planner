@@ -101,7 +101,7 @@ class FissPlanner
 
     TestResult();
     TestResult(const int length);
-    void updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
+    std::vector<double> updateCount(const std::vector<int> numbers, const std::vector<std::chrono::_V2::system_clock::time_point> timestamps,
                      const double fix_cost, const double dyn_cost, const int dist);
     void printSummary();
   };
@@ -121,10 +121,11 @@ class FissPlanner
   std::pair<Path, Spline2D> generateReferenceCurve(const Lane& lane);
 
   // Plan for the optimal trajectory
-  std::vector<FrenetPath> frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& frenet_state, const int lane_id,
-                                                const double left_width, const double right_width, const double current_speed, 
-                                                const autoware_msgs::DetectedObjectArray& obstacles, 
-                                                const bool check_collision, const bool use_async, const bool use_heuristic);
+  std::pair<std::vector<FrenetPath>, std::vector<double>> 
+  frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& frenet_state, const int lane_id,
+                        const double left_width, const double right_width, const double current_speed, 
+                        const autoware_msgs::DetectedObjectArray& obstacles, 
+                        const bool check_collision, const bool use_async, const bool use_heuristic);
   
   std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> candidate_trajs_; 
   std::vector<FrenetPath> all_trajs_;
