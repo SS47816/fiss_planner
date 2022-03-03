@@ -1,19 +1,36 @@
-# FISS Planner: A General Trajectory Planning Framework using Fast Iterative Search and Sampling Strategy for Autonomous Driving
+# FISS Planner
+## FISS Planner: A General Trajectory Planning Framework using Fast Iterative Search and Sampling Strategy for Autonomous Driving
 
-[![CodeFactor](https://www.codefactor.io/repository/github/ss47816/lgsvl_utils/badge)](https://www.codefactor.io/repository/github/ss47816/lgsvl_utils)
+[![CodeFactor](https://www.codefactor.io/repository/github/ss47816/lgsvl_utils/badge)](https://www.codefactor.io/repository/github/ss47816/fiss_planner)
 ![Code Grade](https://api.codiga.io/project/30669/status/svg)
 ![Code Quality Score](https://api.codiga.io/project/30669/score/svg)
-![GitHub Repo stars](https://img.shields.io/github/stars/ss47816/lgsvl_utils?color=FFE333)
-![GitHub Repo forks](https://img.shields.io/github/forks/ss47816/lgsvl_utils?color=FFE333)
+![GitHub Repo stars](https://img.shields.io/github/stars/ss47816/fiss_planner?color=FFE333)
+![GitHub Repo forks](https://img.shields.io/github/forks/ss47816/fiss_planner?color=FFE333)
 
 ![Ubuntu](https://img.shields.io/badge/OS-Ubuntu-informational?style=flat&logo=ubuntu&logoColor=white&color=2bbc8a)
 ![ROS](https://img.shields.io/badge/Tools-ROS-informational?style=flat&logo=ROS&logoColor=white&color=2bbc8a)
 ![C++](https://img.shields.io/badge/Code-C++-informational?style=flat&logo=c%2B%2B&logoColor=white&color=2bbc8a)
 
+This is an improved framework based on the framework used in [`frenet_optimal_planner`](https://github.com/SS47816/frenet_optimal_planner). We utilize historical planning results as prior information in heuristics and introduce an iterative search-generate-evaluate strategy to look for the optimal trajectory candidate. Compared to the current frameworks, our method can significantly reduce the number of computationally expensive operations spent during the planning and achieve 2-6 times faster.
+
 ## Demo 
 ![cover_image](media/demo_1.gif)
 
+## Performance (Planning Frequency in Hz)
+
+| # of Trajectory Samples | FOP  | FOP* | FOP Improved | FOP Improved* | FISS  |   FISS*   |
+| :---------------------: | :--: | :--: | :----------: | :-----------: | :---: | :-------: |
+|           100           | 9.2  | 33.0 |     84.2     |     94.2      | 221.1 | **241.1** |
+|           250           | 3.2  | 15.0 |     42.8     |     51.5      | 199.9 | **207.0** |
+|           500           | 1.5  | 7.7  |     24.6     |     32.5      | 137.6 | **146.9** |
+|          1000           | 0.8  | 3.8  |     16.2     |     18.1      | 97.6  | **98.3**  |
+
+\* are using Asynchronous collision checking module (with `use_async = True` in settings)
+
+(Results above are obtained on an Intel i7-8700K CPU with 6 cores @3.70 GHz with 16 GB RAM)
+
 ## Dependencies
+
 Our package is only based on standard ROS pkgs, with no other external dependencies:
 * C++11 above
 * CMake: 3.0.2 above
