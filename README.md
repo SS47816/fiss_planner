@@ -11,8 +11,8 @@
 ![C++](https://img.shields.io/badge/Code-C++-informational?style=flat&logo=c%2B%2B&logoColor=white&color=2bbc8a)
 
 ## Demo 
-![cover_image](media/demo.gif)
-### Demo Video []()
+![cover_image](media/demo_1.gif)
+
 ## Dependencies
 Our package is only based on standard ROS pkgs, with no other external dependencies:
 * C++11 above
