@@ -75,7 +75,7 @@ class FissPlannerNode
   Lane local_lane_;                // Selected Waypoints
   Path ref_spline_;                // Reference Spline
   Path curr_trajectory_;           // Output Trajectory
-  Path vis_trajectory_;           // Output Trajectory
+  Path vis_trajectory_;            // Output Trajectory
   std::vector<double> roi_boundaries_;  //[0] = left boundary length in metre, [1] = right boundary length in metre.
 
   // Controllers

@@ -416,18 +416,19 @@ void FissPlannerNode::publishVisTraj(const Path& current_traj, const FrenetPath&
 {
   int marker_id = 0;
   Path vis_traj = current_traj;
-  for (int i = 0; i < next_traj.x.size(); i++)
-  {
-    if (std::isnormal(next_traj.x[i]) && std::isnormal(next_traj.y[i]) && std::isnormal(next_traj.yaw[i]))
-    {
-      vis_traj.x.push_back(next_traj.x[i]);
-      vis_traj.y.push_back(next_traj.y[i]);
-      vis_traj.yaw.push_back(next_traj.yaw[i]);
-    }
-  }
+  // for (int i = 0; i < next_traj.x.size(); i++)
+  // {
+  //   if (std::isnormal(next_traj.x[i]) && std::isnormal(next_traj.y[i]) && std::isnormal(next_traj.yaw[i]))
+  //   {
+  //     vis_traj.x.push_back(next_traj.x[i]);
+  //     vis_traj.y.push_back(next_traj.y[i]);
+  //     vis_traj.yaw.push_back(next_traj.yaw[i]);
+  //   }
+  // }
 
   const auto output_traj_marker = CollisionDetectorVisualization::visualizePredictedTrajectory(
-    vis_traj, SETTINGS.vehicle_width, 0.0, map_height_, current_state_, true, marker_id, "final", Visualization::COLOR::GREEN, 0.15);
+                                    vis_traj, SETTINGS.vehicle_width, 0.0, map_height_, current_state_, true, 
+                                    marker_id, "final", Visualization::COLOR::GREEN, 0.15);
   final_traj_pub.publish(output_traj_marker);
 }
 
@@ -580,35 +581,37 @@ void FissPlannerNode::updateStartState()
   }
 
   // if the current path size is too small, regenerate
-  if (curr_trajectory_.x.size() < TRAJ_MIN_SIZE)
-  {
-    regenerate_flag_ = true;
-  }
+  // if (curr_trajectory_.x.size() < TRAJ_MIN_SIZE)
+  // {
+  //   regenerate_flag_ = true;
+  // }
 
-  // if need to regenerate the entire path
-  if (regenerate_flag_)
-  {
-    ROS_INFO("Local Planner: Regenerating The Entire Path...");
-    // Update the starting state in frenet (using ref_spline_ can produce a finer result compared to local_lane_, but
-    // at fringe cases, such as start of code, ref spline might not be available
-    start_state_ = ref_spline_.yaw.empty() ? getFrenet(current_state_, local_lane_) : getFrenet(current_state_, ref_spline_);
+  // // if need to regenerate the entire path
+  // if (regenerate_flag_)
+  // {
+  //   ROS_INFO("Local Planner: Regenerating The Entire Path...");
+  //   // Update the starting state in frenet (using ref_spline_ can produce a finer result compared to local_lane_, but
+  //   // at fringe cases, such as start of code, ref spline might not be available
+  //   start_state_ = ref_spline_.yaw.empty() ? getFrenet(current_state_, local_lane_) : getFrenet(current_state_, ref_spline_);
 
-    // Clear the last output path
-    curr_trajectory_.clear();
-    regenerate_flag_ = false;
-  }
+  //   // Clear the last output path
+  //   curr_trajectory_.clear();
+  //   regenerate_flag_ = false;
+  // }
   // if not regenerating
-  else
-  {
-    ROS_INFO("Local Planner: Continuing From The Previous Path...");
+  // else
+  // {
+  //   ROS_INFO("Local Planner: Continuing From The Previous Path...");
 
-    // End of the previous path speed
-    const double curr_trajectory_last_speed = hypot(curr_trajectory_.x.back() - curr_trajectory_.x.end()[-2], curr_trajectory_.y.back() - curr_trajectory_.y.end()[-2]) / SETTINGS.tick_t;
-    // End of the previous path state
-    VehicleState last_state = VehicleState(curr_trajectory_.x.back(), curr_trajectory_.y.back(), curr_trajectory_.yaw.back(), curr_trajectory_.v.back());
+  //   // End of the previous path speed
+  //   const double curr_trajectory_last_speed = hypot(curr_trajectory_.x.back() - curr_trajectory_.x.end()[-2], curr_trajectory_.y.back() - curr_trajectory_.y.end()[-2]) / SETTINGS.tick_t;
+  //   // End of the previous path state
+  //   VehicleState last_state = VehicleState(curr_trajectory_.x.back(), curr_trajectory_.y.back(), curr_trajectory_.yaw.back(), curr_trajectory_.v.back());
 
-    start_state_ = ref_spline_.yaw.empty() ? getFrenet(last_state, local_lane_) : getFrenet(last_state, ref_spline_);
-  }
+  //   start_state_ = ref_spline_.yaw.empty() ? getFrenet(last_state, local_lane_) : getFrenet(last_state, ref_spline_);
+  // }
+
+  start_state_ = ref_spline_.yaw.empty() ? getFrenet(current_state_, local_lane_) : getFrenet(current_state_, ref_spline_);
 
   // Ensure the speed is above the minimum planning speed
   start_state_.s_d = std::max(start_state_.s_d, 1.0);
@@ -635,7 +638,7 @@ void FissPlannerNode::updateStartState()
 
 // Calculate the sampling width for the planner
 std::vector<double> FissPlannerNode::getSamplingWidthFromTargetLane(const int lane_id, const double vehicle_width, const double current_lane_width,
-                                                                             const double left_lane_width, const double right_lane_width)
+                                                                    const double left_lane_width, const double right_lane_width)
 {
   double left_bound, right_bound;
 
@@ -749,36 +752,23 @@ FrenetPath FissPlannerNode::selectLane(const std::vector<FrenetPath>& best_traj_
 // Concatenate the best next path to the current path
 void FissPlannerNode::concatPath(const FrenetPath& next_traj, const int traj_max_size, const int traj_min_size, const double wp_max_seperation, const double wp_min_seperation)
 {
-  size_t diff = 0;
-  if (curr_trajectory_.x.size() <= traj_min_size)
+  // size_t diff = 0;
+  // if (curr_trajectory_.x.size() <= traj_min_size)
+  // {
+  //   diff = std::min(traj_max_size - curr_trajectory_.x.size(), next_traj.x.size());
+  // }
+
+  // // Concatenate the best path to the output path
+  curr_trajectory_.clear();
+  const size_t N = std::min(next_traj.x.size(), next_traj.yaw.size());
+  for (size_t i = 0; i < N; i++)
   {
-    diff = std::min(traj_max_size - curr_trajectory_.x.size(), next_traj.x.size());
-  }
-
-  // Concatenate the best path to the output path
-  for (size_t i = 0; i < diff; i++)
-  {
-    // double wp_seperation;
-
-    // // Check if the separation between adjacent waypoint are permitted
-    // if (!curr_trajectory_.x.empty() && !curr_trajectory_.y.empty())
-    // {
-    //   wp_seperation = distance(curr_trajectory_.x.back(), curr_trajectory_.y.back(), next_traj.x[i], next_traj.y[i]);
-    // }
-    // else
-    // {
-    //   wp_seperation = distance(next_traj.x[i], next_traj.y[i], next_traj.x[i+1], next_traj.y[i+1]);
-    // }
-
-    // // If the separation is too big/small, reject point onward
-    // if (wp_seperation >= wp_max_seperation || wp_seperation <= wp_min_seperation)
-    // {
-    //   ROS_WARN("Local Planner: waypoint out of bound, rejected");
-    //   regenerate_flag_ = true;
-    //   break;
-    // }
-    if (std::isnormal(next_traj.x[i]) && std::isnormal(next_traj.y[i]) && std::isnormal(next_traj.yaw[i]) && 
-        std::isnormal(next_traj.s_d[i]) && std::isnormal(next_traj.d_d[i]))
+    if (!std::isnormal(next_traj.x[i]) || !std::isnormal(next_traj.y[i]) || !std::isnormal(next_traj.yaw[i]) || 
+        !std::isnormal(next_traj.s_d[i]) || !std::isnormal(next_traj.d_d[i]))
+    {
+      break;
+    }
+    else
     {
       curr_trajectory_.x.push_back(next_traj.x[i]);
       curr_trajectory_.y.push_back(next_traj.y[i]);
@@ -805,19 +795,20 @@ void FissPlannerNode::concatPath(const FrenetPath& next_traj, const int traj_max
       publishVehicleCmd(-1.0, 0.0); // Publish empty control output
     }
 
-    const int next_wp_id = nextWaypoint(current_state_, curr_trajectory_);
+    // const int next_wp_id = nextWaypoint(current_state_, curr_trajectory_);
 
-    for (size_t i = 0; i < next_wp_id; i++)
-    {
-      curr_trajectory_.x.erase(curr_trajectory_.x.begin());
-      curr_trajectory_.y.erase(curr_trajectory_.y.begin());
-      curr_trajectory_.yaw.erase(curr_trajectory_.yaw.begin());
-      curr_trajectory_.v.erase(curr_trajectory_.v.begin());
-    }
+    // for (size_t i = 0; i < next_wp_id; i++)
+    // {
+    //   curr_trajectory_.x.erase(curr_trajectory_.x.begin());
+    //   curr_trajectory_.y.erase(curr_trajectory_.y.begin());
+    //   curr_trajectory_.yaw.erase(curr_trajectory_.yaw.begin());
+    //   curr_trajectory_.v.erase(curr_trajectory_.v.begin());
+    // }
   }
   else
   {
     ROS_ERROR("Local Planner: Output Path is Empty, No Steering Angle");
+    publishVehicleCmd(-1.0, 0.0); // Publish empty control output
   }
 }
 
@@ -827,7 +818,7 @@ bool FissPlannerNode::calculateControlOutput(const int next_wp_id, const Vehicle
   const double wp_id = next_wp_id + NUM_WP_LOOK_AHEAD;
 
   // If the current path is too short, return error value
-  if (curr_trajectory_.x.size() < wp_id + 2)
+  if (curr_trajectory_.x.size() <= wp_id)
   {
     ROS_ERROR("Local Planner: Output Path Too Short! No output steering angle");
     // std::cout << "Output Path Size: " << curr_trajectory_.x.size() << " Required Size: " << wp_id + 2 << std::endl;
@@ -887,7 +878,7 @@ void FissPlannerNode::publishVehicleCmd(const double accel, const double angle)
 {
   autoware_msgs::VehicleCmd vehicle_cmd;
   vehicle_cmd.twist_cmd.twist.linear.x = accel/Vehicle::max_acceleration();  // [pct]
-  vehicle_cmd.twist_cmd.twist.angular.z = angle;                                  // [rad]
+  vehicle_cmd.twist_cmd.twist.angular.z = angle;                             // [rad]
   vehicle_cmd.gear_cmd.gear = autoware_msgs::Gear::DRIVE;
   vehicle_cmd_pub.publish(vehicle_cmd);
 }
