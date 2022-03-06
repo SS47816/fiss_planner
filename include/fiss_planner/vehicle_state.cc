@@ -20,7 +20,7 @@ VehicleState::VehicleState(const double x, const double y, const double yaw, con
 ActuatorState::ActuatorState() {};
 
 ActuatorState::ActuatorState(const double max_accel, const double max_decel, const double max_angle)
-  : max_accel(max_accel), max_decel(max_decel), max_angle(max_angle) {};
+  : accel(0.0), brake(0.0), angle(0.0), max_accel(max_accel), max_decel(max_decel), max_angle(max_angle) {};
 
 void ActuatorState::setAccel(const double a)
 {
