@@ -80,7 +80,7 @@ void Path::clear()
   v.clear();
 }
 
-int closestWaypoint(VehicleState current_state, const Path& path)
+int closestWaypoint(const VehicleState& current_state, const Path& path)
 {
   double closest_dist = 100000.0;  // start with a large number
   int closest_waypoint = 0;
@@ -98,7 +98,7 @@ int closestWaypoint(VehicleState current_state, const Path& path)
   return closest_waypoint;
 }
 
-int closestWaypoint(VehicleState current_state, const Lane& lane)
+int closestWaypoint(const VehicleState& current_state, const Lane& lane)
 {
   double closest_dist = 100000.0;  // start with a large number
   int closest_waypoint = 0;
@@ -116,7 +116,7 @@ int closestWaypoint(VehicleState current_state, const Lane& lane)
   return closest_waypoint;
 }
 
-int nextWaypoint(VehicleState current_state, const Path& path)
+int nextWaypoint(const VehicleState& current_state, const Path& path)
 {
   int closest_waypoint = closestWaypoint(current_state, path);
   double heading = atan2((path.y[closest_waypoint] - current_state.y), (path.x[closest_waypoint] - current_state.x));
@@ -132,7 +132,7 @@ int nextWaypoint(VehicleState current_state, const Path& path)
   return closest_waypoint;
 }
 
-int nextWaypoint(VehicleState current_state, const Lane& lane)
+int nextWaypoint(const VehicleState& current_state, const Lane& lane)
 {
   int closest_waypoint = closestWaypoint(current_state, lane);
   double heading = atan2((lane.points[closest_waypoint].point.y - current_state.y), (lane.points[closest_waypoint].point.x - current_state.x));
@@ -148,12 +148,12 @@ int nextWaypoint(VehicleState current_state, const Lane& lane)
   return closest_waypoint;
 }
 
-int lastWaypoint(VehicleState current_state, const Path& path)
+int lastWaypoint(const VehicleState& current_state, const Path& path)
 {
   return nextWaypoint(current_state, path) - 1;
 }
 
-int lastWaypoint(VehicleState current_state, const Lane& lane)
+int lastWaypoint(const VehicleState& current_state, const Lane& lane)
 {
   return nextWaypoint(current_state, lane) - 1;
 }

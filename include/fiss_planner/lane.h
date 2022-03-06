@@ -46,9 +46,9 @@ struct Waypoint
   Waypoint();
   Waypoint(const double x, const double y, const double yaw);
   Waypoint(const double x, const double y, const double yaw, const double s);
-  Waypoint(const tf::Pose& pose);
-  Waypoint(const geometry_msgs::Pose& pose_msg);
-  Waypoint(const geometry_msgs::Pose& pose_msg, const double s);
+  explicit Waypoint(const tf::Pose& pose);
+  explicit Waypoint(const geometry_msgs::Pose& pose_msg);
+  explicit Waypoint(const geometry_msgs::Pose& pose_msg, const double s);
 
   double x, y, yaw, s;
 };
@@ -96,16 +96,16 @@ class Path
 };
 
 // Find the ID of the closest waypoint wrt current x, y position
-int closestWaypoint(VehicleState current_state, const Path& path);
-int closestWaypoint(VehicleState current_state, const Lane& map);
+int closestWaypoint(const VehicleState& current_state, const Path& path);
+int closestWaypoint(const VehicleState& current_state, const Lane& map);
 
 // Find the ID of the next waypoint of the closest waypoint wrt current x, y position
-int nextWaypoint(VehicleState current_state, const Path& path);
-int nextWaypoint(VehicleState current_state, const Lane& map);
+int nextWaypoint(const VehicleState& current_state, const Path& path);
+int nextWaypoint(const VehicleState& current_state, const Lane& map);
 
 // Find the ID of the previous waypoint
-int lastWaypoint(VehicleState current_state, const Path& path);
-int lastWaypoint(VehicleState current_state, const Lane& map);
+int lastWaypoint(const VehicleState& current_state, const Path& path);
+int lastWaypoint(const VehicleState& current_state, const Lane& map);
 
 }  // end of namespace fiss
 
