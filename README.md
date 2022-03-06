@@ -2,8 +2,8 @@
 ## FISS Planner: A General Trajectory Planning Framework using Fast Iterative Search and Sampling Strategy for Autonomous Driving
 
 [![CodeFactor](https://www.codefactor.io/repository/github/ss47816/lgsvl_utils/badge)](https://www.codefactor.io/repository/github/ss47816/fiss_planner)
-![Code Grade](https://api.codiga.io/project/30669/status/svg)
-![Code Quality Score](https://api.codiga.io/project/30669/score/svg)
+![Code Grade](https://api.codiga.io/project/31518/status/svg)
+![Code Quality Score](https://api.codiga.io/project/31518/score/svg)
 ![GitHub Repo stars](https://img.shields.io/github/stars/ss47816/fiss_planner?color=FFE333)
 ![GitHub Repo forks](https://img.shields.io/github/forks/ss47816/fiss_planner?color=FFE333)
 
