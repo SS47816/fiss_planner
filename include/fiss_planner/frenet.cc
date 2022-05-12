@@ -183,7 +183,7 @@ std::pair<double, double> comparePaths(const FrenetPath& fiss_path, const Frenet
     }
   }
 
-  return std::pair<double, double>{cost, dist};
+  return std::pair<double, double>{cost, std::sqrt(dist)};
 }
 
 }  // end of namespace fiss
