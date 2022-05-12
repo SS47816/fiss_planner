@@ -25,9 +25,9 @@ This is an improved framework based on the framework used in [`frenet_optimal_pl
 |           500           | 1.5  | 7.7  |     24.6     |     32.5      | 137.6 | **146.9** |
 |          1000           | 0.8  | 3.8  |     16.2     |     18.1      | 97.6  | **98.3**  |
 
-\* are using Asynchronous collision checking module (with `use_async = True` in settings)
+All Results above are obtained on an Intel i7-8700K CPU with 6 cores @3.70 GHz and 16 GB RAM
 
-(Results above are obtained on an Intel i7-8700K CPU with 6 cores @3.70 GHz with 16 GB RAM)
+\* are using Asynchronous collision checking module (with `use_async = True` in settings)
 
 ## Dependencies
 
