@@ -47,7 +47,7 @@ class FrenetPath
  public:
   // Constructor
   FrenetPath();
-  FrenetPath(const int lane_id, FrenetState& end_state, const double fix_cost, const double heu_cost);
+  FrenetPath(const Eigen::Vector3i& idx, const int lane_id, FrenetState& end_state, const double fix_cost, const double heu_cost);
 
   friend bool operator < (const FrenetPath& lhs, const FrenetPath& rhs);
   friend bool operator > (const FrenetPath& lhs, const FrenetPath& rhs);
@@ -92,6 +92,9 @@ class FrenetPath
 // Convert the position in Cartesian coordinates to Frenet frame
 FrenetState getFrenet(const VehicleState& current_state, const Lane& lane);
 FrenetState getFrenet(const VehicleState& current_state, const Path& path);
+
+// Compare two frenet paths
+std::pair<double, double> comparePaths(const FrenetPath& fiss_path, const FrenetPath& fop_path);
 
 }  // end of namespace fiss
 

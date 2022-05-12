@@ -195,7 +195,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fiss::Spline2D& cubic_spli
     if (is_safe)
     {
       best_traj_found = true;
-      std::cout << "FISS: Best Traj Found" << std::endl;
+      std::cout << "FOP: Best Traj Found" << std::endl;
       break;
     }
   }
@@ -241,25 +241,21 @@ std::vector<fiss::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPath
   std::vector<fiss::FrenetPath> frenet_trajs;
   std::vector<double> goal_ds;
 
-  int idx_i = 0;
-  // generate different goals with a lateral offset
   const double delta_width = (left_bound - settings_.center_offset)/((settings_.num_width - 1)/2);
-  for (double d = right_bound; d <= left_bound; d += delta_width)  // left being positive
+  for (int i = 0; i < settings_.num_width; i++)  // left being positive
   {
-    int idx_k = 0;
-
-    // calculate lateral offset cost
+    const double d = right_bound + i*delta_width;
     const double lat_norm = std::max(std::pow(left_bound - settings_.center_offset, 2), std::pow(right_bound - settings_.center_offset, 2));
     const double lat_cost = settings_.k_diff*std::pow(d - settings_.center_offset, 2)/lat_norm;
-
-    // generate d_t polynomials
+  
+    // Sampling on the time dimension & generate d_t polynomials
     const double delta_t = (settings_.max_t - settings_.min_t)/(settings_.num_t - 1);
-    for (double T = settings_.min_t; T <= settings_.max_t; T += delta_t)
+    for (int k = 0; k < settings_.num_t; k++)
     {
-      int idx_j = 0;
+      const double T = settings_.min_t + k*delta_t;
 
-      // calculate time cost (encourage longer planning horizon)
-      const double time_cost = settings_.k_time*(1 - (T - settings_.min_t)/(settings_.max_t - settings_.min_t));
+      // Planning Horizon cost (encourage longer planning horizon)
+      const double time_cost = settings_.k_time*(1.0 - (T - settings_.min_t)/(settings_.max_t - settings_.min_t));
 
       fiss::FrenetPath frenet_traj = fiss::FrenetPath();
       frenet_traj.lane_id = lane_id;
@@ -289,14 +285,12 @@ std::vector<fiss::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPath
         frenet_traj.d_ddd.emplace_back(lateral_quintic_poly.calculateThirdDerivative(t));
       }
 
-      // generate longitudinal quartic polynomial
-      const double delta_speed = (settings_.highest_speed - settings_.lowest_speed)/(settings_.num_speed - 1);
-      for (double sample_speed = settings_.lowest_speed; sample_speed <= settings_.highest_speed; sample_speed += delta_speed)
+      // Sampling on the longitudial direction & generate longitudinal quartic polynomial
+      const double delta_v = (settings_.highest_speed - settings_.lowest_speed)/(settings_.num_speed - 1);
+      for (int j = 0; j < settings_.num_speed; j++)
       {
-        if (sample_speed <= 0)  // ensure target speed is positive
-        {
-          continue;
-        }
+        const double v = settings_.lowest_speed + j*delta_v;
+        const double speed_cost = settings_.k_diff*pow((settings_.highest_speed - v)/settings_.highest_speed, 2);
 
         // copy the longitudinal path over
         fiss::FrenetPath target_frenet_traj = frenet_traj;
@@ -309,7 +303,7 @@ std::vector<fiss::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPath
 
         // end longitudinal state [s_d, s_dd]
         std::vector<double> end_s;
-        end_s.emplace_back(sample_speed);
+        end_s.emplace_back(v);
         end_s.emplace_back(0.0);
 
         // generate longitudinal quartic polynomial
@@ -324,22 +318,14 @@ std::vector<fiss::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPath
           target_frenet_traj.s_ddd.emplace_back(longitudinal_quartic_poly.calculateThirdDerivative(t));
         }
 
-        // calculate speed cost
-        const double speed_cost = settings_.k_diff*pow((settings_.highest_speed - sample_speed)/settings_.highest_speed, 2);
         // fixed cost terms
         target_frenet_traj.fix_cost = settings_.k_lat * lat_cost 
                                     + settings_.k_lon * (time_cost + speed_cost);
 
-        target_frenet_traj.idx = Eigen::Vector3i(idx_i, idx_j, idx_k);
+        target_frenet_traj.idx = Eigen::Vector3i(i, j, k);
         frenet_trajs.emplace_back(target_frenet_traj);
-
-        idx_j++;
       }
-
-      idx_k++;
     }
-
-    idx_i++;
   }
 
   return frenet_trajs;

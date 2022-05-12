@@ -14,8 +14,9 @@ namespace fiss
 {
 
 FrenetPath::FrenetPath() {}
-FrenetPath::FrenetPath(const int lane_id, FrenetState& end_state, const double fix_cost, const double heu_cost)
+FrenetPath::FrenetPath(const Eigen::Vector3i& idx, const int lane_id, FrenetState& end_state, const double fix_cost, const double heu_cost)
  : 
+  idx(idx),
   lane_id(lane_id), 
   is_generated(false),
   is_searched(false),
@@ -161,6 +162,28 @@ FrenetState getFrenet(const VehicleState& current_state, const Path& path)
   state.d_ddd = 0.0;
 
   return state;
+}
+
+std::pair<double, double> comparePaths(const FrenetPath& fiss_path, const FrenetPath& fop_path)
+{
+  std::cout << "FISS: idx = " << fiss_path.idx(0) << " " << fiss_path.idx(1) << " " << fiss_path.idx(2) << std::endl;
+  std::cout << " FOP: idx = " << fop_path.idx(0)  << " " << fop_path.idx(1)  << " " << fop_path.idx(2)  << std::endl;
+  std::cout << "FISS: fix_cost = " << fiss_path.fix_cost << " dyn_cost = " << fiss_path.dyn_cost << " est_cost = " << fiss_path.est_cost << std::endl;
+  std::cout << " FOP: fix_cost = " << fop_path.fix_cost  << " dyn_cost = " << fop_path.dyn_cost  << std::endl;
+
+  const double cost = fiss_path.final_cost - fop_path.final_cost;
+
+  double dist;
+  for (int i = 0; i < 3; i++)
+  {
+    const int l = std::abs(fiss_path.idx(i) - fop_path.idx(i));
+    if (l <= 100)
+    {
+      dist += std::pow(l, 2);
+    }
+  }
+
+  return std::pair<double, double>{cost, dist};
 }
 
 }  // end of namespace fiss

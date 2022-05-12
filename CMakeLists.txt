@@ -157,6 +157,8 @@ add_library(${PROJECT_NAME}
   include/${PROJECT_NAME}/fiss_planner.h
   include/${PROJECT_NAME}/fiss_planner.cc
   include/${PROJECT_NAME}/setting.h
+  include/${PROJECT_NAME}/frenet_optimal_trajectory_planner.h
+  include/${PROJECT_NAME}/frenet_optimal_trajectory_planner.cc
 )
 
 ## Add cmake target dependencies of the library

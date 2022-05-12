@@ -286,8 +286,14 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
   FrenetPath best_traj_fop = selectLane(best_traj_list_fop, current_lane_id_);
 
   // Compare the difference between the fiss and fop results
+  if (true)
+  {
+    std::cout << "FISS vs FOP: " << std::endl;
+    const auto comp_results = comparePaths(best_traj, best_traj_fop);
+    std::cout << "Cost Difference: " << comp_results.first << std::endl;
+    std::cout << "L2 Distance: " << comp_results.second << std::endl;
+  }
   
-
   ROS_INFO("Local Planner: Best trajs Selected");
   publishSampleSpace(ref_spline_);
   publishVisTraj(curr_trajectory_, best_traj);

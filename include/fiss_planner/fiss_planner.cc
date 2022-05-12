@@ -300,7 +300,7 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
       {
         best_traj_found = true;
         best_traj_ = std::move(candidate_traj);
-        std::cout << "fiss: Best Traj Found" << std::endl;
+        std::cout << "FISS: Best Traj Found" << std::endl;
         break;
       }
     }
@@ -407,7 +407,8 @@ FissPlanner::sampleEndStates(const int lane_id, const double left_bound, const d
           heu_cost = settings_.k_heuristic * heu_sqr_dist/max_sqr_dist;
         }
 
-        trajs_1d.emplace_back(FrenetPath(lane_id, end_state, fix_cost, heu_cost));
+        const Eigen::Vector3i idx{i, j, k};
+        trajs_1d.emplace_back(FrenetPath(idx, lane_id, end_state, fix_cost, heu_cost));
       }
 
       trajs_2d.emplace_back(trajs_1d);
