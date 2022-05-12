@@ -35,6 +35,7 @@
 #include "fiss_planner/pid.hpp"
 #include "fiss_planner/visualization.hpp"
 #include "fiss_planner/fiss_planner.h"
+#include "fiss_planner/frenet_optimal_trajectory_planner.h"
 
 namespace fiss
 {
@@ -48,7 +49,8 @@ class FissPlannerNode
   virtual ~FissPlannerNode(){};
 
   // Planning algorithm instance
-  FissPlanner frenet_planner_;
+  FissPlanner fiss_planner_;
+  FrenetOptimalTrajectoryPlanner frenet_planner_;
 
  private:
   // Regnerate path flag

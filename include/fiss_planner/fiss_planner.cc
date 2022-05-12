@@ -115,7 +115,7 @@ void FissPlanner::TestResult::printSummary()
 {
   const int count = std::max(1, this->count);
   // Print Summary for this iteration
-  std::cout << " " << std::endl;
+  std::cout << "FISS " << std::endl;
   std::cout << "Summary: This Planning Iteration (iteration no." << count << ")" << std::endl;
   std::cout << "Step 1 : Predicted               " << this->numbers[0] << " Trajectories in " << this->time[0] << " ms" << std::endl;
   std::cout << "Step 2 : Generated               " << this->numbers[1] << " End States   in " << this->time[1] << " ms" << std::endl;
@@ -125,7 +125,7 @@ void FissPlanner::TestResult::printSummary()
   std::cout << "Total  : Planning Took           " << this->time[5] << " ms (or " << 1000/this->time[5] << " Hz)" << std::endl;
 
   // Print Summary for Best Case performance
-  std::cout << " " << std::endl;
+  std::cout << "FISS " << std::endl;
   std::cout << "Summary: Best Case Performance  (" << count << " iterations so far)" << std::endl;
   std::cout << "Step 1 : Predicted               " << this->numbers_min[0] << " Trajectories in " << this->time_min[0] << " ms" << std::endl;
   std::cout << "Step 2 : Generated               " << this->numbers_min[1] << " End States   in " << this->time_min[1] << " ms" << std::endl;
@@ -135,7 +135,7 @@ void FissPlanner::TestResult::printSummary()
   std::cout << "Total  : Planning Took           " << this->time_min[5] << " ms (or " << 1000/this->time_min[5] << " Hz)" << std::endl;
 
   // Print Summary for Worst Case performance
-  std::cout << " " << std::endl;
+  std::cout << "FISS " << std::endl;
   std::cout << "Summary: Worst Case Performance (" << count << " iterations so far)" << std::endl;
   std::cout << "Step 1 : Predicted               " << this->numbers_max[0] << " Trajectories in " << this->time_max[0] << " ms" << std::endl;
   std::cout << "Step 2 : Generated               " << this->numbers_max[1] << " End States   in " << this->time_max[1] << " ms" << std::endl;
@@ -145,7 +145,7 @@ void FissPlanner::TestResult::printSummary()
   std::cout << "Total  : Planning Took           " << this->time_max[5] << " ms (or " << 1000/this->time_max[5] << " Hz)" << std::endl;
 
   // Print Summary for average performance
-  std::cout << " " << std::endl;
+  std::cout << "FISS " << std::endl;
   std::cout << "Summary: Average Performance (" << count << " iterations so far)" << std::endl;
   std::cout << "Step 1 : Predicted               " << this->total_numbers[0]/count << " Trajectories in " << this->total_time[0]/count << " ms" << std::endl;
   std::cout << "Step 2 : Generated               " << this->total_numbers[1]/count << " End States   in " << this->total_time[1]/count << " ms" << std::endl;

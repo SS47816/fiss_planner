@@ -13,7 +13,7 @@ namespace fiss
 {
 
 // FissPlanner settings
-FissPlanner::Setting SETTINGS = FissPlanner::Setting();
+Setting SETTINGS = Setting();
 
 // Constants values used as thresholds (Not for tuning)
 const double WP_MAX_SEP = 3.0;                                    // Maximum allowable waypoint separation
@@ -141,7 +141,9 @@ FissPlannerNode::FissPlannerNode() : tf_listener(tf_buffer)
   ROS_ASSERT(private_nh.getParam("vehicle_cmd_topic", vehicle_cmd_topic));
 
   // Instantiate FissPlanner
-  frenet_planner_ = FissPlanner(SETTINGS);
+  fiss_planner_ = FissPlanner(SETTINGS);
+  // Instantiate FrenetOptimalTrajectoryPlanner
+  frenet_planner_ = FrenetOptimalTrajectoryPlanner(SETTINGS);
 
   // Subscribe & Advertise
   odom_sub = nh.subscribe(odom_topic, 1, &FissPlannerNode::odomCallback, this);
@@ -224,6 +226,7 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
   }
   if (SETTINGS_UPDATED)
   {
+    fiss_planner_.updateSettings(SETTINGS);
     frenet_planner_.updateSettings(SETTINGS);
     SETTINGS_UPDATED = false;
   }
@@ -241,7 +244,7 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
   // Update start state
   updateStartState();
   // Get the reference lane's centerline as a spline
-  auto ref_path_and_curve = frenet_planner_.generateReferenceCurve(local_lane_);
+  auto ref_path_and_curve = fiss_planner_.generateReferenceCurve(local_lane_);
   // Store the results into reference spline
   ref_spline_ = std::move(ref_path_and_curve.first);
 
@@ -257,14 +260,19 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
   roi_boundaries_ = getSamplingWidthFromTargetLane(target_lane_id_, SETTINGS.vehicle_width, LANE_WIDTH, LEFT_LANE_WIDTH, RIGHT_LANE_WIDTH);
 
   // Get the planning result 
-  const auto planning_results = frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
+  const auto planning_results = fiss_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
                                                                                       roi_boundaries_[0], roi_boundaries_[1], current_state_.v, 
                                                                                       *obstacles, CHECK_COLLISION, USE_ASYNC, USE_HEURISTIC);
   std::vector<FrenetPath> best_traj_list = planning_results.first;
   publishStats(planning_results.second);
   
+  // Get the planning result (FOP)
+  std::vector<FrenetPath> best_traj_list_fop = frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
+                                                                                      roi_boundaries_[0], roi_boundaries_[1], current_state_.v, 
+                                                                                      *obstacles, CHECK_COLLISION, USE_ASYNC);
+  
   ROS_INFO("Local Planner: Frenet Optimal Planning Done");
-  publishCandidateTrajs(frenet_planner_.all_trajs_);
+  publishCandidateTrajs(fiss_planner_.all_trajs_);
   if (best_traj_list.empty())
   {
     ROS_ERROR("Local Planner: Frenet Optimal Planning Could Not Find a Safe Trajectory");
@@ -274,6 +282,12 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
 
   // Find the best path from the all candidates 
   FrenetPath best_traj = selectLane(best_traj_list, current_lane_id_);
+  // Find the best path from the all candidates (FOP)
+  FrenetPath best_traj_fop = selectLane(best_traj_list_fop, current_lane_id_);
+
+  // Compare the difference between the fiss and fop results
+  
+
   ROS_INFO("Local Planner: Best trajs Selected");
   publishSampleSpace(ref_spline_);
   publishVisTraj(curr_trajectory_, best_traj);
