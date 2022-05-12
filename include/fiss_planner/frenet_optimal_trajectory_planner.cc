@@ -109,10 +109,10 @@ void FrenetOptimalTrajectoryPlanner::updateSettings(Setting& settings)
   this->settings_ = settings;
 }
 
-std::pair<Path, Spline2D> FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const fiss::Lane& lane)
+std::pair<Path, Spline2D> FrenetOptimalTrajectoryPlanner::generateReferenceCurve(const Lane& lane)
 {
   Path ref_path = Path();
-  auto cubic_spline = fiss::Spline2D(lane);
+  auto cubic_spline = Spline2D(lane);
 
   std::vector<double> s;
   for (double i = 0; i < cubic_spline.s_.back(); i += 0.1)
@@ -122,7 +122,7 @@ std::pair<Path, Spline2D> FrenetOptimalTrajectoryPlanner::generateReferenceCurve
 
   for (int i = 0; i < s.size(); i++)
   {
-    fiss::VehicleState state = cubic_spline.calculatePosition(s[i]);
+    VehicleState state = cubic_spline.calculatePosition(s[i]);
     ref_path.x.emplace_back(state.x);
     ref_path.y.emplace_back(state.y);
     ref_path.yaw.emplace_back(cubic_spline.calculateYaw(s[i]));
@@ -131,8 +131,8 @@ std::pair<Path, Spline2D> FrenetOptimalTrajectoryPlanner::generateReferenceCurve
   return std::pair<Path, Spline2D>{ref_path, cubic_spline};
 }
 
-std::vector<fiss::FrenetPath> 
-FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fiss::Spline2D& cubic_spline, const fiss::FrenetState& frenet_state, const int lane_id,
+std::vector<FrenetPath> 
+FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& frenet_state, const int lane_id,
                                                       const double left_width, const double right_width, const double current_speed, 
                                                       const autoware_msgs::DetectedObjectArray& obstacles, const bool check_collision, const bool use_async)
 {
@@ -147,7 +147,7 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fiss::Spline2D& cubic_spli
   const auto obstacle_trajs = predictTrajectories(obstacles);
 
   // Sample a list of FrenetPaths
-  all_trajs_ = std::make_shared<std::vector<fiss::FrenetPath>>(generateFrenetPaths(frenet_state, lane_id, left_width, right_width, current_speed));
+  all_trajs_ = std::make_shared<std::vector<FrenetPath>>(generateFrenetPaths(frenet_state, lane_id, left_width, right_width, current_speed));
   numbers.push_back(all_trajs_->size());
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
@@ -234,11 +234,11 @@ FrenetOptimalTrajectoryPlanner::frenetOptimalPlanning(fiss::Spline2D& cubic_spli
   }
 }
 
-std::vector<fiss::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths(const fiss::FrenetState& frenet_state, const int lane_id,
+std::vector<FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths(const FrenetState& frenet_state, const int lane_id,
                                                                                  const double left_bound, const double right_bound, const double current_speed)
 {
   // list of frenet paths generated
-  std::vector<fiss::FrenetPath> frenet_trajs;
+  std::vector<FrenetPath> frenet_trajs;
   std::vector<double> goal_ds;
 
   const double delta_width = (left_bound - settings_.center_offset)/((settings_.num_width - 1)/2);
@@ -257,7 +257,7 @@ std::vector<fiss::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPath
       // Planning Horizon cost (encourage longer planning horizon)
       const double time_cost = settings_.k_time*(1.0 - (T - settings_.min_t)/(settings_.max_t - settings_.min_t));
 
-      fiss::FrenetPath frenet_traj = fiss::FrenetPath();
+      FrenetPath frenet_traj = FrenetPath();
       frenet_traj.lane_id = lane_id;
       frenet_traj.is_generated = true;
 
@@ -274,7 +274,7 @@ std::vector<fiss::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPath
       end_d.emplace_back(0.0);
 
       // generate lateral quintic polynomial
-      fiss::QuinticPolynomial lateral_quintic_poly = fiss::QuinticPolynomial(start_d, end_d, T);
+      QuinticPolynomial lateral_quintic_poly = QuinticPolynomial(start_d, end_d, T);
 
       // calculate the costs
       double jerk_sqr_d, jerk_d = 0.0;
@@ -299,7 +299,7 @@ std::vector<fiss::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPath
         const double speed_cost = settings_.k_diff*pow((settings_.highest_speed - v)/settings_.highest_speed, 2);
 
         // copy the longitudinal path over
-        fiss::FrenetPath target_frenet_traj = frenet_traj;
+        FrenetPath target_frenet_traj = frenet_traj;
 
         // start longitudinal state [s, s_d, s_dd]
         std::vector<double> start_s;
@@ -313,7 +313,7 @@ std::vector<fiss::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPath
         end_s.emplace_back(0.0);
 
         // generate longitudinal quartic polynomial
-        fiss::QuarticPolynomial longitudinal_quartic_poly = fiss::QuarticPolynomial(start_s, end_s, T);
+        QuarticPolynomial longitudinal_quartic_poly = QuarticPolynomial(start_s, end_s, T);
 
         // calculate the costs
         double jerk_sqr_s, jerk_s = 0.0;
@@ -346,7 +346,7 @@ std::vector<fiss::FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPath
   return frenet_trajs;
 }
 
-int FrenetOptimalTrajectoryPlanner::calculateGlobalPaths(std::vector<fiss::FrenetPath>& frenet_traj_list, fiss::Spline2D& cubic_spline)
+int FrenetOptimalTrajectoryPlanner::calculateGlobalPaths(std::vector<FrenetPath>& frenet_traj_list, Spline2D& cubic_spline)
 {
   int num_checks = 0;
   for (int i = 0; i < frenet_traj_list.size(); i++)
@@ -354,12 +354,12 @@ int FrenetOptimalTrajectoryPlanner::calculateGlobalPaths(std::vector<fiss::Frene
     // calculate global positions
     for (int j = 0; j < frenet_traj_list[i].s.size(); j++)
     {
-      fiss::VehicleState state = cubic_spline.calculatePosition(frenet_traj_list[i].s[j]);
+      VehicleState state = cubic_spline.calculatePosition(frenet_traj_list[i].s[j]);
       double i_yaw = cubic_spline.calculateYaw(frenet_traj_list[i].s[j]);
       const double di = frenet_traj_list[i].d[j];
       const double frenet_x = state.x + di * cos(i_yaw + M_PI / 2.0);
       const double frenet_y = state.y + di * sin(i_yaw + M_PI / 2.0);
-      if (!fiss::isLegal(frenet_x) || !fiss::isLegal(frenet_y))
+      if (!isLegal(frenet_x) || !isLegal(frenet_y))
       {
         break;
       }
@@ -384,7 +384,7 @@ int FrenetOptimalTrajectoryPlanner::calculateGlobalPaths(std::vector<fiss::Frene
     // calculate curvature
     for (int j = 0; j < frenet_traj_list[i].yaw.size() - 1; j++)
     {
-      double yaw_diff = fiss::unifyAngleRange(frenet_traj_list[i].yaw[j+1] - frenet_traj_list[i].yaw[j]);
+      double yaw_diff = unifyAngleRange(frenet_traj_list[i].yaw[j+1] - frenet_traj_list[i].yaw[j]);
       frenet_traj_list[i].c.emplace_back(yaw_diff / frenet_traj_list[i].ds[j]);
     }
 
@@ -442,7 +442,7 @@ bool FrenetOptimalTrajectoryPlanner::checkConstraints(FrenetPath& traj)
 }
 
 
-int FrenetOptimalTrajectoryPlanner::computeCosts(std::vector<fiss::FrenetPath>& frenet_trajs, const double curr_speed)
+int FrenetOptimalTrajectoryPlanner::computeCosts(std::vector<FrenetPath>& frenet_trajs, const double curr_speed)
 {
   int num_checks = 0;
   for (auto& traj : frenet_trajs)

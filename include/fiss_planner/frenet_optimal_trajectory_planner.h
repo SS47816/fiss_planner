@@ -74,14 +74,14 @@ class FrenetOptimalTrajectoryPlanner
 
   /* Public Functions */
   // Generate reference curve as the frenet s coordinate
-  std::pair<Path, Spline2D> generateReferenceCurve(const fiss::Lane& lane);
+  std::pair<Path, Spline2D> generateReferenceCurve(const Lane& lane);
 
   // Plan for the optimal trajectory
-  std::vector<fiss::FrenetPath> frenetOptimalPlanning(fiss::Spline2D& cubic_spline, const fiss::FrenetState& frenet_state, const int lane_id,
+  std::vector<FrenetPath> frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& frenet_state, const int lane_id,
                                                      const double left_width, const double right_width, const double current_speed, 
                                                      const autoware_msgs::DetectedObjectArray& obstacles, const bool check_collision, const bool use_async);
   
-  std::shared_ptr<std::vector<fiss::FrenetPath>> all_trajs_;
+  std::shared_ptr<std::vector<FrenetPath>> all_trajs_;
   std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> candidate_trajs_;
   FrenetPath best_traj_, prev_best_traj_;
   Eigen::Vector3i prev_best_idx_;
@@ -92,13 +92,13 @@ private:
   SATCollisionChecker sat_collision_checker_;
 
   // Sample candidate trajectories
-  std::vector<fiss::FrenetPath> generateFrenetPaths(const fiss::FrenetState& frenet_state, const int lane_id,
+  std::vector<FrenetPath> generateFrenetPaths(const FrenetState& frenet_state, const int lane_id,
                                                    const double left_bound, const double right_bound, const double current_speed);
 
   // Convert paths from frenet frame to gobal map frame
-  int calculateGlobalPaths(std::vector<fiss::FrenetPath>& frenet_traj_list, fiss::Spline2D& cubic_spline);
+  int calculateGlobalPaths(std::vector<FrenetPath>& frenet_traj_list, Spline2D& cubic_spline);
   // Compute costs for candidate trajectories
-  int computeCosts(std::vector<fiss::FrenetPath>& frenet_trajs, const double curr_speed);
+  int computeCosts(std::vector<FrenetPath>& frenet_trajs, const double curr_speed);
 
   // Check for vehicle kinematic constraints
   bool checkConstraints(FrenetPath& traj);
