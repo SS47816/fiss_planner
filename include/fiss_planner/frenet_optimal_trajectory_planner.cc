@@ -300,6 +300,7 @@ std::vector<FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths(cons
 
         // copy the longitudinal path over
         FrenetPath target_frenet_traj = frenet_traj;
+        target_frenet_traj.idx = Eigen::Vector3i(i, j, k);
 
         // start longitudinal state [s, s_d, s_dd]
         std::vector<double> start_s;
@@ -337,7 +338,6 @@ std::vector<FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths(cons
         target_frenet_traj.dyn_cost = settings_.k_jerk * (settings_.k_lon * jerk_cost_s + settings_.k_lat * jerk_cost_d);
         target_frenet_traj.final_cost = target_frenet_traj.fix_cost + target_frenet_traj.dyn_cost;
 
-        target_frenet_traj.idx = Eigen::Vector3i(i, j, k);
         frenet_trajs.emplace_back(target_frenet_traj);
       }
     }
@@ -447,23 +447,23 @@ int FrenetOptimalTrajectoryPlanner::computeCosts(std::vector<FrenetPath>& frenet
   int num_checks = 0;
   for (auto& traj : frenet_trajs)
   {
-    // // calculate jerk costs
-    // double jerk_s, jerk_d = 0.0;
-    // double jerk_sqr_s, jerk_sqr_d = 0.0;
-    // for (int i = 0; i < traj.t.size(); i++)
-    // {
-    //   // calculate total squared jerks
-    //   jerk_sqr_s += std::pow(traj.s_ddd[i]/settings_.max_jerk_s, 2);
-    //   jerk_s += std::abs(traj.s_ddd[i]/settings_.max_jerk_s);
-    //   jerk_sqr_d += std::pow(traj.d_ddd[i]/settings_.max_jerk_d, 2);
-    //   jerk_d += std::abs(traj.d_ddd[i]/settings_.max_jerk_d);
-    // }
+    // calculate jerk costs
+    double jerk_s, jerk_d = 0.0;
+    double jerk_sqr_s, jerk_sqr_d = 0.0;
+    for (int i = 0; i < traj.t.size(); i++)
+    {
+      // calculate total squared jerks
+      jerk_sqr_s += std::pow(traj.s_ddd[i]/settings_.max_jerk_s, 2);
+      jerk_s += std::abs(traj.s_ddd[i]/settings_.max_jerk_s);
+      jerk_sqr_d += std::pow(traj.d_ddd[i]/settings_.max_jerk_d, 2);
+      jerk_d += std::abs(traj.d_ddd[i]/settings_.max_jerk_d);
+    }
 
-    // const double jerk_cost_s = jerk_sqr_s/jerk_s;
-    // const double jerk_cost_d = jerk_sqr_d/jerk_d;
+    const double jerk_cost_s = jerk_sqr_s/jerk_s;
+    const double jerk_cost_d = jerk_sqr_d/jerk_d;
     
-    // traj.dyn_cost = settings_.k_jerk * (settings_.k_lon * jerk_cost_s + settings_.k_lat * jerk_cost_d);
-    // traj.final_cost = traj.fix_cost + traj.dyn_cost;
+    traj.dyn_cost = settings_.k_jerk * (settings_.k_lon * jerk_cost_s + settings_.k_lat * jerk_cost_d);
+    traj.final_cost = traj.fix_cost + traj.dyn_cost;
 
     num_checks++;
 

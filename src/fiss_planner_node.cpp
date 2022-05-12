@@ -45,6 +45,10 @@ bool USE_HEURISTIC;
 
 bool SETTINGS_UPDATED = false;
 
+int count = 0;
+int correct = 0;
+double rmse_dist, rmse_cost = 0.0;
+
 // Dynamic parameter server callback function
 void dynamicParamCallback(fiss_planner::fiss_planner_Config& config, uint32_t level)
 {
@@ -259,17 +263,19 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
   // Define ROI width for path sampling
   roi_boundaries_ = getSamplingWidthFromTargetLane(target_lane_id_, SETTINGS.vehicle_width, LANE_WIDTH, LEFT_LANE_WIDTH, RIGHT_LANE_WIDTH);
 
-  // Get the planning result 
-  const auto planning_results = fiss_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
-                                                                                      roi_boundaries_[0], roi_boundaries_[1], current_state_.v, 
-                                                                                      *obstacles, CHECK_COLLISION, USE_ASYNC, USE_HEURISTIC);
-  std::vector<FrenetPath> best_traj_list = planning_results.first;
-  publishStats(planning_results.second);
-  
   // Get the planning result (FOP)
   std::vector<FrenetPath> best_traj_list_fop = frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
                                                                                       roi_boundaries_[0], roi_boundaries_[1], current_state_.v, 
                                                                                       *obstacles, CHECK_COLLISION, USE_ASYNC);
+  // Find the best path from the all candidates (FOP)
+  FrenetPath best_traj_fop = selectLane(best_traj_list_fop, current_lane_id_);
+
+  // Get the planning result 
+  const auto planning_results = fiss_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
+                                                                    roi_boundaries_[0], roi_boundaries_[1], current_state_.v, 
+                                                                    *obstacles, CHECK_COLLISION, USE_ASYNC, USE_HEURISTIC);
+  std::vector<FrenetPath> best_traj_list = planning_results.first;
+  publishStats(planning_results.second);
   
   ROS_INFO("Local Planner: Frenet Optimal Planning Done");
   publishCandidateTrajs(fiss_planner_.all_trajs_);
@@ -282,16 +288,45 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
 
   // Find the best path from the all candidates 
   FrenetPath best_traj = selectLane(best_traj_list, current_lane_id_);
-  // Find the best path from the all candidates (FOP)
-  FrenetPath best_traj_fop = selectLane(best_traj_list_fop, current_lane_id_);
 
   // Compare the difference between the fiss and fop results
   if (true)
   {
     std::cout << "FISS vs FOP: " << std::endl;
-    const auto comp_results = comparePaths(best_traj, best_traj_fop);
-    std::cout << "Cost Difference: " << comp_results.first << std::endl;
-    std::cout << "L2 Distance: " << comp_results.second << std::endl;
+    std::cout << "FISS: idx = " << best_traj.idx(0) << " " << best_traj.idx(1) << " " << best_traj.idx(2) << std::endl;
+    std::cout << " FOP: idx = " << best_traj_fop.idx(0)  << " " << best_traj_fop.idx(1)  << " " << best_traj_fop.idx(2)  << std::endl;
+    
+    for (const auto& traj : fiss_planner_.all_trajs_)
+    {
+      if (traj.idx == best_traj_fop.idx)
+      {
+        count++;
+        std::cout << "FISS: fix_cost = " << best_traj.fix_cost << " dyn_cost = " << best_traj.dyn_cost << " est_cost = " << best_traj.est_cost << std::endl;
+        std::cout << " FOP: fix_cost = " << traj.fix_cost  << " dyn_cost = " << traj.dyn_cost  << std::endl;
+
+        if (best_traj.idx == traj.idx)
+        {
+          correct++;
+        }
+
+        double dist = 0.0;
+        for (int i = 0; i < 3; i++)
+        {
+          const int l = std::abs(best_traj.idx(i) - traj.idx(i));
+          if (l <= 100)
+          {
+            dist += std::pow(l, 2);
+          }
+        }
+        const double cost = best_traj.final_cost - traj.final_cost;
+        std::cout << "L2 Distance = " << std::sqrt(dist) << " Cost Difference = " << cost << std::endl;
+        rmse_dist += dist;
+        rmse_cost += cost * cost;
+
+        std::cout << "FISS vs FOP Average: " << count << " planning cycles" << std::endl;
+        std::cout << "Accuracy = " << 100.0*correct/count << " L2 RMSE = " << std::sqrt(rmse_dist/count) << " Cost RMSE = " << std::sqrt(rmse_cost/count) << std::endl;
+      }
+    }
   }
   
   ROS_INFO("Local Planner: Best trajs Selected");
