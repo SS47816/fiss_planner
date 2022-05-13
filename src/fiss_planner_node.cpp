@@ -46,8 +46,10 @@ bool USE_HEURISTIC;
 bool SETTINGS_UPDATED = false;
 
 int count = 0;
-int correct = 0;
+int wrong = 0;
+double cost_fiss, cost_fop = 0.0;
 double rmse_dist, rmse_cost = 0.0;
+std::vector<double> dists{0.0, 0.0, 0.0};
 
 // Dynamic parameter server callback function
 void dynamicParamCallback(fiss_planner::fiss_planner_Config& config, uint32_t level)
@@ -296,35 +298,43 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
     std::cout << "FISS: idx = " << best_traj.idx(0) << " " << best_traj.idx(1) << " " << best_traj.idx(2) << std::endl;
     std::cout << " FOP: idx = " << best_traj_fop.idx(0)  << " " << best_traj_fop.idx(1)  << " " << best_traj_fop.idx(2)  << std::endl;
     
-    for (const auto& traj : fiss_planner_.all_trajs_)
+    for (const auto& traj : *frenet_planner_.all_trajs_)
     {
-      if (traj.idx == best_traj_fop.idx)
+      if (traj.idx == best_traj.idx)
       {
         count++;
-        std::cout << "FISS: fix_cost = " << best_traj.fix_cost << " dyn_cost = " << best_traj.dyn_cost << " est_cost = " << best_traj.est_cost << std::endl;
-        std::cout << " FOP: fix_cost = " << traj.fix_cost  << " dyn_cost = " << traj.dyn_cost  << std::endl;
-
-        if (best_traj.idx == traj.idx)
-        {
-          correct++;
-        }
+        std::cout << "FISS: fix_cost = " << traj.fix_cost << " dyn_cost = " << traj.dyn_cost << " est_cost = " << traj.est_cost << std::endl;
+        std::cout << " FOP: fix_cost = " << best_traj_fop.fix_cost  << " dyn_cost = " << best_traj_fop.dyn_cost  << std::endl;
 
         double dist = 0.0;
         for (int i = 0; i < 3; i++)
         {
-          const int l = std::abs(best_traj.idx(i) - traj.idx(i));
+          const int l = std::abs(traj.idx(i) - best_traj_fop.idx(i));
           if (l <= 100)
           {
+            dists[i] += std::pow(l, 2);
             dist += std::pow(l, 2);
           }
         }
-        const double cost = best_traj.final_cost - traj.final_cost;
-        std::cout << "L2 Distance = " << std::sqrt(dist) << " Cost Difference = " << cost << std::endl;
-        rmse_dist += dist;
-        rmse_cost += cost * cost;
 
+        cost_fiss += traj.final_cost;
+        cost_fop += best_traj_fop.final_cost;
+        const double cost = traj.final_cost - best_traj_fop.final_cost;
+        std::cout << "L2 Distance = " << std::sqrt(dist) << " Cost Difference = " << cost << std::endl;
+
+        if (cost > 0.0)
+        {
+          wrong++;
+          rmse_dist += dist;
+          rmse_cost += cost * cost;
+        }
+        
         std::cout << "FISS vs FOP Average: " << count << " planning cycles" << std::endl;
-        std::cout << "Accuracy = " << 100.0*correct/count << " L2 RMSE = " << std::sqrt(rmse_dist/count) << " Cost RMSE = " << std::sqrt(rmse_cost/count) << std::endl;
+        std::cout << " L2 RMSE: d = " << std::sqrt(dists[0]/count) << " s = " << std::sqrt(dists[1]/count) 
+                  << " t = " << std::sqrt(dists[2]/count) << " Total = " << std::sqrt(rmse_dist/count) << std::endl;
+        std::cout << "Accuracy = " << 1.0*wrong/count << " Cost RMSE = " << std::sqrt(rmse_cost/count) << std::endl;
+        std::cout << "Average Cost: FISS = " << cost_fiss/count << " FOP = " << cost_fop/count << std::endl;
+        break;
       }
     }
   }

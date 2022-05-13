@@ -241,7 +241,7 @@ std::vector<FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths(cons
   std::vector<FrenetPath> frenet_trajs;
   std::vector<double> goal_ds;
 
-  const double delta_width = (left_bound - settings_.center_offset)/((settings_.num_width - 1)/2);
+  const double delta_width = (left_bound - settings_.center_offset)/(std::max(1, settings_.num_width - 1)/2.0);
   for (int i = 0; i < settings_.num_width; i++)  // left being positive
   {
     const double d = right_bound + i*delta_width;
@@ -249,7 +249,7 @@ std::vector<FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths(cons
     const double lat_cost = settings_.k_diff*std::pow(d - settings_.center_offset, 2)/lat_norm;
   
     // Sampling on the time dimension & generate d_t polynomials
-    const double delta_t = (settings_.max_t - settings_.min_t)/(settings_.num_t - 1);
+    const double delta_t = (settings_.max_t - settings_.min_t)/std::max(1, settings_.num_t - 1);
     for (int k = 0; k < settings_.num_t; k++)
     {
       const double T = settings_.min_t + k*delta_t;
@@ -292,7 +292,7 @@ std::vector<FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths(cons
       const double jerk_cost_d = jerk_sqr_d/jerk_d;
 
       // Sampling on the longitudial direction & generate longitudinal quartic polynomial
-      const double delta_v = (settings_.highest_speed - settings_.lowest_speed)/(settings_.num_speed - 1);
+      const double delta_v = (settings_.highest_speed - settings_.lowest_speed)/std::max(1, settings_.num_speed - 1);
       for (int j = 0; j < settings_.num_speed; j++)
       {
         const double v = settings_.lowest_speed + j*delta_v;
