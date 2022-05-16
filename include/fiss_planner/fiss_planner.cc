@@ -373,7 +373,7 @@ FissPlanner::sampleEndStates(const int lane_id, const double left_bound, const d
     {
       std::vector<FrenetPath> trajs_1d;
       const double v = settings_.lowest_speed + j*delta_v;
-      const double speed_cost = settings_.k_diff*pow((settings_.highest_speed - v)/settings_.highest_speed, 2);
+      const double speed_cost = settings_.k_diff*pow((settings_.highest_speed - v)/(settings_.highest_speed - settings_.lowest_speed), 2);
 
       // Sampling on the time dimension
       const double delta_t = (settings_.max_t - settings_.min_t)/std::max(1, settings_.num_t - 1);

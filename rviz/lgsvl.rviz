@@ -198,11 +198,11 @@ Visualization Manager:
     - Class: rviz/Group
       Displays:
         - Class: jsk_rviz_plugin/BoundingBoxArray
-          Enabled: false
+          Enabled: true
           Name: BoundingBoxArray
           Topic: /lgsvl_utils/ground_truth/jsk_bounding_boxes
           Unreliable: false
-          Value: false
+          Value: true
           alpha: 0.800000011920929
           color: 25; 255; 0
           coloring: Auto
@@ -210,18 +210,13 @@ Visualization Manager:
           only edge: false
           show coords: false
         - Class: rviz/MarkerArray
-          Enabled: true
+          Enabled: false
           Marker Topic: /lgsvl_utils/ground_truth/objects_markers
           Name: AutowareObjectMarkers
           Namespaces:
-            /lgsvl_utils/ground_truth/arrow_markers: true
-            /lgsvl_utils/ground_truth/box_markers: true
-            /lgsvl_utils/ground_truth/centroid_markers: true
-            /lgsvl_utils/ground_truth/hull_markers: true
-            /lgsvl_utils/ground_truth/label_markers: true
-            /lgsvl_utils/ground_truth/model_markers: true
+            {}
           Queue Size: 100
-          Value: true
+          Value: false
         - Class: rviz/Group
           Displays:
             - Alpha: 1

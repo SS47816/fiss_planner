@@ -296,7 +296,7 @@ std::vector<FrenetPath> FrenetOptimalTrajectoryPlanner::generateFrenetPaths(cons
       for (int j = 0; j < settings_.num_speed; j++)
       {
         const double v = settings_.lowest_speed + j*delta_v;
-        const double speed_cost = settings_.k_diff*pow((settings_.highest_speed - v)/settings_.highest_speed, 2);
+        const double speed_cost = settings_.k_diff*pow((settings_.highest_speed - v)/(settings_.highest_speed - settings_.lowest_speed), 2);
 
         // copy the longitudinal path over
         FrenetPath target_frenet_traj = frenet_traj;

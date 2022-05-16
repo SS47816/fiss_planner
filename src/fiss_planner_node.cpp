@@ -330,10 +330,26 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
         }
         
         std::cout << "FISS vs FOP Average: " << count << " planning cycles" << std::endl;
-        std::cout << " L2 RMSE: d = " << std::sqrt(dists[0]/count) << " s = " << std::sqrt(dists[1]/count) 
-                  << " t = " << std::sqrt(dists[2]/count) << " Total = " << std::sqrt(rmse_dist/count) << std::endl;
-        std::cout << "Accuracy = " << 1.0*wrong/count << " Cost RMSE = " << std::sqrt(rmse_cost/count) << std::endl;
-        std::cout << "Average Cost: FISS = " << cost_fiss/count << " FOP = " << cost_fop/count << std::endl;
+        std::cout << "Average Cost: FISS = " << cost_fiss/count 
+                  << " FOP = " << cost_fop/count 
+                  << " Cost RMSE = " << std::sqrt(rmse_cost/count)
+                  << std::endl;
+
+        std::cout << " L2 RMSE: d = " << std::sqrt(dists[0]/count) 
+                  << " s = " << std::sqrt(dists[1]/count) 
+                  << " t = " << std::sqrt(dists[2]/count) 
+                  << " Total = " << std::sqrt(rmse_dist/count) 
+                  << std::endl;
+        
+        const double diag_dist = std::sqrt(std::pow(SETTINGS.num_width, 2) + std::pow(SETTINGS.num_speed, 2) + std::pow(SETTINGS.num_t, 2));
+        std::cout << "%L2 RMSE: d = " << std::sqrt(dists[0]/count/SETTINGS.num_width) 
+                  << " s = " << std::sqrt(dists[1]/count/SETTINGS.num_speed) 
+                  << " t = " << std::sqrt(dists[2]/count/SETTINGS.num_t) 
+                  << " Total = " << std::sqrt(rmse_dist/count/diag_dist) 
+                  << std::endl;
+        std::cout << "Accuracy = " << 100.0 - 100.0*wrong/count 
+                  << std::endl;
+        
         break;
       }
     }
