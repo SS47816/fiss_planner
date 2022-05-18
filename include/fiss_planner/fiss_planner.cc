@@ -124,25 +124,25 @@ void FissPlanner::TestResult::printSummary()
   std::cout << "Step 5 : Checked Collisions for  " << this->numbers[4] << " PolygonPairs in " << this->time[4] << " ms" << std::endl;
   std::cout << "Total  : Planning Took           " << this->time[5] << " ms (or " << 1000/this->time[5] << " Hz)" << std::endl;
 
-  // Print Summary for Best Case performance
-  std::cout << "FISS " << std::endl;
-  std::cout << "Summary: Best Case Performance  (" << count << " iterations so far)" << std::endl;
-  std::cout << "Step 1 : Predicted               " << this->numbers_min[0] << " Trajectories in " << this->time_min[0] << " ms" << std::endl;
-  std::cout << "Step 2 : Generated               " << this->numbers_min[1] << " End States   in " << this->time_min[1] << " ms" << std::endl;
-  std::cout << "Step 3 : Generated & Evaluated   " << this->numbers_min[2] << " Trajectories in " << this->time_min[2] << " ms" << std::endl;
-  std::cout << "Step 4 : Validated               " << this->numbers_min[3] << " Trajectories in " << this->time_min[3] << " ms" << std::endl;
-  std::cout << "Step 5 : Checked Collisions for  " << this->numbers_min[4] << " PolygonPairs in " << this->time_min[4] << " ms" << std::endl;
-  std::cout << "Total  : Planning Took           " << this->time_min[5] << " ms (or " << 1000/this->time_min[5] << " Hz)" << std::endl;
+  // // Print Summary for Best Case performance
+  // std::cout << "FISS " << std::endl;
+  // std::cout << "Summary: Best Case Performance  (" << count << " iterations so far)" << std::endl;
+  // std::cout << "Step 1 : Predicted               " << this->numbers_min[0] << " Trajectories in " << this->time_min[0] << " ms" << std::endl;
+  // std::cout << "Step 2 : Generated               " << this->numbers_min[1] << " End States   in " << this->time_min[1] << " ms" << std::endl;
+  // std::cout << "Step 3 : Generated & Evaluated   " << this->numbers_min[2] << " Trajectories in " << this->time_min[2] << " ms" << std::endl;
+  // std::cout << "Step 4 : Validated               " << this->numbers_min[3] << " Trajectories in " << this->time_min[3] << " ms" << std::endl;
+  // std::cout << "Step 5 : Checked Collisions for  " << this->numbers_min[4] << " PolygonPairs in " << this->time_min[4] << " ms" << std::endl;
+  // std::cout << "Total  : Planning Took           " << this->time_min[5] << " ms (or " << 1000/this->time_min[5] << " Hz)" << std::endl;
 
-  // Print Summary for Worst Case performance
-  std::cout << "FISS " << std::endl;
-  std::cout << "Summary: Worst Case Performance (" << count << " iterations so far)" << std::endl;
-  std::cout << "Step 1 : Predicted               " << this->numbers_max[0] << " Trajectories in " << this->time_max[0] << " ms" << std::endl;
-  std::cout << "Step 2 : Generated               " << this->numbers_max[1] << " End States   in " << this->time_max[1] << " ms" << std::endl;
-  std::cout << "Step 3 : Generated & Evaluated   " << this->numbers_max[2] << " Trajectories in " << this->time_max[2] << " ms" << std::endl;
-  std::cout << "Step 4 : Validated               " << this->numbers_max[3] << " Trajectories in " << this->time_max[3] << " ms" << std::endl;
-  std::cout << "Step 5 : Checked Collisions for  " << this->numbers_max[4] << " PolygonPairs in " << this->time_max[4] << " ms" << std::endl;
-  std::cout << "Total  : Planning Took           " << this->time_max[5] << " ms (or " << 1000/this->time_max[5] << " Hz)" << std::endl;
+  // // Print Summary for Worst Case performance
+  // std::cout << "FISS " << std::endl;
+  // std::cout << "Summary: Worst Case Performance (" << count << " iterations so far)" << std::endl;
+  // std::cout << "Step 1 : Predicted               " << this->numbers_max[0] << " Trajectories in " << this->time_max[0] << " ms" << std::endl;
+  // std::cout << "Step 2 : Generated               " << this->numbers_max[1] << " End States   in " << this->time_max[1] << " ms" << std::endl;
+  // std::cout << "Step 3 : Generated & Evaluated   " << this->numbers_max[2] << " Trajectories in " << this->time_max[2] << " ms" << std::endl;
+  // std::cout << "Step 4 : Validated               " << this->numbers_max[3] << " Trajectories in " << this->time_max[3] << " ms" << std::endl;
+  // std::cout << "Step 5 : Checked Collisions for  " << this->numbers_max[4] << " PolygonPairs in " << this->time_max[4] << " ms" << std::endl;
+  // std::cout << "Total  : Planning Took           " << this->time_max[5] << " ms (or " << 1000/this->time_max[5] << " Hz)" << std::endl;
 
   // Print Summary for average performance
   std::cout << "FISS " << std::endl;

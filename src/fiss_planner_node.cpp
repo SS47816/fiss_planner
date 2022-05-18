@@ -310,11 +310,8 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
         for (int i = 0; i < 3; i++)
         {
           const int l = std::abs(traj.idx(i) - best_traj_fop.idx(i));
-          if (l <= 100)
-          {
-            dists[i] += std::pow(l, 2);
-            dist += std::pow(l, 2);
-          }
+          dists[i] += std::pow(l, 2);
+          dist += std::pow(l, 2);
         }
 
         cost_fiss += traj.final_cost;
@@ -332,6 +329,7 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
         std::cout << "FISS vs FOP Average: " << count << " planning cycles" << std::endl;
         std::cout << "Average Cost: FISS = " << cost_fiss/count 
                   << " FOP = " << cost_fop/count 
+                  << " Cost MAE = " << (cost_fiss - cost_fop)/count 
                   << " Cost RMSE = " << std::sqrt(rmse_cost/count)
                   << std::endl;
 
