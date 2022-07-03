@@ -22,8 +22,9 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <nav_msgs/Path.h>
+
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/Twist.h>
 
 #include <autoware_msgs/VehicleCmd.h>
 #include <autoware_msgs/DetectedObjectArray.h>
@@ -59,6 +60,7 @@ class FissPlannerNode
   double map_height_;
 
   // Control outputs
+  double speed_;
   double acceleration_;
   double steering_angle_;
 
@@ -93,6 +95,7 @@ class FissPlannerNode
   ros::Publisher candidate_paths_pub;
   ros::Publisher obstacles_pub;
   ros::Publisher vehicle_cmd_pub;
+  ros::Publisher twist_cmd_pub;
 
   // ROS
   ros::NodeHandle nh;
@@ -105,6 +108,7 @@ class FissPlannerNode
 
   // Functions for subscribing
   void laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path);
+  // void laneInfoCallback(const geometry_msgs::PoseArray::ConstPtr& global_path);
   void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
   void obstaclesCallback(const autoware_msgs::DetectedObjectArray::ConstPtr& input_obstacles);
 
@@ -116,7 +120,7 @@ class FissPlannerNode
   void publishSampleSpace(const Path& ref_path);
   void publishVisTraj(const Path& current_traj, const FrenetPath& next_traj);
   void publishCandidateTrajs(const std::vector<FrenetPath>& candidate_trajs);
-  void publishVehicleCmd(const double accel, const double angle);
+  void publishVehicleCmd(const double speed, const double accel, const double angle);
 
   // Planner Helper Functions
   bool feedWaypoints();

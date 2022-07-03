@@ -123,6 +123,7 @@ FissPlannerNode::FissPlannerNode() : tf_listener(tf_buffer)
   std::string final_traj_topic;
   std::string candidate_trajs_topic;
   std::string vehicle_cmd_topic;
+  std::string twist_cmd_topic;
 
   ros::NodeHandle private_nh("~");
   f = boost::bind(&dynamicParamCallback, _1, _2);
@@ -139,6 +140,7 @@ FissPlannerNode::FissPlannerNode() : tf_listener(tf_buffer)
   ROS_ASSERT(private_nh.getParam("final_traj_topic", final_traj_topic));
   ROS_ASSERT(private_nh.getParam("candidate_trajs_topic", candidate_trajs_topic));
   ROS_ASSERT(private_nh.getParam("vehicle_cmd_topic", vehicle_cmd_topic));
+  ROS_ASSERT(private_nh.getParam("twist_cmd_topic", twist_cmd_topic));
 
   // Instantiate FissPlanner
   frenet_planner_ = FissPlanner(SETTINGS);
@@ -155,7 +157,8 @@ FissPlannerNode::FissPlannerNode() : tf_listener(tf_buffer)
   final_traj_pub = nh.advertise<visualization_msgs::Marker>(final_traj_topic, 1);
   candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>(candidate_trajs_topic, 1);
   vehicle_cmd_pub = nh.advertise<autoware_msgs::VehicleCmd>(vehicle_cmd_topic, 1);
-  obstacles_pub = nh.advertise<autoware_msgs::DetectedObjectArray>("local_planner/objects", 1);
+  twist_cmd_pub = nh.advertise<geometry_msgs::Twist>(twist_cmd_topic, 1);
+  // obstacles_pub = nh.advertise<autoware_msgs::DetectedObjectArray>("local_planner/objects", 1);
 
   // Initializing states
   regenerate_flag_ = false;
@@ -168,6 +171,12 @@ void FissPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& global_pa
   lane_ = Lane(global_path, LANE_WIDTH/2, LANE_WIDTH/2, LANE_WIDTH/2 + LEFT_LANE_WIDTH, LANE_WIDTH/2 + RIGHT_LANE_WIDTH);
   ROS_INFO("Local Planner: Lane Info Received, with %d points, filtered to %d points", int(lane_.points.size()), int(lane_.points.size()));
 }
+
+// void FissPlannerNode::laneInfoCallback(const geometry_msgs::PoseArray::ConstPtr& global_path)
+// {
+//   lane_ = Lane(global_path, LANE_WIDTH/2, LANE_WIDTH/2, LANE_WIDTH/2 + LEFT_LANE_WIDTH, LANE_WIDTH/2 + RIGHT_LANE_WIDTH);
+//   ROS_INFO("Local Planner: Lane Info Received, with %d points, filtered to %d points", int(lane_.points.size()), int(lane_.points.size()));
+// }
 
 // Update vehicle current state from the tf transform
 void FissPlannerNode::odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg)
@@ -206,7 +215,7 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
   
   auto obstacles = boost::make_shared<autoware_msgs::DetectedObjectArray>();
   transformObjects(*obstacles, *input_obstacles);
-  obstacles_pub.publish(*obstacles);
+  // obstacles_pub.publish(*obstacles);
 
   // Check if all required data are in position
   if (obstacles->objects.empty())
@@ -438,7 +447,7 @@ void FissPlannerNode::publishEmptyTrajsAndStop()
   publishRefSpline(Path());
   publishCurrTraj(Path());
   publishNextTraj(FrenetPath());
-  publishVehicleCmd(-1.0, 0.0);
+  publishVehicleCmd(0.0, -1.0, 0.0);
 }
 
 // Update the vehicle front axle state (used in odomcallback)
@@ -768,18 +777,19 @@ void FissPlannerNode::concatPath(const FrenetPath& next_traj, const int traj_max
   if (!curr_trajectory_.x.empty() && !curr_trajectory_.y.empty())
   {
     // Calculate steering angle
+    std::cout << "###################### curr_trajectory_ is not empty ###########################" << std::endl;
     updateVehicleFrontAxleState();
     const int next_frontlink_wp_id = nextWaypoint(frontaxle_state_, curr_trajectory_);
     // Calculate Control Outputs
     if (calculateControlOutput(next_frontlink_wp_id, frontaxle_state_))
     {
       // Publish steering angle
-      publishVehicleCmd(acceleration_, steering_angle_);
+      publishVehicleCmd(speed_, acceleration_, steering_angle_);
     }
     else
     {
       ROS_ERROR("Local Planner: No output steering angle");
-      publishVehicleCmd(-1.0, 0.0); // Publish empty control output
+      publishVehicleCmd(0.0, -1.0, 0.0); // Publish empty control output
     }
 
     const int next_wp_id = nextWaypoint(current_state_, curr_trajectory_);
@@ -807,7 +817,7 @@ bool FissPlannerNode::calculateControlOutput(const int next_wp_id, const Vehicle
   if (curr_trajectory_.x.size() < wp_id + 2)
   {
     ROS_ERROR("Local Planner: Output Path Too Short! No output steering angle");
-    // std::cout << "Output Path Size: " << curr_trajectory_.x.size() << " Required Size: " << wp_id + 2 << std::endl;
+    std::cout << "Output Path Size: " << curr_trajectory_.x.size() << " Required Size: " << wp_id + 2 << std::endl;
     regenerate_flag_ = true;
     return false;
   }
@@ -851,7 +861,8 @@ bool FissPlannerNode::calculateControlOutput(const int next_wp_id, const Vehicle
     steering_angle_ = limitWithinRange(steering_angle_, -Vehicle::max_steering_angle(), Vehicle::max_steering_angle());
 
     // Calculate accelerator output
-    acceleration_ = pid_.calculate(curr_trajectory_.v[wp_id], current_state_.v);
+    speed_ = curr_trajectory_.v[wp_id];
+    acceleration_ = pid_.calculate(speed_, current_state_.v);
 
     ROS_INFO("Controller: Traget Speed: %2f, Current Speed: %2f, Acceleration: %.2f ", curr_trajectory_.v[wp_id], current_state_.v, acceleration_);
     ROS_INFO("Controller: Cross Track Error: %2f, Yaw Diff: %2f, SteeringAngle: %.2f ", direction*x, rad2deg(delta_yaw), rad2deg(steering_angle_));
@@ -860,13 +871,18 @@ bool FissPlannerNode::calculateControlOutput(const int next_wp_id, const Vehicle
 }
 
 // Publish the resulted steering angle (Stanley)
-void FissPlannerNode::publishVehicleCmd(const double accel, const double angle)
+void FissPlannerNode::publishVehicleCmd(const double speed, const double accel, const double angle)
 {
   autoware_msgs::VehicleCmd vehicle_cmd;
   vehicle_cmd.twist_cmd.twist.linear.x = accel/Vehicle::max_acceleration();  // [pct]
-  vehicle_cmd.twist_cmd.twist.angular.z = angle;                                  // [rad]
+  vehicle_cmd.twist_cmd.twist.angular.z = angle;                             // [rad]
   vehicle_cmd.gear_cmd.gear = autoware_msgs::Gear::DRIVE;
   vehicle_cmd_pub.publish(vehicle_cmd);
+
+  geometry_msgs::Twist twist_cmd;
+  twist_cmd.linear.x = speed;
+  twist_cmd.angular.z = steering_angle_;
+  twist_cmd_pub.publish(twist_cmd);
 }
 
 } // namespace fiss

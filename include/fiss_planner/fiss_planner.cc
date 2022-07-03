@@ -259,7 +259,7 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
     timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
     // ################################ Validation Process #####################################
-    std::cout << "fiss: Validating Candiate Trajectory" << std::endl;
+    // std::cout << "fiss: Validating Candiate Trajectory" << std::endl;
     
     if (!candidate_trajs_.empty())
     {
@@ -293,7 +293,7 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
       {
         best_traj_found = true;
         best_traj_ = std::move(candidate_traj);
-        std::cout << "fiss: Best Traj Found" << std::endl;
+        // std::cout << "fiss: Best Traj Found" << std::endl;
         break;
       }
     }
