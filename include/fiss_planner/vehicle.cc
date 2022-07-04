@@ -13,11 +13,11 @@ namespace fiss
 {
   Eigen::Vector3d Vehicle::bbox_size()
   {
-    return Eigen::Vector3d{5.0, 2.0, 2.0};
+    return Eigen::Vector3d{1.85, 1.4, 1.8};
   };
   Eigen::Vector3d Vehicle::bbox_center()
   {
-    return Eigen::Vector3d{5.0, 2.0, 2.0};
+    return Eigen::Vector3d{1.85, 1.4, 1.8};
   };
   std::vector<Eigen::Vector3d> Vehicle::footprint()
   {
@@ -25,9 +25,9 @@ namespace fiss
     
     return std::vector<Eigen::Vector3d>{};
   }
-  double Vehicle::L() { return 2.75; };
-  double Vehicle::Lf() { return 1.25; };
-  double Vehicle::Lr() { return 1.5; };
+  double Vehicle::L() { return 1.05; };
+  double Vehicle::Lf() { return 0.65; };
+  double Vehicle::Lr() { return 0.4; };
 
   double Vehicle::max_speed() { return kph2mps(100); };
   double Vehicle::max_acceleration() { return max_speed()/10.0; };
