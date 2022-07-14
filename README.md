@@ -1,5 +1,5 @@
 # FISS Planner
-## FISS Planner: A General Trajectory Planning Framework using Fast Iterative Search and Sampling Strategy for Autonomous Driving
+## [RA-L 2022] FISS: A Trajectory Planning Framework using Fast Iterative Search and Sampling Strategy for Autonomous Driving
 
 [![CodeFactor](https://www.codefactor.io/repository/github/ss47816/lgsvl_utils/badge)](https://www.codefactor.io/repository/github/ss47816/fiss_planner)
 ![Code Grade](https://api.codiga.io/project/31518/status/svg)
@@ -11,7 +11,9 @@
 ![ROS](https://img.shields.io/badge/Tools-ROS-informational?style=flat&logo=ROS&logoColor=white&color=2bbc8a)
 ![C++](https://img.shields.io/badge/Code-C++-informational?style=flat&logo=c%2B%2B&logoColor=white&color=2bbc8a)
 
-This is an improved framework based on the framework used in [`frenet_optimal_planner`](https://github.com/SS47816/frenet_optimal_planner). We utilize historical planning results as prior information in heuristics and introduce an iterative search-generate-evaluate strategy to look for the optimal trajectory candidate. Compared to the current frameworks, our method can significantly reduce the number of computationally expensive operations spent during the planning and achieve 2-6 times faster.
+This is an improved framework based on the framework used in [`frenet_optimal_planner`](https://github.com/SS47816/frenet_optimal_planner). We utilize historical planning results as prior information in heuristics and introduce an iterative search-generate-evaluate strategy to look for the optimal trajectory candidate. Compared to the current frameworks, our method can significantly reduce the number of computationally expensive operations spent during the planning and achieve 2-6 times faster. 
+
+_Our work has been accepted by RA-L 2022 and IROS 2022._
 
 ## Demo 
 ![cover_image](media/demo_1.gif)
@@ -70,6 +72,9 @@ Launch the Planner node by running:
 # Launch nodes
 roslaunch fiss_planner fiss_planner.launch
 ```
+
+### Update July 2022
+The latest instructions to run our code will be coming soon, since the LGSVL simulator is deprecated recently
 
 ## Contribution
 You are welcome contributing to the package by opening a pull-request
