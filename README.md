@@ -15,6 +15,18 @@ This is an improved framework based on the framework used in [`frenet_optimal_pl
 
 _Our work has been accepted by RA-L 2022 and IROS 2022._
 
+Concider citing our work:
+> @ARTICLE{9833251,  
+author={Sun, Shuo and Liu, Zhiyang and Yin, Huan and Ang, Marcelo H.},  
+journal={IEEE Robotics and Automation Letters},   
+title={FISS: A Trajectory Planning Framework Using Fast Iterative Search and Sampling Strategy for Autonomous Driving},   
+year={2022},  
+volume={7},  
+number={4},  
+pages={9985-9992},  
+doi={10.1109/LRA.2022.3191940}}
+
+
 ## Demo 
 ![cover_image](media/demo_1.gif)
 
