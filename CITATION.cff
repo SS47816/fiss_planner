@@ -1,0 +1,46 @@
+
+cff-version: 1.2.0
+message: >-
+  If you find this software useful, please cite our work as below.
+type: software
+authors:
+  - given-names: "Shuo"
+    family-names: "Sun"
+    email: "shuo.sun@u.nus.edu"
+    affiliation: "Department of Mechanical Engineering, National University of Singapore"
+    orcid: 'https://orcid.org/0000-0002-8432-0452'
+title: "FISS: A Trajectory Planning Framework using Fast Iterative Search and Sampling Strategy for Autonomous Driving"
+url: "https://github.com/SS47816/fiss_planner"
+version: 1.0.0
+date-released: 2022-02-24
+preferred-citation:
+  type: article
+  authors:
+  - given-names: "Shuo"
+    family-names: "Sun"
+    email: "shuo.sun@u.nus.edu"
+    affiliation: "Department of Mechanical Engineering, National University of Singapore"
+    orcid: "https://orcid.org/0000-0002-8432-0452"
+  - given-names: "Zhiyang"
+    family-names: "Liu"
+    email: "zhiyang@u.nus.edu"
+    affiliation: "Department of Mechanical Engineering, National University of Singapore"
+    orcid: "https://orcid.org/0000-0002-0336-0269"
+  - given-names: "Huan"
+    family-names: "Yin"
+    email: "eehyin@ust.hk"
+    affiliation: "Hong Kong University of Science and Technology"
+    orcid: "https://orcid.org/0000-0002-0872-8202"
+  - given-names: "Marcelo"
+    family-names: "Ang"
+    email: "mpeang@nus.edu.sg"
+    affiliation: "Department of Mechanical Engineering, National University of Singapore"
+    orcid: "https://orcid.org/0000-0001-8277-6408"
+  doi: "10.1109/LRA.2022.3191940"
+  journal: "IEEE Robotics and Automation Letters"
+  start: 9985 # First page number
+  end: 9992 # Last page number
+  title: "FISS: A Trajectory Planning Framework using Fast Iterative Search and Sampling Strategy for Autonomous Driving"
+  issue: 4
+  volume: 7
+  year: 2022
