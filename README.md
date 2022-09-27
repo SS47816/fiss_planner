@@ -25,7 +25,9 @@ pages={9985-9992},
 doi={10.1109/LRA.2022.3191940}}
 
 
-## Demo 
+## Video
+<a href="https://youtu.be/jzRzVJsofPU" target="_blank"><img src="media/video_cover.png" alt="video" width="640" height="360" border="10" /></a>
+
 ![cover_image](media/demo_1.gif)
 
 ## Performance (Planning Frequency in Hz)
