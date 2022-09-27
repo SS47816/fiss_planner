@@ -13,7 +13,7 @@
 
 This is an improved framework based on the framework used in [`frenet_optimal_planner`](https://github.com/SS47816/frenet_optimal_planner). We utilize historical planning results as prior information in heuristics and introduce an iterative search-generate-evaluate strategy to look for the optimal trajectory candidate. Compared to the current frameworks, our method can significantly reduce the number of computationally expensive operations spent during the planning and achieve 2-6 times faster. 
 
-_Our work has been accepted by RA-L 2022 and IROS 2022._
+_[Our paper](https://doi.org/10.1109/LRA.2022.3191940) has been accepted by RA-L 2022 and IROS 2022._
 > @ARTICLE{Sun_FISS_A_Trajectory_2022,  
 author={Sun, Shuo and Liu, Zhiyang and Yin, Huan and Ang, Marcelo H.},  
 journal={IEEE Robotics and Automation Letters},   
