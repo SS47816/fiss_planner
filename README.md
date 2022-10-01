@@ -64,14 +64,15 @@ Our package is only based on standard ROS pkgs, with no other external dependenc
 ## Installation
 Clone the repo and install dependencies:
 ```bash
-# clone the repo
+# clone the repo into your catkin workspace (assuming ~/catkin_ws here)
+cd ~/catkin_ws/src
 git clone https://github.com/SS47816/fiss_planner.git
-cd fiss_planner
+cd ..
 
 # install dependencies
 rosdep install --from-paths src --ignore-src -r -y
 
-# build using `catkin_make` , or you can build with `catkin build`
+# build using `catkin_make` (or you can also build with `catkin build`)
 catkin_make
 # source 
 source devel/setup.bash
