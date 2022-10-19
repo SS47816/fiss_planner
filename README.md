@@ -33,19 +33,6 @@ doi={10.1109/LRA.2022.3191940}}
 ## Updates
 * [19 Oct 2022] Major updates in the documentation. Now you should be able use this repo **out-of-the box**.
 
-## Performance (Planning Frequency in Hz)
-
-| # of Trajectory Samples | FOP  | FOP* | FOP Improved | FOP Improved* | FISS  |   FISS*   |
-| :---------------------: | :--: | :--: | :----------: | :-----------: | :---: | :-------: |
-|           100           | 9.2  | 33.0 |     84.2     |     94.2      | 221.1 | **241.1** |
-|           250           | 3.2  | 15.0 |     42.8     |     51.5      | 199.9 | **207.0** |
-|           500           | 1.5  | 7.7  |     24.6     |     32.5      | 137.6 | **146.9** |
-|          1000           | 0.8  | 3.8  |     16.2     |     18.1      | 97.6  | **98.3**  |
-
-All Results above are obtained on an Intel i7-8700K CPU with 6 cores @3.70 GHz and 16 GB RAM
-
-\* are using Asynchronous collision checking module (with `use_async = True` in settings)
-
 ## Dependencies
 
 Our package is only based on standard ROS pkgs, with no other external dependencies:
