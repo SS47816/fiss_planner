@@ -1,17 +1,8 @@
 <?xml version="1.0"?>
 <launch>
 
-  <!-- lanelet2 Global Planner -->
-  <node pkg="mission_planner" type="mission_planner" name="mission_planner" output="screen">
-    <param name="map_frame"                   value="map" />
-    <param name="base_link_frame"             value="base_link" />
-    <remap from="~input/vector_map"           to="/lanelet_map_bin" />
-    <remap from="~input/goal_pose"            to="/move_base_simple/goal" />
-    <remap from="~input/checkpoint"           to="/move_base_simple/fake_goal" />
-    <remap from="~output/route"               to="/planning/mission_planning/route" />
-    <remap from="~debug/route_marker"         to="/planning/mission_planning/route_marker" />
-    <remap from="~output/global_path"         to="/planning/mission_planning/global_path" />
-  </node>
+  <!-- Global Planner -->
+  <include file="$(find fiss_planner)/launch/global_planner.launch" />
 
   <!-- Local Planner -->
   <node name="fiss_planner_node" pkg="fiss_planner" type="fiss_planner_node" output="screen">
@@ -28,9 +19,6 @@
     <param name="candidate_trajs_topic"         value="local_planner/candidate_trajs"/>
     <param name="vehicle_cmd_topic"             value="auto_vehicle_cmd"/>
   </node>
-
-  <!-- Autoware Object Visualizer -->
-  <node ns="local_planner" pkg="lgsvl_utils" type="detected_objects_visualizer" name="autoware_objects_visualizer" output="log" respawn="true" />
 
   <!-- Dynamic Reconfigure GUI -->
   <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" output="screen" />
