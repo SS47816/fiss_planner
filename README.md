@@ -30,6 +30,9 @@ doi={10.1109/LRA.2022.3191940}}
 
 ![cover_image](media/demo_1.gif)
 
+## Updates
+* [19 Oct 2022] Major updates in the documentation. Now you should be able use this repo **out-of-the box**.
+
 ## Performance (Planning Frequency in Hz)
 
 | # of Trajectory Samples | FOP  | FOP* | FOP Improved | FOP Improved* | FISS  |   FISS*   |
@@ -63,10 +66,16 @@ Our package is only based on standard ROS pkgs, with no other external dependenc
 
 ## Installation
 To use this package, you will need to create a `catkin_ws` first. Details please see the [ROS official tutorial](http://wiki.ros.org/catkin/Tutorials/create_a_workspace).
+
 ```bash
-# clone the repo into your catkin workspace (assuming ~/catkin_ws here)
+# locate your catkin workspace (assuming ~/catkin_ws here)
 cd ~/catkin_ws/src
+
+# clone the lgsvl_utils repo so that you can use this planner with the lgsvl simulator
+git clone https://github.com/SS47816/lgsvl_utils.git
+# clone this repo
 git clone https://github.com/SS47816/fiss_planner.git
+
 cd ..
 
 # install dependencies
@@ -79,12 +88,18 @@ source devel/setup.bash
 ```
 
 ## Usage
-
-Launch the Planner node by running:
-```bash
-# Launch nodes
-roslaunch fiss_planner fiss_planner.launch
-```
+1. Install the LGSVL simulator by following this [guide](https://www.svlsimulator.com/)
+2. Set up your LGSVL simulator and launch the `lgsvl_utils` nodes by following the [guide](https://github.com/SS47816/lgsvl_utils#usage)
+3. Launch the FISS planner nodes by running:
+    ```bash
+    # Launch nodes
+    roslaunch fiss_planner fiss_planner.launch
+    ```
+    The local planner is now waiting for the global route to be published so that it can start planning.
+4. You may adjust any config parameters you like in the `dynamic_reconfigure` window. 
+5. In the RVIZ window, use the `2D Nav Goal` tool to selet a reachable goal point on the road as the global goal. The global planner will immediately plan a global route for you. And you will soon see the local planner starts planning. 
+6. Press the green `A` button on your joystick to enter the autonomous mode.
+7. Now you should be able to see your ego vehicle moving. Have fun!
 
 ### Update July 2022
 The latest instructions to run our code will be coming soon, since the LGSVL simulator is deprecated recently
