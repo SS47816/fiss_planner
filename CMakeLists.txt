@@ -10,14 +10,14 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
+  tf
+  tf2_ros
   std_msgs
   nav_msgs
   geometry_msgs
   autoware_msgs
   visualization_msgs
   dynamic_reconfigure
-  tf
-  tf2_ros
 )
 
 ## System dependencies are found with CMake's conventions
