@@ -62,7 +62,7 @@ Our package is only based on standard ROS pkgs, with no other external dependenc
   * dynamic_reconfigure
 
 ## Installation
-Clone the repo and install dependencies:
+To use this package, you will need to create a `catkin_ws` first. Details please see the [ROS official tutorial](http://wiki.ros.org/catkin/Tutorials/create_a_workspace).
 ```bash
 # clone the repo into your catkin workspace (assuming ~/catkin_ws here)
 cd ~/catkin_ws/src
@@ -72,7 +72,7 @@ cd ..
 # install dependencies
 rosdep install --from-paths src --ignore-src -r -y
 
-# build using `catkin_make` (or you can also build with `catkin build`)
+# build
 catkin_make
 # source 
 source devel/setup.bash
