@@ -14,16 +14,17 @@
 This is an improved framework based on the framework used in [`frenet_optimal_planner`](https://github.com/SS47816/frenet_optimal_planner). We utilize historical planning results as prior information in heuristics and introduce an iterative search-generate-evaluate strategy to look for the optimal trajectory candidate. Compared to the current frameworks, our method can significantly reduce the number of computationally expensive operations spent during the planning and achieve 2-6 times faster. 
 
 _[Our paper](https://doi.org/10.1109/LRA.2022.3191940) has been accepted by RA-L 2022 and IROS 2022._
-> @ARTICLE{Sun_FISS_A_Trajectory_2022,  
+```bibtex
+@article{Sun_FISS_A_Trajectory_2022,  
 author={Sun, Shuo and Liu, Zhiyang and Yin, Huan and Ang, Marcelo H.},  
 journal={IEEE Robotics and Automation Letters},   
 title={FISS: A Trajectory Planning Framework Using Fast Iterative Search and Sampling Strategy for Autonomous Driving},   
 year={2022},  
 volume={7},  
 number={4},  
-pages={9985-9992},  
+pages={9985-9992},
 doi={10.1109/LRA.2022.3191940}}
-
+```
 
 ## Video
 <a href="https://youtu.be/jzRzVJsofPU" target="_blank"><img src="media/video_cover.png" alt="video" width="640" height="360" border="10" /></a>
