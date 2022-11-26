@@ -7,9 +7,9 @@
   <!-- Local Planner -->
   <node name="fiss_planner_node" pkg="fiss_planner" type="fiss_planner_node" output="screen">
     <!-- Input Topic Names -->
-    <param name="odom_topic"                    value="carla/ego_vehicle/odometry"/>
-    <param name="obstacles_topic"               value="planning/ground_truth/objects"/>
-    <param name="lane_info_topic"               value="planning/reference_lanes"/>
+    <param name="odom_topic"                    value="simulator/ground_truth/odom"/>
+    <param name="obstacles_topic"               value="lgsvl_utils/ground_truth/objects"/>
+    <param name="lane_info_topic"               value="planning/mission_planning/global_path"/>
     <!-- Output Topic Names -->
     <param name="ref_path_topic"                value="local_planner/ref_path"/>
     <param name="curr_traj_topic"               value="local_planner/current_trajectory"/>
