@@ -112,51 +112,51 @@ void dynamicParamCallback(fiss_planner::fiss_planner_Config& config, uint32_t le
 FissPlannerNode::FissPlannerNode() : tf_listener(tf_buffer)
 {
   // topics
-  std::string odom_topic;
-  std::string lane_info_topic;
-  std::string obstacles_topic;
+  // std::string odom_topic;
+  // std::string lane_info_topic;
+  // std::string obstacles_topic;
 
-  std::string ref_path_topic;
-  std::string curr_traj_topic;
-  std::string next_traj_topic;
-  std::string sample_space_topic;
-  std::string final_traj_topic;
-  std::string candidate_trajs_topic;
-  std::string vehicle_cmd_topic;
+  // std::string ref_path_topic;
+  // std::string curr_traj_topic;
+  // std::string next_traj_topic;
+  // std::string sample_space_topic;
+  // std::string final_traj_topic;
+  // std::string candidate_trajs_topic;
+  // std::string vehicle_cmd_topic;
 
   ros::NodeHandle private_nh("~");
   f = boost::bind(&dynamicParamCallback, _1, _2);
   server.setCallback(f);
 
   // Hyperparameters from launch file
-  ROS_ASSERT(private_nh.getParam("odom_topic", odom_topic));
-  ROS_ASSERT(private_nh.getParam("lane_info_topic", lane_info_topic));
-  ROS_ASSERT(private_nh.getParam("obstacles_topic", obstacles_topic));
-  ROS_ASSERT(private_nh.getParam("ref_path_topic", ref_path_topic));
-  ROS_ASSERT(private_nh.getParam("curr_traj_topic", curr_traj_topic));
-  ROS_ASSERT(private_nh.getParam("next_traj_topic", next_traj_topic));
-  ROS_ASSERT(private_nh.getParam("sample_space_topic", sample_space_topic));
-  ROS_ASSERT(private_nh.getParam("final_traj_topic", final_traj_topic));
-  ROS_ASSERT(private_nh.getParam("candidate_trajs_topic", candidate_trajs_topic));
-  ROS_ASSERT(private_nh.getParam("vehicle_cmd_topic", vehicle_cmd_topic));
+  // ROS_ASSERT(private_nh.getParam("odom_topic", odom_topic));
+  // ROS_ASSERT(private_nh.getParam("lane_info_topic", lane_info_topic));
+  // ROS_ASSERT(private_nh.getParam("obstacles_topic", obstacles_topic));
+  // ROS_ASSERT(private_nh.getParam("ref_path_topic", ref_path_topic));
+  // ROS_ASSERT(private_nh.getParam("curr_traj_topic", curr_traj_topic));
+  // ROS_ASSERT(private_nh.getParam("next_traj_topic", next_traj_topic));
+  // ROS_ASSERT(private_nh.getParam("sample_space_topic", sample_space_topic));
+  // ROS_ASSERT(private_nh.getParam("final_traj_topic", final_traj_topic));
+  // ROS_ASSERT(private_nh.getParam("candidate_trajs_topic", candidate_trajs_topic));
+  // ROS_ASSERT(private_nh.getParam("vehicle_cmd_topic", vehicle_cmd_topic));
 
   // Instantiate FissPlanner
   frenet_planner_ = FissPlanner(SETTINGS);
 
   // Subscribe & Advertise
-  odom_sub = nh.subscribe(odom_topic, 1, &FissPlannerNode::odomCallback, this);
-  lane_info_sub = nh.subscribe(lane_info_topic, 1, &FissPlannerNode::laneInfoCallback, this);
-  obstacles_sub = nh.subscribe(obstacles_topic, 1, &FissPlannerNode::obstaclesCallback, this);
+  odom_sub = nh.subscribe("carla/ego_vehicle/odometry", 1, &FissPlannerNode::odomCallback, this);
+  lane_info_sub = nh.subscribe("planning/reference_lanes", 1, &FissPlannerNode::laneInfoCallback, this);
+  obstacles_sub = nh.subscribe("planning/ground_truth/objects", 1, &FissPlannerNode::obstaclesCallback, this);
   
-  ref_path_pub = nh.advertise<nav_msgs::Path>(ref_path_topic, 1);
-  curr_traj_pub = nh.advertise<nav_msgs::Path>(curr_traj_topic, 1);
-  next_traj_pub = nh.advertise<nav_msgs::Path>(next_traj_topic, 1);
+  ref_path_pub = nh.advertise<nav_msgs::Path>("fiss_planner/ref_path", 1);
+  curr_traj_pub = nh.advertise<nav_msgs::Path>("fiss_planner/current_trajectory", 1);
+  next_traj_pub = nh.advertise<nav_msgs::Path>("fiss_planner/next_trajectory", 1);
 
-  sample_space_pub = nh.advertise<visualization_msgs::Marker>(sample_space_topic, 1);
-  final_traj_pub = nh.advertise<visualization_msgs::Marker>(final_traj_topic, 1);
-  candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>(candidate_trajs_topic, 1);
+  sample_space_pub = nh.advertise<visualization_msgs::Marker>("fiss_planner/sample_space", 1);
+  final_traj_pub = nh.advertise<visualization_msgs::Marker>("fiss_planner/final_trajectory", 1);
+  candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>("fiss_planner/candidate_trajs", 1);
 
-  vehicle_cmd_pub = nh.advertise<autoware_msgs::VehicleCmd>(vehicle_cmd_topic, 1);
+  vehicle_cmd_pub = nh.advertise<autoware_msgs::VehicleCmd>("auto_vehicle_cmd", 1);
   obstacles_pub = nh.advertise<autoware_msgs::DetectedObjectArray>("fiss_planner/objects", 1);
 
   run_time_pub = nh.advertise<std_msgs::Float32>("fiss_planner/run_time", 1);
@@ -170,9 +170,23 @@ FissPlannerNode::FissPlannerNode() : tf_listener(tf_buffer)
   pid_ = control::PID(0.1, Vehicle::max_acceleration(), Vehicle::max_deceleration(), PID_Kp, PID_Ki, PID_Kd);
 };
 
-void FissPlannerNode::laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path)
+void FissPlannerNode::laneInfoCallback(const autoware_msgs::LaneArray::ConstPtr& lanes_msg)
 {
-  lane_ = Lane(global_path, LANE_WIDTH/2, LANE_WIDTH/2, LANE_WIDTH/2 + LEFT_LANE_WIDTH, LANE_WIDTH/2 + RIGHT_LANE_WIDTH);
+  std::vector<nav_msgs::Path> reference_lines;
+  int lane_id = 0;
+  for (const auto& lane : lanes_msg->lanes)
+  {
+    nav_msgs::Path reference_line;
+    reference_line.header = lane.header;
+    for (const auto& waypoint : lane.waypoints)
+    {
+      reference_line.poses.emplace_back(waypoint.pose);
+    }
+
+    reference_lines.emplace_back(reference_line);
+  }
+  
+  lane_ = Lane(reference_lines[0], LANE_WIDTH/2, LANE_WIDTH/2, LANE_WIDTH/2 + LEFT_LANE_WIDTH, LANE_WIDTH/2 + RIGHT_LANE_WIDTH);
   ROS_INFO("Local Planner: Lane Info Received, with %d points, filtered to %d points", int(lane_.points.size()), int(lane_.points.size()));
 }
 
@@ -887,7 +901,7 @@ void FissPlannerNode::publishVehicleCmd(const double accel, const double angle)
 {
   autoware_msgs::VehicleCmd vehicle_cmd;
   vehicle_cmd.twist_cmd.twist.linear.x = accel/Vehicle::max_acceleration();  // [pct]
-  vehicle_cmd.twist_cmd.twist.angular.z = angle;                                  // [rad]
+  vehicle_cmd.twist_cmd.twist.angular.z = angle;                             // [rad]
   vehicle_cmd.gear_cmd.gear = autoware_msgs::Gear::DRIVE;
   vehicle_cmd_pub.publish(vehicle_cmd);
 }

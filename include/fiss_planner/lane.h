@@ -70,7 +70,7 @@ class Lane
  public:
   // Constructors
   Lane(){};
-  Lane(const nav_msgs::Path::ConstPtr& ref_path, const double left_width, const double right_width, const double far_left_width, const double far_right_width);
+  Lane(const nav_msgs::Path& ref_path, const double left_width, const double right_width, const double far_left_width, const double far_right_width);
   // Destructor
   virtual ~Lane() {};
   // Clear all contents
