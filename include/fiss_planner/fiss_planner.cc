@@ -210,14 +210,17 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
 
   /* --------------------------------- Construction Zone -------------------------------- */
-  // Clear the canidate trajectories from the last planning cycle
+  // Clear the candidate trajectories from the last planning cycle
   std::priority_queue<FrenetPath, std::vector<FrenetPath>, std::greater<std::vector<FrenetPath>::value_type>> empty;
   std::swap(candidate_trajs_, empty);
   all_trajs_.clear();
 
+  std::cout << "fiss: Searched through all trajectories, found no suitable candidate" << std::endl;
+
   // Initialize start state and obstacle trajectories
   start_state_ = start_state;
-  const auto obstacle_trajs = predictTrajectories(obstacles);
+  // const auto obstacle_trajs = predictTrajectories(obstacles);
+  const auto obstacle_trajs = getPredictedTrajectories(obstacles);
   numbers.emplace_back(obstacle_trajs.size());
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
   
@@ -707,6 +710,27 @@ std::vector<Path> FissPlanner::predictTrajectories(const autoware_msgs::Detected
       obstacle_traj.v.push_back(v);
     }
 
+    obstacle_trajs.emplace_back(obstacle_traj);
+  }
+
+  return obstacle_trajs;
+}
+
+std::vector<Path> FissPlanner::getPredictedTrajectories(const autoware_msgs::DetectedObjectArray& obstacles)
+{
+  std::vector<Path> obstacle_trajs;
+  for (const auto& obstacle : obstacles.objects)
+  {
+    const auto predicted_trajectory = obstacle.candidate_trajectories.lanes[0];
+    const double v = magnitude(obstacle.velocity.linear.x, obstacle.velocity.linear.y, obstacle.velocity.linear.z);
+    Path obstacle_traj;
+    for (const auto& waypoint : predicted_trajectory.waypoints)
+    {
+      obstacle_traj.x.push_back(waypoint.pose.pose.position.x);
+      obstacle_traj.y.push_back(waypoint.pose.pose.position.y);
+      obstacle_traj.yaw.push_back(waypoint.pose.pose.orientation.w);
+      obstacle_traj.v.push_back(v);
+    }
     obstacle_trajs.emplace_back(obstacle_traj);
   }
 

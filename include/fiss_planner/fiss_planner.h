@@ -157,6 +157,7 @@ class FissPlanner
 
   // Check for collisions and calculate obstacle cost
   std::vector<Path> predictTrajectories(const autoware_msgs::DetectedObjectArray& obstacles);
+  std::vector<Path> getPredictedTrajectories(const autoware_msgs::DetectedObjectArray& obstacles);
   bool checkCollisions(FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, 
                        const autoware_msgs::DetectedObjectArray& obstacles, const bool use_async, int& num_checks);
   std::pair<bool, int> checkTrajCollision(const FrenetPath& ego_traj, const std::vector<Path>& obstacle_trajs, 
