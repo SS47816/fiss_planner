@@ -13,7 +13,7 @@ namespace fiss
 {
 
 // Return PI
-constexpr double pi() { return M_PI; }
+double pi() { return M_PI; }
 
 // Convert degrees to radians
 double deg2rad(const double x) { return x * pi() / 180; }
@@ -31,13 +31,13 @@ double kph2mps(const double x) { return x / 3.6; }
 double unifyAngleRange(const double angle)
 {
   auto new_angle = angle;
-  while (new_angle > M_PI)
+  while (new_angle > pi())
   {
-    new_angle -= 2 * M_PI;
+    new_angle -= 2 * pi();
   }
-  while (new_angle < -M_PI)
+  while (new_angle < -pi())
   {
-    new_angle += 2 * M_PI;
+    new_angle += 2 * pi();
   }
   return new_angle;
 }

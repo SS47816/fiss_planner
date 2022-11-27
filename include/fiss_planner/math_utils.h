@@ -18,7 +18,7 @@ namespace fiss
 {
 
 // Return PI
-constexpr double pi();
+double pi();
 
 // Convert degrees to radians
 double deg2rad(const double x);

@@ -109,7 +109,7 @@ class FissPlannerNode
   // ###################################### Private Functions ######################################
 
   // Functions for subscribing
-  void laneInfoCallback(const nav_msgs::Path::ConstPtr& global_path);
+  void laneInfoCallback(const autoware_msgs::LaneArray::ConstPtr& lanes_msg);
   void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
   void obstaclesCallback(const autoware_msgs::DetectedObjectArray::ConstPtr& input_obstacles);
 

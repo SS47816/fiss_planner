@@ -1,24 +1,8 @@
 <?xml version="1.0"?>
 <launch>
 
-  <!-- Global Planner -->
-  <include file="$(find fiss_planner)/launch/global_planner.launch" />
-
   <!-- Local Planner -->
-  <node name="fiss_planner_node" pkg="fiss_planner" type="fiss_planner_node" output="screen">
-    <!-- Input Topic Names -->
-    <param name="odom_topic"                    value="carla/ego_vehicle/odometry"/>
-    <param name="obstacles_topic"               value="planning/ground_truth/objects"/>
-    <param name="lane_info_topic"               value="planning/reference_lanes"/>
-    <!-- Output Topic Names -->
-    <param name="ref_path_topic"                value="local_planner/ref_path"/>
-    <param name="curr_traj_topic"               value="local_planner/current_trajectory"/>
-    <param name="next_traj_topic"               value="local_planner/next_trajectory"/>
-    <param name="sample_space_topic"            value="local_planner/sample_space"/>
-    <param name="final_traj_topic"              value="local_planner/final_trajectory"/>
-    <param name="candidate_trajs_topic"         value="local_planner/candidate_trajs"/>
-    <param name="vehicle_cmd_topic"             value="auto_vehicle_cmd"/>
-  </node>
+  <node name="fiss_planner_node" pkg="fiss_planner" type="fiss_planner_node" output="screen" />
 
   <!-- Dynamic Reconfigure GUI -->
   <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" output="screen" />
