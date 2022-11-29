@@ -71,10 +71,10 @@ class FissPlannerNode
   FrenetState start_state_;       // Starting States for sampling
   
   // Maps and Trajs
-  Lane lane_;                      // Maps (All the waypoints)
-  Lane local_lane_;                // Selected Waypoints
-  Path ref_spline_;                // Reference Spline
-  Path curr_trajectory_;           // Output Trajectory
+  Lane lane_;                     // Maps (All the waypoints)
+  Lane local_lane_;               // Selected Waypoints
+  Path ref_spline_;               // Reference Spline
+  Path curr_trajectory_;          // Output Trajectory
   Path vis_trajectory_;           // Output Trajectory
   std::vector<double> roi_boundaries_;  //[0] = left boundary length in metre, [1] = right boundary length in metre.
 
@@ -91,6 +91,7 @@ class FissPlannerNode
   ros::Publisher next_traj_pub;
   ros::Publisher sample_space_pub;
   ros::Publisher final_traj_pub;
+  ros::Publisher traj_pub;
   ros::Publisher candidate_paths_pub;
   ros::Publisher obstacles_pub;
   ros::Publisher vehicle_cmd_pub;

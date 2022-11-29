@@ -93,6 +93,7 @@ class Path
   std::vector<double> y;
   std::vector<double> yaw;
   std::vector<double> v;
+  std::vector<double> c;
 };
 
 // Find the ID of the closest waypoint wrt current x, y position

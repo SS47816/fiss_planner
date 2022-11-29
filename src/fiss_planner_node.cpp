@@ -154,6 +154,7 @@ FissPlannerNode::FissPlannerNode() : tf_listener(tf_buffer)
 
   sample_space_pub = nh.advertise<visualization_msgs::Marker>("fiss_planner/sample_space", 1);
   final_traj_pub = nh.advertise<visualization_msgs::Marker>("fiss_planner/final_trajectory", 1);
+  traj_pub = nh.advertise<autoware_msgs::Lane>("fiss_planner/trajectory", 1);
   candidate_paths_pub = nh.advertise<visualization_msgs::MarkerArray>("fiss_planner/candidate_trajs", 1);
 
   vehicle_cmd_pub = nh.advertise<autoware_msgs::VehicleCmd>("auto_vehicle_cmd", 1);
@@ -433,6 +434,7 @@ void FissPlannerNode::publishVisTraj(const Path& current_traj, const FrenetPath&
 {
   int marker_id = 0;
   Path vis_traj = current_traj;
+  
   for (int i = 0; i < next_traj.x.size(); i++)
   {
     if (std::isnormal(next_traj.x[i]) && std::isnormal(next_traj.y[i]) && std::isnormal(next_traj.yaw[i]))
@@ -440,12 +442,31 @@ void FissPlannerNode::publishVisTraj(const Path& current_traj, const FrenetPath&
       vis_traj.x.push_back(next_traj.x[i]);
       vis_traj.y.push_back(next_traj.y[i]);
       vis_traj.yaw.push_back(next_traj.yaw[i]);
+      vis_traj.v.push_back(std::hypot(next_traj.s_d[i], next_traj.d_d[i]));
+      vis_traj.c.push_back(next_traj.c[i]);
     }
   }
 
   const auto output_traj_marker = CollisionDetectorVisualization::visualizePredictedTrajectory(
     vis_traj, SETTINGS.vehicle_width, 0.0, map_height_, current_state_, true, marker_id, "final", Visualization::COLOR::GREEN, 0.15);
   final_traj_pub.publish(output_traj_marker);
+
+  // Publish the final trajectory as autoware_msgs::Lane
+  autoware_msgs::Lane output_traj;
+  output_traj.header = output_traj_marker.header;
+  
+  for (int i = 0; i < vis_traj.x.size(); i++)
+  {
+    autoware_msgs::Waypoint waypoint;
+    waypoint.pose.pose.position.x = vis_traj.x[i];
+    waypoint.pose.pose.position.y = vis_traj.y[i];
+    waypoint.pose.pose.position.z = vis_traj.yaw[i];
+    waypoint.twist.twist.linear.x = vis_traj.v[i];
+    waypoint.cost = vis_traj.c[i];
+
+    output_traj.waypoints.emplace_back(waypoint);
+  }
+  traj_pub.publish(output_traj);
 }
 
 /**
@@ -801,6 +822,7 @@ void FissPlannerNode::concatPath(const FrenetPath& next_traj, const int traj_max
       curr_trajectory_.y.push_back(next_traj.y[i]);
       curr_trajectory_.yaw.push_back(next_traj.yaw[i]);
       curr_trajectory_.v.push_back(std::hypot(next_traj.s_d[i], next_traj.d_d[i]));
+      curr_trajectory_.c.push_back(next_traj.c[i]);
     }
   }
 
@@ -830,6 +852,7 @@ void FissPlannerNode::concatPath(const FrenetPath& next_traj, const int traj_max
       curr_trajectory_.y.erase(curr_trajectory_.y.begin());
       curr_trajectory_.yaw.erase(curr_trajectory_.yaw.begin());
       curr_trajectory_.v.erase(curr_trajectory_.v.begin());
+      curr_trajectory_.c.erase(curr_trajectory_.c.begin());
     }
   }
   else
