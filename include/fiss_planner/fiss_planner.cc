@@ -283,37 +283,43 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
       num_trajs_validated++;
       
       // Convert to the global frame
-      convertToGlobalFrame(candidate_traj, cubic_spline);
+      bool is_safe = convertToGlobalFrame(candidate_traj, cubic_spline);
       std::cout << "fiss: trajectory converted to global frame" << std::endl;
-
-      // Check for constraints
-      bool is_safe = checkConstraints(candidate_traj);
-      std::cout << "fiss: trajectory constraints checked" << std::endl;
       if (!is_safe)
       {
         continue;
       }
       else
       {
-        // Check for collisions
-        if (check_collision)
+        // Check for constraints
+        is_safe = checkConstraints(candidate_traj);
+        std::cout << "fiss: trajectory constraints checked" << std::endl;
+        if (!is_safe)
         {
-          is_safe = checkCollisions(candidate_traj, obstacle_trajs, obstacles, use_async, num_collision_checks);
-          std::cout << "fiss: trajectory collision checked" << std::endl;
+          continue;
         }
         else
         {
-          std::cout << "Collision Checking Skipped" << std::endl;
-          is_safe = true;
+          // Check for collisions
+          if (check_collision)
+          {
+            is_safe = checkCollisions(candidate_traj, obstacle_trajs, obstacles, use_async, num_collision_checks);
+            std::cout << "fiss: trajectory collision checked" << std::endl;
+          }
+          else
+          {
+            std::cout << "Collision Checking Skipped" << std::endl;
+            is_safe = true;
+          }
         }
-      }
-      
-      if (is_safe)
-      {
-        best_traj_found = true;
-        best_traj_ = std::move(candidate_traj);
-        std::cout << "fiss: Best Traj Found" << std::endl;
-        break;
+        
+        if (is_safe)
+        {
+          best_traj_found = true;
+          best_traj_ = std::move(candidate_traj);
+          std::cout << "fiss: Best Traj Found" << std::endl;
+          break;
+        }
       }
     }
 
@@ -605,7 +611,7 @@ double FissPlanner::getTrajAndRealCost(std::vector<std::vector<std::vector<Frene
   }
 }
 
-void FissPlanner::convertToGlobalFrame(FrenetPath& traj, Spline2D& cubic_spline)
+bool FissPlanner::convertToGlobalFrame(FrenetPath& traj, Spline2D& cubic_spline)
 {
   // calculate global positions
   for (int j = 0; j < traj.s.size(); j++)
@@ -625,24 +631,43 @@ void FissPlanner::convertToGlobalFrame(FrenetPath& traj, Spline2D& cubic_spline)
       traj.y.emplace_back(frenet_y);
     }
   }
-  // calculate yaw and ds
-  for (int j = 0; j < traj.x.size() - 1; j++)
+  std::cout << "fiss: cTGF calculated global coordindates " << traj.s.size() << std::endl;
+
+  // check if the global coordinates are valid
+  if (traj.x.size() <= 0)
   {
-    const double dx = traj.x[j+1] - traj.x[j];
-    const double dy = traj.y[j+1] - traj.y[j];
-    traj.yaw.emplace_back(atan2(dy, dx));
-    traj.ds.emplace_back(sqrt(dx * dx + dy * dy));
+    traj.constraint_passed = false;
+    return false;
+  }
+  else
+  {
+    // calculate yaw and ds
+    for (int j = 0; j < traj.x.size() - 1; j++)
+    {
+      std::cout << "fiss: cTGF j = " << j << " in " << traj.x.size() - 1 << std::endl;
+      const double dx = traj.x[j+1] - traj.x[j];
+      const double dy = traj.y[j+1] - traj.y[j];
+      std::cout << "fiss: cTGF atan2 " << dy << " " << dx << std::endl;
+      traj.yaw.emplace_back(atan2(dy, dx));
+      std::cout << "fiss: cTGF magnitude" << std::endl;
+      traj.ds.emplace_back(magnitude(dx, dy, 0.0));
+    }
+    traj.yaw.emplace_back(traj.yaw.back());
+    traj.ds.emplace_back(traj.ds.back());
+
+    std::cout << "fiss: cTGF calculated yaw and ds" << std::endl;
+
+    // calculate curvature
+    for (int j = 0; j < traj.yaw.size() - 1; j++)
+    {
+      double yaw_diff = unifyAngleRange(traj.yaw[j+1] - traj.yaw[j]);
+      traj.c.emplace_back(yaw_diff / traj.ds[j]);
+    }
+
+    std::cout << "fiss: cTGF calculated curvature" << std::endl;
   }
 
-  traj.yaw.emplace_back(traj.yaw.back());
-  traj.ds.emplace_back(traj.ds.back());
-
-  // calculate curvature
-  for (int j = 0; j < traj.yaw.size() - 1; j++)
-  {
-    double yaw_diff = unifyAngleRange(traj.yaw[j+1] - traj.yaw[j]);
-    traj.c.emplace_back(yaw_diff / traj.ds[j]);
-  }
+  return true;
 }
 
 /**

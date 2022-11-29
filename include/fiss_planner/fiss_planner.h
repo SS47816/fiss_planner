@@ -151,7 +151,7 @@ class FissPlanner
   double getTrajAndRealCost(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, int& num_traj);
 
   // Convert paths from frenet frame to gobal map frame
-  void convertToGlobalFrame(FrenetPath& traj, Spline2D& cubic_spline);
+  bool convertToGlobalFrame(FrenetPath& traj, Spline2D& cubic_spline);
   // Check for vehicle kinematic constraints
   bool checkConstraints(FrenetPath& traj);
 
