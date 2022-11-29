@@ -221,15 +221,11 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
   const auto obstacle_trajs = getPredictedTrajectories(obstacles);
   numbers.emplace_back(obstacle_trajs.size());
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
-
-  std::cout << "fiss: get predicted object trajectories" << std::endl;
   
   // Sample all the end states in 3 dimensions, [d, v, t] and form the 3d traj candidate array
   auto trajs_3d = sampleEndStates(lane_id, left_width, right_width, current_speed, use_heuristic);
   numbers.emplace_back(trajs_3d.size()*trajs_3d[0].size()*trajs_3d[0][0].size());
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
-
-  std::cout << "fiss: sampled end states " << trajs_3d.size() << " x " << trajs_3d[0].size() << " x " << trajs_3d[0][0].size() << std::endl;
 
   int num_iter = 0;
   int num_trajs_generated = 0;
@@ -255,26 +251,23 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
     {
       best_idx = candidate_trajs_.top().idx;
     }
-    std::cout << "fiss: candidates initialized" << std::endl;
 
     // ################################ Search Process #####################################
     bool converged = false;
     while (!converged)
     {
-      // std::cout << "fiss: Search iteration " << num_iter << " convergence: " << converged << std::endl;
-      std::cout << "fiss: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
+      // std::cout << "fiss: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
 
       // Perform a search for the real best trajectory using gradients
       converged = findNextBest(trajs_3d, best_idx, num_trajs_generated);
       num_iter++;
-      std::cout << "fiss: search iteration: " << num_iter << std::endl;
     }
     numbers.emplace_back(num_trajs_generated);
     timestamps.emplace_back(std::chrono::high_resolution_clock::now());
-    std::cout << "fiss: search converged in " << num_iter << " iterations" << std::endl;
+    // std::cout << "fiss: search converged in " << num_iter << " iterations" << std::endl;
 
     // ################################ Validation Process #####################################
-    std::cout << "fiss: Validating " << candidate_trajs_.size() << " Candidate Trajectories" << std::endl;
+    // std::cout << "fiss: Validating " << candidate_trajs_.size() << " Candidate Trajectories" << std::endl;
     
     if (!candidate_trajs_.empty())
     {
@@ -284,7 +277,7 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
       
       // Convert to the global frame
       bool is_safe = convertToGlobalFrame(candidate_traj, cubic_spline);
-      std::cout << "fiss: trajectory converted to global frame" << std::endl;
+
       if (!is_safe)
       {
         continue;
@@ -293,7 +286,7 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
       {
         // Check for constraints
         is_safe = checkConstraints(candidate_traj);
-        std::cout << "fiss: trajectory constraints checked" << std::endl;
+        
         if (!is_safe)
         {
           continue;
@@ -304,7 +297,6 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
           if (check_collision)
           {
             is_safe = checkCollisions(candidate_traj, obstacle_trajs, obstacles, use_async, num_collision_checks);
-            std::cout << "fiss: trajectory collision checked" << std::endl;
           }
           else
           {
@@ -322,8 +314,6 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
         }
       }
     }
-
-    std::cout << "fiss: validated candidate trajectories" << std::endl;
   }
 
   double fix_cost = 0.0;
@@ -477,12 +467,12 @@ bool FissPlanner::findNextBest(std::vector<std::vector<std::vector<FrenetPath>>>
   const Eigen::Vector3i sizes = {int(trajs.size()), int(trajs[0].size()), int(trajs[0][0].size())};
   if (trajs[idx(0)][idx(1)][idx(2)].is_searched)
   {
-    std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " converged" << std::endl;
+    // std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " converged" << std::endl;
     return true; // converged
   }
   else
   {
-    std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " not converged" << std::endl;
+    // std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " not converged" << std::endl;
     trajs[idx(0)][idx(1)][idx(2)].is_searched = true; // label this traj as searched
     const auto gradients = findGradients(trajs, sizes, idx, num_traj);
 
@@ -631,7 +621,6 @@ bool FissPlanner::convertToGlobalFrame(FrenetPath& traj, Spline2D& cubic_spline)
       traj.y.emplace_back(frenet_y);
     }
   }
-  std::cout << "fiss: cTGF calculated global coordindates " << traj.s.size() << std::endl;
 
   // check if the global coordinates are valid
   if (traj.x.size() <= 0)
@@ -644,18 +633,13 @@ bool FissPlanner::convertToGlobalFrame(FrenetPath& traj, Spline2D& cubic_spline)
     // calculate yaw and ds
     for (int j = 0; j < traj.x.size() - 1; j++)
     {
-      std::cout << "fiss: cTGF j = " << j << " in " << traj.x.size() - 1 << std::endl;
       const double dx = traj.x[j+1] - traj.x[j];
       const double dy = traj.y[j+1] - traj.y[j];
-      std::cout << "fiss: cTGF atan2 " << dy << " " << dx << std::endl;
       traj.yaw.emplace_back(atan2(dy, dx));
-      std::cout << "fiss: cTGF magnitude" << std::endl;
       traj.ds.emplace_back(magnitude(dx, dy, 0.0));
     }
     traj.yaw.emplace_back(traj.yaw.back());
     traj.ds.emplace_back(traj.ds.back());
-
-    std::cout << "fiss: cTGF calculated yaw and ds" << std::endl;
 
     // calculate curvature
     for (int j = 0; j < traj.yaw.size() - 1; j++)
@@ -663,8 +647,6 @@ bool FissPlanner::convertToGlobalFrame(FrenetPath& traj, Spline2D& cubic_spline)
       double yaw_diff = unifyAngleRange(traj.yaw[j+1] - traj.yaw[j]);
       traj.c.emplace_back(yaw_diff / traj.ds[j]);
     }
-
-    std::cout << "fiss: cTGF calculated curvature" << std::endl;
   }
 
   return true;
