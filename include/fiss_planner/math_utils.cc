@@ -43,6 +43,14 @@ double unifyAngleRange(const double angle)
 }
 
 // Limit the value within [lower_bound, upper_bound]
+int limitWithinRange(const int value, const int lower_bound, const int upper_bound)
+{
+  auto new_value = std::max(value, lower_bound);
+  new_value = std::min(new_value, upper_bound);
+  return new_value;
+}
+
+// Limit the value within [lower_bound, upper_bound]
 double limitWithinRange(const double value, const double lower_bound, const double upper_bound)
 {
   auto new_value = std::max(value, lower_bound);

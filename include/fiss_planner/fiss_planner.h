@@ -145,7 +145,7 @@ class FissPlanner
   bool findInitGuess(const std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx);
   // Explore trajectories
   bool findNextBest(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx, int& num_traj);
-  Eigen::Vector3d findGradients(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, int& num_traj);
+  Eigen::Vector3d findGradients(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& sizes, const Eigen::Vector3i& idx, int& num_traj);
   Eigen::Vector3i findDirection(const Eigen::Vector3i& sizes, const Eigen::Vector3i& idx);
   // Generate this candidate trajectory and compute the real(final) cost
   double getTrajAndRealCost(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, int& num_traj);

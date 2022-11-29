@@ -36,6 +36,9 @@ double kph2mps(const double x);
 double unifyAngleRange(const double angle);
 
 // Limit the value within [lower_bound, upper_bound]
+int limitWithinRange(int value, const int lower_bound, const int upper_bound);
+
+// Limit the value within [lower_bound, upper_bound]
 double limitWithinRange(double value, const double lower_bound, const double upper_bound);
 
 // Calculate the Euclideam distance between two points

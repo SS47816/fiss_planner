@@ -180,7 +180,9 @@ void FissPlannerNode::laneInfoCallback(const autoware_msgs::LaneArray::ConstPtr&
     reference_line.header = lane.header;
     for (const auto& waypoint : lane.waypoints)
     {
-      reference_line.poses.emplace_back(waypoint.pose);
+      geometry_msgs::PoseStamped pose = waypoint.pose;
+      pose.pose.position.z = 0.0;
+      reference_line.poses.emplace_back(pose);
     }
 
     reference_lines.emplace_back(reference_line);
@@ -270,6 +272,9 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
   // Define ROI width for path sampling
   roi_boundaries_ = getSamplingWidthFromTargetLane(target_lane_id_, SETTINGS.vehicle_width, LANE_WIDTH, LEFT_LANE_WIDTH, RIGHT_LANE_WIDTH);
 
+  publishRefSpline(ref_spline_);
+  publishSampleSpace(ref_spline_);
+
   // Get the planning result 
   const auto planning_results = frenet_planner_.frenetOptimalPlanning(ref_path_and_curve.second, start_state_, target_lane_id_, 
                                                                                       roi_boundaries_[0], roi_boundaries_[1], current_state_.v, 
@@ -289,16 +294,14 @@ void FissPlannerNode::obstaclesCallback(const autoware_msgs::DetectedObjectArray
   // Find the best path from the all candidates 
   FrenetPath best_traj = selectLane(best_traj_list, current_lane_id_);
   ROS_INFO("Local Planner: Best trajs Selected");
-  publishSampleSpace(ref_spline_);
-  publishVisTraj(curr_trajectory_, best_traj);
-
+  
   // Concatenate the best path into output_path
   concatPath(best_traj, TRAJ_MAX_SIZE, TRAJ_MIN_SIZE, WP_MAX_SEP, WP_MIN_SEP);
 
   // Publish the best trajs
-  publishRefSpline(ref_spline_);
   publishCurrTraj(curr_trajectory_);
   publishNextTraj(best_traj);
+  publishVisTraj(curr_trajectory_, best_traj);
 
   const auto end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;

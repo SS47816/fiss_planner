@@ -215,19 +215,21 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
   std::swap(candidate_trajs_, empty);
   all_trajs_.clear();
 
-  std::cout << "fiss: Searched through all trajectories, found no suitable candidate" << std::endl;
-
   // Initialize start state and obstacle trajectories
   start_state_ = start_state;
   // const auto obstacle_trajs = predictTrajectories(obstacles);
   const auto obstacle_trajs = getPredictedTrajectories(obstacles);
   numbers.emplace_back(obstacle_trajs.size());
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
+
+  std::cout << "fiss: get predicted object trajectories" << std::endl;
   
   // Sample all the end states in 3 dimensions, [d, v, t] and form the 3d traj candidate array
   auto trajs_3d = sampleEndStates(lane_id, left_width, right_width, current_speed, use_heuristic);
   numbers.emplace_back(trajs_3d.size()*trajs_3d[0].size()*trajs_3d[0][0].size());
   timestamps.emplace_back(std::chrono::high_resolution_clock::now());
+
+  std::cout << "fiss: sampled end states " << trajs_3d.size() << " x " << trajs_3d[0].size() << " x " << trajs_3d[0][0].size() << std::endl;
 
   int num_iter = 0;
   int num_trajs_generated = 0;
@@ -253,23 +255,26 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
     {
       best_idx = candidate_trajs_.top().idx;
     }
+    std::cout << "fiss: candidates initialized" << std::endl;
 
     // ################################ Search Process #####################################
     bool converged = false;
     while (!converged)
     {
       // std::cout << "fiss: Search iteration " << num_iter << " convergence: " << converged << std::endl;
-      // std::cout << "fiss: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
+      std::cout << "fiss: Current idx " << best_idx(0) << best_idx(1) << best_idx(2) << std::endl;
 
       // Perform a search for the real best trajectory using gradients
       converged = findNextBest(trajs_3d, best_idx, num_trajs_generated);
       num_iter++;
+      std::cout << "fiss: search iteration: " << num_iter << std::endl;
     }
     numbers.emplace_back(num_trajs_generated);
     timestamps.emplace_back(std::chrono::high_resolution_clock::now());
+    std::cout << "fiss: search converged in " << num_iter << " iterations" << std::endl;
 
     // ################################ Validation Process #####################################
-    // std::cout << "fiss: Validating Candiate Trajectory" << std::endl;
+    std::cout << "fiss: Validating " << candidate_trajs_.size() << " Candidate Trajectories" << std::endl;
     
     if (!candidate_trajs_.empty())
     {
@@ -279,8 +284,11 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
       
       // Convert to the global frame
       convertToGlobalFrame(candidate_traj, cubic_spline);
+      std::cout << "fiss: trajectory converted to global frame" << std::endl;
+
       // Check for constraints
       bool is_safe = checkConstraints(candidate_traj);
+      std::cout << "fiss: trajectory constraints checked" << std::endl;
       if (!is_safe)
       {
         continue;
@@ -291,6 +299,7 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
         if (check_collision)
         {
           is_safe = checkCollisions(candidate_traj, obstacle_trajs, obstacles, use_async, num_collision_checks);
+          std::cout << "fiss: trajectory collision checked" << std::endl;
         }
         else
         {
@@ -307,6 +316,8 @@ FissPlanner::frenetOptimalPlanning(Spline2D& cubic_spline, const FrenetState& st
         break;
       }
     }
+
+    std::cout << "fiss: validated candidate trajectories" << std::endl;
   }
 
   double fix_cost = 0.0;
@@ -457,37 +468,30 @@ bool FissPlanner::findInitGuess(const std::vector<std::vector<std::vector<Frenet
 
 bool FissPlanner::findNextBest(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, Eigen::Vector3i& idx, int& num_traj)
 {
+  const Eigen::Vector3i sizes = {int(trajs.size()), int(trajs[0].size()), int(trajs[0][0].size())};
   if (trajs[idx(0)][idx(1)][idx(2)].is_searched)
   {
-    // std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " converged" << std::endl;
+    std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " converged" << std::endl;
     return true; // converged
   }
   else
   {
-    // std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " not converged" << std::endl;
+    std::cout << "FNB: At Current idx " << idx(0) << idx(1) << idx(2) << " not converged" << std::endl;
     trajs[idx(0)][idx(1)][idx(2)].is_searched = true; // label this traj as searched
-    const auto gradients = findGradients(trajs, idx, num_traj);
+    const auto gradients = findGradients(trajs, sizes, idx, num_traj);
 
-    int grad_dim = 0;
-    double max_grad = gradients(0);
-    for (int i = 1; i < 3; i++)
+    for (int i = 0; i < 3; i++)
     {
-      if (std::abs(gradients(i)) > std::abs(max_grad))
-      {
-        grad_dim = i;
-        max_grad = gradients(i);
-      }
+      idx(i) += gradients(i) > 0.0? -1 : 1; // move in the max gradient direction, towards lower cost
+      idx(i) = limitWithinRange(idx(i), 0, sizes(i)-1);
     }
-
-    idx(grad_dim) += max_grad > 0? -1 : 1; // move in the max gradient direction, towards lower cost
     
     return false; // not converged
   }
 }
 
-Eigen::Vector3d FissPlanner::findGradients(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& idx, int& num_traj)
+Eigen::Vector3d FissPlanner::findGradients(std::vector<std::vector<std::vector<FrenetPath>>>& trajs, const Eigen::Vector3i& sizes, const Eigen::Vector3i& idx, int& num_traj)
 {
-  const Eigen::Vector3i sizes = {int(trajs.size()), int(trajs[0].size()), int(trajs[0][0].size())};
   const Eigen::Vector3i directions = findDirection(sizes, idx);
 
   // Center sample location which we want to find the gradient
