@@ -646,6 +646,13 @@ bool FissPlanner::convertToGlobalFrame(FrenetPath& traj, Spline2D& cubic_spline)
     {
       double yaw_diff = unifyAngleRange(traj.yaw[j+1] - traj.yaw[j]);
       traj.c.emplace_back(yaw_diff / traj.ds[j]);
+
+      // kappa = (dx * d2y - dy * d2x) / [(dx * dx + dy * dy)^(3/2)]
+      // const double a = traj.s_d[j] * traj.d_dd[j] - traj.d_d[j] * traj.s_dd[j];
+      // const double norm_square = traj.s_d[j] * traj.s_d[j] + traj.d_d[j] * traj.d_d[j];
+      // const double norm = std::sqrt(norm_square);
+      // const double b = norm * norm_square;
+      // traj.c.emplace_back(a / b);
     }
   }
 
@@ -716,7 +723,7 @@ std::vector<Path> FissPlanner::predictTrajectories(const autoware_msgs::Detected
     for (int i = 0; i < steps; i++)
     {
       obstacle_traj.x.push_back(obstacle_traj.x.back() + v*settings_.tick_t*std::cos(yaw));
-      obstacle_traj.x.push_back(obstacle_traj.y.back() + v*settings_.tick_t*std::sin(yaw));
+      obstacle_traj.y.push_back(obstacle_traj.y.back() + v*settings_.tick_t*std::sin(yaw));
       obstacle_traj.yaw.push_back(yaw);
       obstacle_traj.v.push_back(v);
     }

@@ -17,7 +17,7 @@ VehicleState getNextKinematicModelState(const VehicleState &state, const Actuato
 {
   // state [x, y, psi, v]
   const double x = state.x;
-  const double y = state.x;
+  const double y = state.y;
   const double psi = state.yaw;
   const double v = state.v;
 
