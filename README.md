@@ -1,15 +1,12 @@
 # FISS Planner
 ## [RA-L 2022] FISS: A Trajectory Planning Framework using Fast Iterative Search and Sampling Strategy for Autonomous Driving
 
-[![CodeFactor](https://www.codefactor.io/repository/github/ss47816/lgsvl_utils/badge)](https://www.codefactor.io/repository/github/ss47816/fiss_planner)
-![Code Grade](https://api.codiga.io/project/31518/status/svg)
-![Code Quality Score](https://api.codiga.io/project/31518/score/svg)
-![GitHub Repo stars](https://img.shields.io/github/stars/ss47816/fiss_planner?color=FFE333)
-![GitHub Repo forks](https://img.shields.io/github/forks/ss47816/fiss_planner?color=FFE333)
-
 ![Ubuntu](https://img.shields.io/badge/OS-Ubuntu-informational?style=flat&logo=ubuntu&logoColor=white&color=2bbc8a)
 ![ROS](https://img.shields.io/badge/Tools-ROS-informational?style=flat&logo=ROS&logoColor=white&color=2bbc8a)
 ![C++](https://img.shields.io/badge/Code-C++-informational?style=flat&logo=c%2B%2B&logoColor=white&color=2bbc8a)
+[![CodeFactor](https://www.codefactor.io/repository/github/ss47816/lgsvl_utils/badge)](https://www.codefactor.io/repository/github/ss47816/fiss_planner)
+![GitHub Repo stars](https://img.shields.io/github/stars/ss47816/fiss_planner?color=FFE333)
+![GitHub Repo forks](https://img.shields.io/github/forks/ss47816/fiss_planner?color=FFE333)
 
 This is an improved framework based on the framework used in [`frenet_optimal_planner`](https://github.com/SS47816/frenet_optimal_planner). We utilize historical planning results as prior information in heuristics and introduce an iterative search-generate-evaluate strategy to look for the optimal trajectory candidate. Compared to the current frameworks, our method can significantly reduce the number of computationally expensive operations spent during the planning and achieve 2-6 times faster. 
 
