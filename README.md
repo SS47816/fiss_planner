@@ -30,6 +30,7 @@ doi={10.1109/LRA.2022.3191940}
 ![cover_image](media/demo_1.gif)
 
 ## Updates
+* [14 Jul 2023] An improved new version of the method, **FISS+**, is now available at [https://github.com/SS47816/fiss_plus_planner](https://github.com/SS47816/fiss_plus_planner)
 * [19 Oct 2022] Major updates in the documentation. Now you should be able use this repo **out-of-the box**.
 
 ## Dependencies
@@ -86,9 +87,6 @@ source devel/setup.bash
 5. In the RVIZ window, use the `2D Nav Goal` tool to selet a reachable goal point on the road as the global goal. The global planner will immediately plan a global route for you. And you will soon see the local planner starts planning. 
 6. Press the green `A` button on your joystick to enter the autonomous mode.
 7. Now you should be able to see your ego vehicle moving. Have fun!
-
-### Update July 2022
-The latest instructions to run our code will be coming soon, since the LGSVL simulator is deprecated recently
 
 ## Contribution
 You are welcome contributing to the package by opening a pull-request
