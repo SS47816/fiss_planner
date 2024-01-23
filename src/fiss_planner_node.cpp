@@ -46,7 +46,7 @@ bool USE_HEURISTIC;
 bool SETTINGS_UPDATED = false;
 
 // Dynamic parameter server callback function
-void dynamicParamCallback(fiss_planner::fiss_planner_Config& config, uint32_t level)
+void dynamicParamCallback(fiss_planner::fiss_plannerConfig& config, uint32_t level)
 {
   // General Settings
   CHECK_COLLISION = config.check_collision;

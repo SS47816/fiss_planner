@@ -30,7 +30,7 @@
 #include <autoware_msgs/DetectedObjectArray.h>
 
 #include <dynamic_reconfigure/server.h>
-#include <fiss_planner/fiss_planner_Config.h>
+#include <fiss_planner/fiss_plannerConfig.h>
 
 #include "fiss_planner/pid.hpp"
 #include "fiss_planner/visualization.hpp"
@@ -103,8 +103,8 @@ class FissPlannerNode
   ros::NodeHandle nh;
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener;
-  dynamic_reconfigure::Server<fiss_planner::fiss_planner_Config> server;
-  dynamic_reconfigure::Server<fiss_planner::fiss_planner_Config>::CallbackType f;
+  dynamic_reconfigure::Server<fiss_planner::fiss_plannerConfig> server;
+  dynamic_reconfigure::Server<fiss_planner::fiss_plannerConfig>::CallbackType f;
 
   // ###################################### Private Functions ######################################
 
