@@ -14,15 +14,15 @@ This is an improved framework based on the framework used in [`frenet_optimal_pl
 _[Our paper](https://doi.org/10.1109/LRA.2022.3191940) has been accepted by RA-L 2022 and IROS 2022._
 
 ```bibtex
-@article{Sun_FISS_A_Trajectory_2022,
-author={Sun, Shuo and Liu, Zhiyang and Yin, Huan and Ang, Marcelo H.},
-journal={IEEE Robotics and Automation Letters},
-title={FISS: A Trajectory Planning Framework Using Fast Iterative Search and Sampling Strategy for Autonomous Driving},
-year={2022},
-volume={7},
-number={4},
-pages={9985-9992},
-doi={10.1109/LRA.2022.3191940}
+@article{Sun_FISS_2022,
+  author={Sun, Shuo and Liu, Zhiyang and Yin, Huan and Ang, Marcelo H.},
+  journal={IEEE Robotics and Automation Letters},
+  title={FISS: A Trajectory Planning Framework Using Fast Iterative Search and Sampling Strategy for Autonomous Driving},
+  year={2022},
+  volume={7},
+  number={4},
+  pages={9985-9992},
+  doi={10.1109/LRA.2022.3191940}
 }
 ```
 
@@ -54,6 +54,7 @@ Our package is only based on standard ROS pkgs, with no other external dependenc
   - geometry_msgs
   - autoware_msgs
   - visualization_msgs
+  - tf2_geometry_msgs
   - dynamic_reconfigure
 
 ## Installation
@@ -85,11 +86,13 @@ source devel/setup.bash
 1. Install the LGSVL simulator by following this [guide](https://www.svlsimulator.com/)
 2. Set up your LGSVL simulator and launch the `lgsvl_utils` nodes by following the [guide](https://github.com/SS47816/lgsvl_utils#usage)
 3. Launch the FISS planner nodes by running:
-   ```bash
-   # Launch nodes
-   roslaunch fiss_planner fiss_planner.launch
-   ```
-   The local planner is now waiting for the global route to be published so that it can start planning.
+  
+  ```bash
+  # Launch nodes
+  roslaunch fiss_planner fiss_planner.launch
+  ```
+  
+  The local planner is now waiting for the global route to be published so that it can start planning.
 4. You may adjust any config parameters you like in the `dynamic_reconfigure` window.
 5. In the RVIZ window, use the `2D Nav Goal` tool to selet a reachable goal point on the road as the global goal. The global planner will immediately plan a global route for you. And you will soon see the local planner starts planning.
 6. Press the green `A` button on your joystick to enter the autonomous mode.
