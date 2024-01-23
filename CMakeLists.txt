@@ -113,7 +113,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES fiss_planner
-  CATKIN_DEPENDS roscpp rospy std_msgs 
+  CATKIN_DEPENDS roscpp rospy std_msgs nav_msgs tf tf2_ros geometry_msgs autoware_msgs visualization_msgs dynamic_reconfigure
   DEPENDS system_lib
 )
 
