@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   autoware_msgs
   visualization_msgs
+  tf2_geometry_msgs
   dynamic_reconfigure
 )
 
