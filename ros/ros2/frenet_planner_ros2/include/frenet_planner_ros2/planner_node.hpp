@@ -20,6 +20,7 @@
 
 #include "frenet_planner/control/controller.hpp"
 #include "frenet_planner/planning/local_planner.hpp"
+#include "frenet_planner/prediction/lane_following.hpp"
 
 namespace frenet_planner::ros_common {
 class Lanelet2Map;
@@ -29,7 +30,8 @@ namespace frenet_planner_ros2 {
 
 /// Local planner node. Inputs: ~/odom, ~/obstacles, and either a Lanelet2
 /// map (parameter map.lanelet2_path, route from ~/goal) or ~/reference_path.
-/// Outputs: ~/trajectory, ~/path, ~/reference, ~/stats, ~/candidates.
+/// Outputs: ~/trajectory, ~/path, ~/reference, ~/stats, ~/candidates and
+/// ~/markers (ego, obstacles, predictions; blocking and lead obstacles highlighted).
 /// Planning runs on a timer (or on every odometry message with
 /// plan_on_odom); parameters can be changed at runtime and are applied
 /// between cycles.
@@ -54,12 +56,16 @@ class PlannerNode : public rclcpp::Node {
                   double& yaw) const;
   std::vector<frenet_planner::Obstacle> obstaclesAt(const rclcpp::Time& now) const;
   void publish(const frenet_planner::LocalPlanOutput& out, const rclcpp::Time& stamp, double cycle_ms);
+  void publishScene(const frenet_planner::LocalPlanOutput& out,
+                    const std::vector<frenet_planner::Obstacle>& obstacles, const rclcpp::Time& stamp);
 
   frenet_planner::VehicleParams vehicle_;
   std::string map_frame_;
   double odom_to_center_ = 0.0;
   bool plan_on_odom_ = false;
   bool publish_candidates_ = false;
+  frenet_planner::PredictionMode prediction_mode_ = frenet_planner::PredictionMode::kLaneFollowing;
+  std::shared_ptr<const frenet_planner::RoadMap> road_map_;
 
   std::unique_ptr<frenet_planner::LocalPlanner> planner_;
   std::unique_ptr<frenet_planner::ros_common::Lanelet2Map> lanelet_map_;
@@ -83,6 +89,7 @@ class PlannerNode : public rclcpp::Node {
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr ref_pub_;
   rclcpp::Publisher<frenet_planner_msgs::msg::PlannerStats>::SharedPtr stats_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr candidates_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr markers_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
   OnSetParametersCallbackHandle::SharedPtr param_cb_;
 };

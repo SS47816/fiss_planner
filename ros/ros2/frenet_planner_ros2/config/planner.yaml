@@ -5,6 +5,7 @@ frenet_planner:
     rate_hz: 10.0
     odom_to_center_offset: 1.35   # base_link (rear axle) -> box center [m]
     publish_candidates: true
+    prediction.mode: lane_following   # for obstacles sent with only their current state
     planner.type: fiss_plus       # fop | fop_plus | fiss | fiss_plus (switchable at runtime)
     sampling.num_width: 5
     sampling.num_speed: 5
@@ -15,6 +16,11 @@ frenet_planner:
     stitching.enabled: true
     stitching.latency: 0.0
     desired_speed: 13.9
+    # Keeping distance: hard envelope (virtual bumper) and comfort costs
+    safety.min_gap: 2.0
+    safety.min_ttc: 1.5
+    cost.desired_time_headway: 1.5
+    collision.ignore_rear_in_lane: true   # followers keep their distance (real traffic reacts)
     # Path mode (no map): lanes around ~/reference_path
     path.lane_width: 3.5
     path.num_left_lanes: 1

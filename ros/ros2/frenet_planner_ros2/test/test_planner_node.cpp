@@ -29,11 +29,14 @@ class Harness {
     stats_sub = io->create_subscription<frenet_planner_msgs::msg::PlannerStats>(
         "/frenet_planner/stats", 10,
         [this](const frenet_planner_msgs::msg::PlannerStats::ConstSharedPtr& m) { last_stats = m; });
+    markers_sub = io->create_subscription<visualization_msgs::msg::MarkerArray>(
+        "/frenet_planner/markers", 1,
+        [this](const visualization_msgs::msg::MarkerArray::ConstSharedPtr& m) { last_markers = m; });
     exec.add_node(planner);
     exec.add_node(io);
   }
 
-  void publishWorld(double ego_x) {
+  void publishWorld(double ego_x, bool lead_moving = false) {
     nav_msgs::msg::Odometry odom;
     odom.header.stamp = io->now();
     odom.header.frame_id = "map";
@@ -47,9 +50,10 @@ class Harness {
     o.id = 1;
     o.length = 4.5;
     o.width = 1.9;
-    o.is_static = true;
+    o.is_static = !lead_moving;
     frenet_planner_msgs::msg::ObstacleState st;
     st.x = ego_x + 35.0;
+    st.v = lead_moving ? 10.0 : 0.0;  // tracked object: current state only
     o.prediction.push_back(st);
     obs.obstacles.push_back(o);
     obs_pub->publish(obs);
@@ -85,8 +89,10 @@ class Harness {
   rclcpp::Publisher<frenet_planner_msgs::msg::ObstacleArray>::SharedPtr obs_pub;
   rclcpp::Subscription<frenet_planner_msgs::msg::Trajectory>::SharedPtr traj_sub;
   rclcpp::Subscription<frenet_planner_msgs::msg::PlannerStats>::SharedPtr stats_sub;
+  rclcpp::Subscription<visualization_msgs::msg::MarkerArray>::SharedPtr markers_sub;
   frenet_planner_msgs::msg::Trajectory::ConstSharedPtr last_traj;
   frenet_planner_msgs::msg::PlannerStats::ConstSharedPtr last_stats;
+  visualization_msgs::msg::MarkerArray::ConstSharedPtr last_markers;
 };
 
 }  // namespace
@@ -120,6 +126,34 @@ TEST(PlannerNode, PathModeAvoidsObstacleAndSwitchesPlanner) {
   EXPECT_FALSE(h.planner->set_parameter(rclcpp::Parameter("planner.type", "rrt")).successful);
   EXPECT_FALSE(h.planner->set_parameter(rclcpp::Parameter("sampling.min_t", 9.0)).successful);
   EXPECT_FALSE(h.planner->set_parameter(rclcpp::Parameter("vehicle.length", 3.0)).successful);
+}
+
+TEST(PlannerNode, PredictsTrackedObjectsAndPublishesTheScene) {
+  rclcpp::NodeOptions options;
+  options.append_parameter_override("path.num_left_lanes", 0);  // single lane: follow
+  options.append_parameter_override("path.num_right_lanes", 0);
+  options.append_parameter_override("rate_hz", 20.0);
+  Harness h(options);
+  h.publishPath();
+  // A car 35 m ahead driving at our speed: with a prediction it is a lead to
+  // follow, not a parked car to stop for.
+  ASSERT_TRUE(h.spinUntil([&] {
+    h.publishWorld(0.0, true);
+    return h.last_stats && h.last_stats->success && h.last_markers && h.last_traj;
+  }));
+  EXPECT_EQ(h.last_stats->lead_obstacle_id, 1);
+  EXPECT_NEAR(h.last_stats->lead_gap, 35.0 - 4.5, 0.5);
+  EXPECT_FALSE(h.last_stats->emergency);
+  EXPECT_GT(h.last_traj->points.back().v, 7.0) << "a moving lead must not be treated as parked";
+  bool has_ego = false, has_prediction = false;
+  for (const auto& m : h.last_markers->markers) {
+    has_ego = has_ego || m.ns == "ego";
+    has_prediction = has_prediction || (m.ns == "predictions" && m.points.size() > 10);
+  }
+  EXPECT_TRUE(has_ego);
+  EXPECT_TRUE(has_prediction);
+  EXPECT_FALSE(h.planner->set_parameter(rclcpp::Parameter("prediction.mode", "kalman")).successful);
+  EXPECT_TRUE(h.planner->set_parameter(rclcpp::Parameter("prediction.mode", "constant_velocity")).successful);
 }
 
 TEST(PlannerNode, LoadsLanelet2Map) {

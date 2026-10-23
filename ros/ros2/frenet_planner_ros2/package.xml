@@ -27,6 +27,8 @@
   <depend>lanelet2_routing</depend>
   <depend>lanelet2_traffic_rules</depend>
 
+  <exec_depend>rviz2</exec_depend>
+
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>lanelet2_maps</test_depend>
   <test_depend>ament_index_cpp</test_depend>

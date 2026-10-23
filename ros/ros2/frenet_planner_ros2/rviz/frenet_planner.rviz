@@ -1,0 +1,55 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Background Color: 20; 23; 28
+    Fixed Frame: map
+    Frame Rate: 30
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 10
+      Plane Cell Count: 40
+      Color: 60; 66; 76
+    - Class: rviz_default_plugins/Path
+      Name: Reference
+      Enabled: true
+      Topic:
+        Value: /frenet_planner/reference
+      Color: 124; 132; 148
+      Line Style: Lines
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Candidates
+      Enabled: true
+      Topic:
+        Value: /frenet_planner/candidates
+    - Class: rviz_default_plugins/Path
+      Name: Plan
+      Enabled: true
+      Topic:
+        Value: /frenet_planner/path
+      Color: 242; 179; 61
+      Line Style: Billboards
+      Line Width: 0.4
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Scene
+      Enabled: true
+      Topic:
+        Value: /frenet_planner/markers
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/SetGoal
+      Topic:
+        Value: /goal_pose
+  Views:
+    Current:
+      Class: rviz_default_plugins/TopDownOrtho
+      Target Frame: map
+      Scale: 8
+    Saved: ~
+Window Geometry:
+  Width: 1400
+  Height: 900

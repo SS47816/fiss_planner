@@ -49,7 +49,7 @@ target_link_libraries(controller_node ${PROJECT_NAME})
 install(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION lib ARCHIVE DESTINATION lib RUNTIME DESTINATION bin)
 install(TARGETS planner_node controller_node DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY include/ ${COMMON_DIR}/include/ DESTINATION include)
-install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY launch config rviz DESTINATION share/${PROJECT_NAME})
 install(PROGRAMS scripts/bag_replay_eval.py DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

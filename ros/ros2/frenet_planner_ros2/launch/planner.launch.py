@@ -1,7 +1,7 @@
 """Launch the frenet planner and (optionally) the trajectory controller.
 
 ros2 launch frenet_planner_ros2 planner.launch.py odom:=/localization/odom
-ros2 launch frenet_planner_ros2 planner.launch.py lanelet2_map:=/path/map.osm controller:=true
+ros2 launch frenet_planner_ros2 planner.launch.py lanelet2_map:=/path/map.osm controller:=true rviz:=true
 """
 
 from launch import LaunchDescription
@@ -29,6 +29,7 @@ def generate_launch_description():
         DeclareLaunchArgument("planner", default_value="fiss_plus"),
         DeclareLaunchArgument("controller", default_value="false"),
         DeclareLaunchArgument("use_sim_time", default_value="false"),
+        DeclareLaunchArgument("rviz", default_value="false"),
     ]
     planner = Node(
         package="frenet_planner_ros2",
@@ -59,4 +60,12 @@ def generate_launch_description():
         parameters=[params, {"use_sim_time": LaunchConfiguration("use_sim_time")}],
         remappings=[("~/odom", LaunchConfiguration("odom")), ("~/trajectory", "/frenet_planner/trajectory")],
     )
-    return LaunchDescription(args + [planner, controller])
+    rviz = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        arguments=["-d", PathJoinSubstitution([FindPackageShare("frenet_planner_ros2"), "rviz", "frenet_planner.rviz"])],
+        condition=IfCondition(LaunchConfiguration("rviz")),
+        parameters=[{"use_sim_time": LaunchConfiguration("use_sim_time")}],
+    )
+    return LaunchDescription(args + [planner, controller, rviz])

@@ -26,6 +26,7 @@
 
 #include "frenet_planner/common/math.hpp"
 #include "frenet_planner/planning/local_planner.hpp"
+#include "frenet_planner/prediction/lane_following.hpp"
 #include "frenet_planner_ros/lanelet2_adapter.hpp"
 
 namespace fp = frenet_planner;
@@ -61,7 +62,8 @@ class PlannerNode {
       pnh_.param("map/origin_lat", lo.origin_lat, 49.0);
       pnh_.param("map/origin_lon", lo.origin_lon, 8.4);
       lanelet_map_ = std::make_unique<fp::ros_common::Lanelet2Map>(lo);
-      planner_->setMap(std::make_shared<fp::RoadMap>(lanelet_map_->roadMap()));
+      road_map_ = std::make_shared<fp::RoadMap>(lanelet_map_->roadMap());
+      planner_->setMap(road_map_);
       has_reference_ = true;
       ROS_INFO("Loaded Lanelet2 map %s with %zu lanes", l2.c_str(), lanelet_map_->numLanes());
     }
@@ -110,8 +112,30 @@ class PlannerNode {
     w.w_lateral = c.w_lateral;
     w.w_lane_change = c.w_lane_change;
     w.w_heuristic = c.w_heuristic;
+    w.w_headway = c.w_headway;
+    w.desired_gap = c.desired_gap;
+    w.desired_time_headway = c.desired_time_headway;
+    w.w_ttc = c.w_ttc;
+    w.desired_ttc = c.desired_ttc;
+    w.w_clearance = c.w_clearance;
+    w.desired_clearance = c.desired_clearance;
+    w.follow_time = c.follow_time;
     cfg.planner.collision.margin_lon = c.margin_lon;
     cfg.planner.collision.margin_lat = c.margin_lat;
+    cfg.planner.collision.ignore_rear_in_lane = c.ignore_rear_in_lane;
+    auto& sf = cfg.planner.safety;
+    sf.enabled = c.safety_envelope;
+    sf.min_gap = c.min_gap;
+    sf.min_time_headway = c.min_time_headway;
+    sf.min_ttc = c.min_ttc;
+    sf.reaction_time = c.reaction_time;
+    cfg.degraded_horizon = c.degraded_horizon;
+    cfg.recovery_decel = c.recovery_decel;
+    try {
+      prediction_mode_ = fp::predictionModeFromString(c.prediction_mode);
+    } catch (const std::exception& e) {
+      ROS_ERROR("%s", e.what());
+    }
     cfg.smoother.enabled = c.smoother;
     cfg.stitching.enabled = c.stitching;
     cfg.stitching.latency = c.latency;
@@ -197,7 +221,7 @@ class PlannerNode {
       ROS_WARN("No route to the goal");
       return;
     }
-    planner_->setMap(std::make_shared<fp::RoadMap>(lanelet_map_->roadMap()), route);
+    planner_->setMap(road_map_, route);
   }
 
   std::vector<fp::Obstacle> obstacles(const ros::Time& now) const {
@@ -217,6 +241,8 @@ class PlannerNode {
       }
       if (!ob.prediction.empty()) out.push_back(std::move(ob));
     }
+    const double horizon = planner_->config().planner.sampling.max_t + 0.5;
+    fp::completePredictions(out, prediction_mode_, road_map_.get(), horizon, 0.1);
     return out;
   }
 
@@ -251,6 +277,12 @@ class PlannerNode {
     st.num_validated = out.stats.num_validated;
     st.num_collision_checks = out.stats.num_collision_checks;
     st.ego_lane = out.ego_lane;
+    st.degraded = out.degraded;
+    st.blocking_obstacle_id = out.stats.blocking_id;
+    st.lead_obstacle_id = out.stats.lead.id;
+    st.lead_gap = out.stats.lead.gap;
+    st.time_headway = out.stats.lead.time_headway;
+    st.ttc = out.stats.lead.ttc;
     stats_pub_.publish(st);
 
     const auto& t = out.trajectory;
@@ -322,6 +354,8 @@ class PlannerNode {
   fp::LocalPlannerConfig base_;
   std::unique_ptr<fp::LocalPlanner> planner_;
   std::unique_ptr<fp::ros_common::Lanelet2Map> lanelet_map_;
+  std::shared_ptr<const fp::RoadMap> road_map_;
+  fp::PredictionMode prediction_mode_ = fp::PredictionMode::kLaneFollowing;
   std::string map_frame_;
   double odom_to_center_ = 0.0;
   bool plan_on_odom_ = false, publish_candidates_ = false, has_reference_ = false;

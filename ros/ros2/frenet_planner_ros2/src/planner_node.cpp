@@ -13,6 +13,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include "frenet_planner/common/math.hpp"
+#include "frenet_planner/prediction/lane_following.hpp"
 #include "frenet_planner_ros/lanelet2_adapter.hpp"
 
 namespace frenet_planner_ros2 {
@@ -33,14 +34,14 @@ struct Binding {
 };
 
 template <typename T>
-Binding bind(const std::string& name, T LocalPlannerConfig::* section, double T::* field,
+Binding bind(const std::string& name, T LocalPlannerConfig::*section, double T::*field,
              const std::string& desc) {
   return {name, [=](const LocalPlannerConfig& c) { return rclcpp::ParameterValue((c.*section).*field); },
           [=](LocalPlannerConfig& c, const rclcpp::Parameter& p) { (c.*section).*field = p.as_double(); },
           desc};
 }
 template <typename T>
-Binding bindInt(const std::string& name, T LocalPlannerConfig::* section, int T::* field,
+Binding bindInt(const std::string& name, T LocalPlannerConfig::*section, int T::*field,
                 const std::string& desc) {
   return {name, [=](const LocalPlannerConfig& c) { return rclcpp::ParameterValue((c.*section).*field); },
           [=](LocalPlannerConfig& c, const rclcpp::Parameter& p) {
@@ -49,7 +50,7 @@ Binding bindInt(const std::string& name, T LocalPlannerConfig::* section, int T:
           desc};
 }
 template <typename T>
-Binding bindBool(const std::string& name, T LocalPlannerConfig::* section, bool T::* field,
+Binding bindBool(const std::string& name, T LocalPlannerConfig::*section, bool T::*field,
                  const std::string& desc) {
   return {name, [=](const LocalPlannerConfig& c) { return rclcpp::ParameterValue((c.*section).*field); },
           [=](LocalPlannerConfig& c, const rclcpp::Parameter& p) { (c.*section).*field = p.as_bool(); },
@@ -58,7 +59,7 @@ Binding bindBool(const std::string& name, T LocalPlannerConfig::* section, bool 
 
 /// Planner-config fields reached through LocalPlannerConfig::planner.
 template <typename S, typename F>
-Binding bindPlanner(const std::string& name, S fp::PlannerConfig::* section, F S::* field,
+Binding bindPlanner(const std::string& name, S fp::PlannerConfig::*section, F S::*field,
                     const std::string& desc) {
   return {name,
           [=](const LocalPlannerConfig& c) { return rclcpp::ParameterValue((c.planner.*section).*field); },
@@ -76,6 +77,7 @@ const std::vector<Binding>& bindings() {
     using fp::CostConfig;
     using fp::FissPlusConfig;
     using fp::PlannerConfig;
+    using fp::SafetyConfig;
     using fp::SamplingConfig;
     std::vector<Binding> v;
     v.push_back(
@@ -109,10 +111,34 @@ const std::vector<Binding>& bindings() {
     v.push_back(bindPlanner("cost.w_lane_change", &PlannerConfig::cost, &CostConfig::w_lane_change, ""));
     v.push_back(bindPlanner("cost.w_heuristic", &PlannerConfig::cost, &CostConfig::w_heuristic,
                             "FISS history heuristic"));
+    v.push_back(bindPlanner("cost.w_headway", &PlannerConfig::cost, &CostConfig::w_headway,
+                            "gap to the vehicle ahead"));
+    v.push_back(
+        bindPlanner("cost.desired_gap", &PlannerConfig::cost, &CostConfig::desired_gap, "[m] at standstill"));
+    v.push_back(bindPlanner("cost.desired_time_headway", &PlannerConfig::cost,
+                            &CostConfig::desired_time_headway, "[s]"));
+    v.push_back(bindPlanner("cost.w_ttc", &PlannerConfig::cost, &CostConfig::w_ttc, "time to collision"));
+    v.push_back(bindPlanner("cost.desired_ttc", &PlannerConfig::cost, &CostConfig::desired_ttc, "[s]"));
+    v.push_back(
+        bindPlanner("cost.w_clearance", &PlannerConfig::cost, &CostConfig::w_clearance, "lateral clearance"));
+    v.push_back(
+        bindPlanner("cost.desired_clearance", &PlannerConfig::cost, &CostConfig::desired_clearance, "[m]"));
+    v.push_back(bindPlanner("cost.follow_time", &PlannerConfig::cost, &CostConfig::follow_time,
+                            "[s] car following; 0 = off"));
+    v.push_back(bindPlanner("safety.enabled", &PlannerConfig::safety, &SafetyConfig::enabled,
+                            "hard gap / TTC envelope"));
+    v.push_back(bindPlanner("safety.min_gap", &PlannerConfig::safety, &SafetyConfig::min_gap, "[m]"));
+    v.push_back(bindPlanner("safety.min_time_headway", &PlannerConfig::safety,
+                            &SafetyConfig::min_time_headway, "[s]"));
+    v.push_back(bindPlanner("safety.min_ttc", &PlannerConfig::safety, &SafetyConfig::min_ttc, "[s]"));
+    v.push_back(
+        bindPlanner("safety.reaction_time", &PlannerConfig::safety, &SafetyConfig::reaction_time, "[s]"));
     v.push_back(
         bindPlanner("collision.margin_lon", &PlannerConfig::collision, &CollisionConfig::margin_lon, "[m]"));
     v.push_back(
         bindPlanner("collision.margin_lat", &PlannerConfig::collision, &CollisionConfig::margin_lat, "[m]"));
+    v.push_back(bindPlanner("collision.ignore_rear_in_lane", &PlannerConfig::collision,
+                            &CollisionConfig::ignore_rear_in_lane, "followers keep their distance"));
     v.push_back(bindPlanner("fiss_plus.refine", &PlannerConfig::fiss_plus, &FissPlusConfig::refine, ""));
     v.push_back(bindPlanner("fiss_plus.max_refine_iters", &PlannerConfig::fiss_plus,
                             &FissPlusConfig::max_refine_iters, ""));
@@ -139,6 +165,15 @@ const std::vector<Binding>& bindings() {
                  [](const LocalPlannerConfig& c) { return rclcpp::ParameterValue(c.desired_speed); },
                  [](LocalPlannerConfig& c, const rclcpp::Parameter& p) { c.desired_speed = p.as_double(); },
                  "[m/s]"});
+    v.push_back(
+        {"degraded_horizon",
+         [](const LocalPlannerConfig& c) { return rclcpp::ParameterValue(c.degraded_horizon); },
+         [](LocalPlannerConfig& c, const rclcpp::Parameter& p) { c.degraded_horizon = p.as_double(); },
+         "[s] collision horizon of the last retry before braking; 0 = off"});
+    v.push_back({"recovery_decel",
+                 [](const LocalPlannerConfig& c) { return rclcpp::ParameterValue(c.recovery_decel); },
+                 [](LocalPlannerConfig& c, const rclcpp::Parameter& p) { c.recovery_decel = p.as_double(); },
+                 "[m/s^2] initial deceleration of the first plan after an emergency stop"});
     return v;
   }();
   return b;
@@ -158,7 +193,8 @@ PlannerNode::PlannerNode(const rclcpp::NodeOptions& options) : rclcpp::Node("fre
     lo.origin_lat = get_parameter("map.origin_lat").as_double();
     lo.origin_lon = get_parameter("map.origin_lon").as_double();
     lanelet_map_ = std::make_unique<fp::ros_common::Lanelet2Map>(lo);
-    planner_->setMap(std::make_shared<fp::RoadMap>(lanelet_map_->roadMap()));
+    road_map_ = std::make_shared<fp::RoadMap>(lanelet_map_->roadMap());
+    planner_->setMap(road_map_);
     has_reference_ = true;
     RCLCPP_INFO(get_logger(), "Loaded Lanelet2 map %s with %zu lanes", l2_path.c_str(),
                 lanelet_map_->numLanes());
@@ -186,6 +222,7 @@ PlannerNode::PlannerNode(const rclcpp::NodeOptions& options) : rclcpp::Node("fre
   ref_pub_ = create_publisher<nav_msgs::msg::Path>("~/reference", rclcpp::QoS(1));
   stats_pub_ = create_publisher<frenet_planner_msgs::msg::PlannerStats>("~/stats", rclcpp::QoS(10));
   candidates_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("~/candidates", rclcpp::QoS(1));
+  markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("~/markers", rclcpp::QoS(1));
 
   param_cb_ = add_on_set_parameters_callback(
       [this](const std::vector<rclcpp::Parameter>& p) { return onParameters(p); });
@@ -212,6 +249,14 @@ void PlannerNode::declareParameters() {
   odom_to_center_ = declare_parameter("odom_to_center_offset", 0.0);
   plan_on_odom_ = declare_parameter("plan_on_odom", false);
   publish_candidates_ = declare_parameter("publish_candidates", false);
+  {
+    rcl_interfaces::msg::ParameterDescriptor d;
+    d.description =
+        "predictions for obstacles sent with only their current state: as_given | constant_velocity | "
+        "lane_following (constant velocity without a map)";
+    prediction_mode_ =
+        fp::predictionModeFromString(declare_parameter("prediction.mode", std::string("lane_following"), d));
+  }
   declare_parameter("rate_hz", 10.0);
   declare_parameter("map.lanelet2_path", std::string(""));
   declare_parameter("map.projector", std::string("utm"));
@@ -256,6 +301,16 @@ rcl_interfaces::msg::SetParametersResult PlannerNode::onParameters(
                                  [&](const Binding& b) { return b.name == p.get_name(); });
     if (it == bindings().end()) {
       if (p.get_name() == "publish_candidates") continue;
+      if (p.get_name() == "prediction.mode") {
+        try {
+          fp::predictionModeFromString(p.as_string());
+        } catch (const std::exception& e) {
+          result.successful = false;
+          result.reason = e.what();
+          return result;
+        }
+        continue;
+      }
       result.successful = false;
       result.reason = "parameter '" + p.get_name() + "' cannot be changed at runtime";
       return result;
@@ -270,6 +325,7 @@ rcl_interfaces::msg::SetParametersResult PlannerNode::onParameters(
   }
   for (const auto& p : params) {
     if (p.get_name() == "publish_candidates") publish_candidates_ = p.as_bool();
+    if (p.get_name() == "prediction.mode") prediction_mode_ = fp::predictionModeFromString(p.as_string());
   }
   cfg.planner.keep_candidates = publish_candidates_;
   try {
@@ -371,7 +427,7 @@ void PlannerNode::onGoal(const geometry_msgs::msg::PoseStamped::ConstSharedPtr& 
     RCLCPP_WARN(get_logger(), "No route to the goal");
     return;
   }
-  planner_->setMap(std::make_shared<fp::RoadMap>(lanelet_map_->roadMap()), route);
+  planner_->setMap(road_map_, route);
   RCLCPP_INFO(get_logger(), "Route with %zu lanelets", route.size());
 }
 
@@ -393,6 +449,8 @@ std::vector<Obstacle> PlannerNode::obstaclesAt(const rclcpp::Time& now) const {
     }
     if (!ob.prediction.empty()) out.push_back(std::move(ob));
   }
+  const double horizon = planner_->config().planner.sampling.max_t + 0.5;
+  fp::completePredictions(out, prediction_mode_, road_map_.get(), horizon, 0.1);
   return out;
 }
 
@@ -401,8 +459,9 @@ void PlannerNode::planCycle() {
   const auto t0 = std::chrono::steady_clock::now();
   const rclcpp::Time now = plan_on_odom_ ? ego_stamp_ : this->now();
   fp::LocalPlanOutput out;
+  const std::vector<Obstacle> obstacles = obstaclesAt(now);
   try {
-    out = planner_->step(now.seconds(), *ego_, obstaclesAt(now));
+    out = planner_->step(now.seconds(), *ego_, obstacles);
   } catch (const std::exception& e) {
     RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 2000, "Planning failed: %s", e.what());
     return;
@@ -410,6 +469,7 @@ void PlannerNode::planCycle() {
   const double cycle_ms =
       std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
   publish(out, now, cycle_ms);
+  if (markers_pub_->get_subscription_count() > 0) publishScene(out, obstacles, now);
 }
 
 void PlannerNode::publish(const fp::LocalPlanOutput& out, const rclcpp::Time& stamp, double cycle_ms) {
@@ -430,6 +490,12 @@ void PlannerNode::publish(const fp::LocalPlanOutput& out, const rclcpp::Time& st
   stats.num_validated = out.stats.num_validated;
   stats.num_collision_checks = out.stats.num_collision_checks;
   stats.ego_lane = out.ego_lane;
+  stats.degraded = out.degraded;
+  stats.blocking_obstacle_id = out.stats.blocking_id;
+  stats.lead_obstacle_id = out.stats.lead.id;
+  stats.lead_gap = out.stats.lead.gap;
+  stats.time_headway = out.stats.lead.time_headway;
+  stats.ttc = out.stats.lead.ttc;
   stats_pub_->publish(stats);
 
   const auto& t = out.trajectory;
@@ -513,6 +579,80 @@ void PlannerNode::publish(const fp::LocalPlanOutput& out, const rclcpp::Time& st
     }
     candidates_pub_->publish(markers);
   }
+}
+
+void PlannerNode::publishScene(const fp::LocalPlanOutput& out, const std::vector<Obstacle>& obstacles,
+                               const rclcpp::Time& stamp) {
+  using visualization_msgs::msg::Marker;
+  visualization_msgs::msg::MarkerArray markers;
+  Marker clear;
+  clear.action = Marker::DELETEALL;
+  markers.markers.push_back(clear);
+  int id = 0;
+  const auto box_marker = [&](const fp::Box2d& b, const std::string& ns, float r, float g, float bl) {
+    Marker m;
+    m.header.stamp = stamp;
+    m.header.frame_id = map_frame_;
+    m.ns = ns;
+    m.id = id++;
+    m.type = Marker::CUBE;
+    m.pose.position.x = b.cx;
+    m.pose.position.y = b.cy;
+    m.pose.position.z = 0.75;
+    tf2::Quaternion q;
+    q.setRPY(0.0, 0.0, b.yaw);
+    m.pose.orientation = tf2::toMsg(q);
+    m.scale.x = b.length;
+    m.scale.y = b.width;
+    m.scale.z = 1.5;
+    m.color.r = r;
+    m.color.g = g;
+    m.color.b = bl;
+    m.color.a = 0.85f;
+    return m;
+  };
+  if (ego_) {
+    const auto& v = vehicle_;
+    markers.markers.push_back(
+        box_marker({ego_->x, ego_->y, ego_->yaw, v.length, v.width}, "ego", 0.25f, 0.66f, 1.0f));
+  }
+  for (const auto& ob : obstacles) {
+    const auto box = ob.boxAt(0.0);
+    if (!box) continue;
+    const bool blocking = ob.id == out.stats.blocking_id;
+    const bool lead = ob.id == out.stats.lead.id;
+    // Blocking obstacle orange, vehicle ahead yellow, others red.
+    markers.markers.push_back(box_marker(*box,
+                                         blocking ? "blocking"
+                                         : lead   ? "lead"
+                                                  : "obstacles",
+                                         1.0f,
+                                         blocking ? 0.55f
+                                         : lead   ? 0.85f
+                                                  : 0.36f,
+                                         0.36f));
+    if (ob.prediction.size() < 2) continue;
+    Marker path;
+    path.header = markers.markers.back().header;
+    path.ns = "predictions";
+    path.id = id++;
+    path.type = Marker::LINE_STRIP;
+    path.scale.x = 0.15;
+    path.color.r = 1.0f;
+    path.color.g = 0.36f;
+    path.color.b = 0.36f;
+    path.color.a = 0.6f;
+    for (const auto& p : ob.prediction) {
+      if (p.t < 0.0) continue;
+      geometry_msgs::msg::Point pt;
+      pt.x = p.x;
+      pt.y = p.y;
+      pt.z = 0.1;
+      path.points.push_back(pt);
+    }
+    markers.markers.push_back(path);
+  }
+  markers_pub_->publish(markers);
 }
 
 }  // namespace frenet_planner_ros2
