@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>frenet_planner</name>
+  <version>1.0.0</version>
+  <description>ROS-agnostic C++17 core of the Frenet optimal planners (FOP, FOP+, FISS, FISS+).</description>
+  <maintainer email="ss1057532022@gmail.com">Shuo Sun</maintainer>
+  <license>Apache-2.0</license>
+  <url type="repository">https://github.com/SS47816/frenet_planner</url>
+  <url type="bugtracker">https://github.com/SS47816/frenet_planner/issues</url>
+  <author>Shuo Sun</author>
+
+  <buildtool_depend>cmake</buildtool_depend>
+
+  <depend>yaml-cpp</depend>
+
+  <test_depend>gtest</test_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

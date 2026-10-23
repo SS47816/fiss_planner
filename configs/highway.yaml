@@ -1,0 +1,21 @@
+# Highway preset: longer horizons, wider speed range, lane changes encouraged when faster.
+planner:
+  type: fiss_plus
+sampling:
+  num_width: 5
+  num_speed: 7
+  num_t: 5
+  min_t: 3.0
+  max_t: 6.0
+  min_speed: 0.0
+cost:
+  w_time: 1.0
+  w_speed: 1.0
+  w_lateral: 2.0
+  w_lane_change: 3.0
+collision:
+  margin_lon: 1.0
+  margin_lat: 0.3
+vehicle:
+  max_speed: 36.0
+  max_lat_accel: 3.0

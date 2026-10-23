@@ -1,0 +1,19 @@
+# Urban preset: shorter horizons, conservative lane changes and margins.
+planner:
+  type: fiss_plus
+sampling:
+  num_width: 5
+  num_speed: 5
+  num_t: 5
+  min_t: 2.0
+  max_t: 4.0
+cost:
+  w_lane_change: 8.0
+  w_jerk: 0.2
+collision:
+  margin_lon: 0.8
+  margin_lat: 0.4
+vehicle:
+  max_speed: 16.7
+  max_accel: 2.5
+  max_decel: 6.0

@@ -1,0 +1,11 @@
+# Reproduces the setting of the FISS / FISS+ papers: single-lane sampling,
+# 5 x 5 x 5 grid, time horizon 8-10 s (use with route.max_adjacent_lanes = 0).
+planner:
+  type: fiss
+sampling:
+  num_width: 5
+  num_speed: 5
+  num_t: 5
+  min_t: 8.0
+  max_t: 10.0
+  dt: 0.1
