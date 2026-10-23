@@ -1,0 +1,47 @@
+[
+ {
+  "id": "ZAM_Zip-1_50_T-1",
+  "planners": [
+   "fop",
+   "fop_plus",
+   "fiss",
+   "fiss_plus"
+  ]
+ },
+ {
+  "id": "USA_US101-22_3_T-1",
+  "planners": [
+   "fop",
+   "fop_plus",
+   "fiss",
+   "fiss_plus"
+  ]
+ },
+ {
+  "id": "ZAM_Tjunction-1_101_T-1",
+  "planners": [
+   "fop",
+   "fop_plus",
+   "fiss",
+   "fiss_plus"
+  ]
+ },
+ {
+  "id": "USA_Lanker-2_25_T-1",
+  "planners": [
+   "fop",
+   "fop_plus",
+   "fiss",
+   "fiss_plus"
+  ]
+ },
+ {
+  "id": "DEU_A99-1_1_T-1",
+  "planners": [
+   "fop",
+   "fop_plus",
+   "fiss",
+   "fiss_plus"
+  ]
+ }
+]

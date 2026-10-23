@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- frenet-playback:start -->
+<title>frenet_planner Playback</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one instrument panel — scenario/planner rail on the left, road canvas with HUD on the right, transport bar beneath. */
+:root {
+  --bg: #e9ecef;          /* concrete */
+  --panel: #f7f8f9;
+  --ink: #1c2329;
+  --muted: #5b6670;
+  --rule: #cfd5db;
+  --road: #c3c9cf;        /* asphalt, light */
+  --lane-mark: #f8f9fa;
+  --plan: #d18b00;        /* lane-marking amber */
+  --ego: #1f6fd1;         /* signal blue */
+  --obstacle: #d43b3b;    /* brake light */
+  --goal: #2f9e5b;
+  --cand-hi: #2a9d8f;
+  --cand-lo: #9aa5b1;
+  --focus: #1f6fd1;
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161a; --panel: #1a1f25; --ink: #e6eaee; --muted: #93a0ab; --rule: #2b333b;
+    --road: #2a3139; --lane-mark: #8e99a4; --plan: #f2b33d; --ego: #4ea3ff; --obstacle: #ff6060;
+    --goal: #5fd08c; --cand-hi: #4fd1c5; --cand-lo: #4a5561; --focus: #4ea3ff; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161a; --panel: #1a1f25; --ink: #e6eaee; --muted: #93a0ab; --rule: #2b333b;
+  --road: #2a3139; --lane-mark: #8e99a4; --plan: #f2b33d; --ego: #4ea3ff; --obstacle: #ff6060;
+  --goal: #5fd08c; --cand-hi: #4fd1c5; --cand-lo: #4a5561; --focus: #4ea3ff; color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 20px 28px; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
+h1 { font: 700 2rem/1.05 var(--font-display); letter-spacing: 0.01em; margin: 0; text-wrap: balance; }
+h1 span { color: var(--plan); }
+.sub { color: var(--muted); margin: 0; max-width: 62ch; }
+.grid { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.rail { display: grid; gap: 14px; min-width: 0; }
+.label { font: 600 0.72rem/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin: 0 0 6px; }
+select, button { font: inherit; color: var(--ink); }
+select {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--panel);
+}
+.planners { display: grid; gap: 8px; }
+.pcard {
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; text-align: left; cursor: pointer;
+  padding: 10px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--panel);
+}
+.pcard[aria-pressed="true"] { border-color: var(--plan); box-shadow: inset 3px 0 0 var(--plan); }
+.pname { font: 600 1.25rem/1.1 var(--font-display); }
+.pstat { font: 0.78rem/1.4 var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.pstat b { color: var(--ink); font-weight: 500; }
+.ptag { font: 600 0.7rem/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--goal); align-self: center; }
+.legend { display: grid; gap: 6px; font-size: 0.85rem; color: var(--muted); }
+.legend i { display: inline-block; width: 22px; height: 6px; border-radius: 3px; margin-right: 8px; vertical-align: middle; }
+.stage { display: grid; gap: 10px; min-width: 0; }
+.canvas-box { position: relative; border-radius: 10px; overflow: hidden; border: 1px solid var(--rule); background: var(--road); aspect-ratio: 16 / 10; max-width: 100%; }
+canvas { display: block; width: 100%; height: 100%; }
+.hud {
+  position: absolute; left: 10px; top: 10px; display: flex; flex-wrap: wrap; gap: 6px;
+  font: 0.8rem/1 var(--font-mono); font-variant-numeric: tabular-nums;
+}
+.hud span { background: color-mix(in srgb, var(--panel) 86%, transparent); padding: 6px 8px; border-radius: 5px; }
+.status { position: absolute; right: 10px; top: 10px; font: 600 0.72rem/1 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 8px; border-radius: 5px; background: var(--goal); color: var(--panel); }
+.status[data-state="fail"] { background: var(--obstacle); }
+.transport { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.btn {
+  border: 1px solid var(--rule); background: var(--panel); border-radius: 6px; padding: 7px 12px; cursor: pointer;
+  font: 600 0.9rem/1 var(--font-body);
+}
+.btn.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); min-width: 74px; }
+input[type="range"] { flex: 1 1 220px; min-width: 0; accent-color: var(--plan); }
+.time { font: 0.85rem/1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--muted); min-width: 92px; }
+.toggles { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.9rem; color: var(--muted); }
+.toggles label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.note { color: var(--muted); font-size: 0.85rem; margin: 0; max-width: 75ch; }
+.note code { font-family: var(--font-mono); font-size: 0.82rem; }
+.err { color: var(--obstacle); }
+</style>
+<!-- frenet-playback:head-end -->
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>frenet_planner <span>playback</span></h1>
+    <p class="sub">Closed-loop replays of CommonRoad scenarios. Every planning cycle is recorded: the executed plan, the candidates each planner generated, and the recorded traffic around the ego.</p>
+  </header>
+
+  <div class="grid">
+    <aside class="rail">
+      <div>
+        <p class="label"><label for="scenario">Scenario</label></p>
+        <select id="scenario"></select>
+      </div>
+      <div>
+        <p class="label">Planner</p>
+        <div class="planners" id="planners" role="group" aria-label="Planner"></div>
+      </div>
+      <div class="legend" aria-label="Legend">
+        <span><i style="background: var(--ego)"></i>ego vehicle</span>
+        <span><i style="background: var(--plan)"></i>executed plan</span>
+        <span><i style="background: var(--cand-hi)"></i>candidates (bright = cheaper)</span>
+        <span><i style="background: var(--obstacle)"></i>recorded traffic</span>
+        <span><i style="background: var(--goal)"></i>goal region</span>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="canvas-box">
+        <canvas id="view" aria-label="Top-down replay of the selected planner"></canvas>
+        <div class="hud" id="hud"></div>
+        <div class="status" id="status"></div>
+      </div>
+      <div class="transport">
+        <button class="btn primary" id="play" type="button">Play</button>
+        <button class="btn" id="back" type="button" aria-label="Previous cycle">−0.2 s</button>
+        <button class="btn" id="fwd" type="button" aria-label="Next cycle">+0.2 s</button>
+        <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Time">
+        <span class="time" id="time">0.0 s</span>
+      </div>
+      <div class="toggles">
+        <label><input type="checkbox" id="showCands" checked> Candidates</label>
+        <label><input type="checkbox" id="follow" checked> Follow ego</label>
+        <label>Speed
+          <select id="speed" style="width:auto">
+            <option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option>
+          </select></label>
+        <label>Zoom <input type="range" id="zoom" min="30" max="140" value="70" aria-label="View width in meters" style="flex:0 0 110px"></label>
+      </div>
+      <p class="note">Recorded traffic is replayed from the dataset and does not react to the ego. Plans use ground-truth predictions and the QP smoother. Regenerate with <code>python -m frenet_planner.commonroad.export_web</code>.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const canvas = $("view"), ctx = canvas.getContext("2d");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const state = { index: [], data: null, planner: null, frame: 0, playing: !reduced, last: 0, acc: 0 };
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+  async function loadJSON(path) {
+    const r = await fetch(path);
+    if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
+    return r.json();
+  }
+
+  async function init() {
+    try {
+      state.index = await loadJSON("data/index.json");
+    } catch (e) {
+      $("hud").innerHTML = `<span class="err">Could not load the recorded runs (${e.message}).</span>`;
+      return;
+    }
+    const sel = $("scenario");
+    for (const s of state.index) sel.add(new Option(s.id.replaceAll("_", " "), s.id));
+    let saved = null;
+    try { saved = localStorage.getItem("frenet-playback-scenario"); } catch (_) {}
+    if (saved && state.index.some((s) => s.id === saved)) sel.value = saved;
+    sel.addEventListener("change", () => loadScenario(sel.value));
+    await loadScenario(sel.value);
+    requestAnimationFrame(tick);
+  }
+
+  async function loadScenario(id) {
+    try { localStorage.setItem("frenet-playback-scenario", id); } catch (_) {}
+    state.data = await loadJSON(`data/${id}.json`);
+    const keys = Object.keys(state.data.runs);
+    if (!keys.includes(state.planner)) state.planner = keys.includes("fiss_plus") ? "fiss_plus" : keys[0];
+    renderPlanners();
+    setFrame(0);
+  }
+
+  function renderPlanners() {
+    const box = $("planners");
+    box.textContent = "";
+    for (const [key, run] of Object.entries(state.data.runs)) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "pcard";
+      b.setAttribute("aria-pressed", String(key === state.planner));
+      b.innerHTML = `<span class="pname">${run.label}</span>
+        <span class="ptag">${run.status === "success" ? "goal reached" : run.status.replace("_", " ")}</span>
+        <span class="pstat"><b>${run.plan_ms_mean.toFixed(2)}</b> ms / cycle</span>
+        <span class="pstat"><b>${Math.round(run.generated_mean)}</b> trajectories</span>`;
+      b.addEventListener("click", () => {
+        state.planner = key;
+        renderPlanners();
+        setFrame(Math.min(state.frame, run.frames.length - 1));
+      });
+      box.append(b);
+    }
+  }
+
+  const run = () => state.data.runs[state.planner];
+
+  function setFrame(i) {
+    const n = run().frames.length;
+    state.frame = Math.max(0, Math.min(n - 1, i));
+    $("scrub").max = String(n - 1);
+    $("scrub").value = String(state.frame);
+    draw();
+  }
+
+  function tick(ts) {
+    const dt = state.last ? (ts - state.last) / 1000 : 0;
+    state.last = ts;
+    if (state.playing && state.data) {
+      state.acc += dt * Number($("speed").value);
+      const step = state.data.dt;
+      if (state.acc >= step) {
+        const adv = Math.floor(state.acc / step);
+        state.acc -= adv * step;
+        const n = run().frames.length;
+        setFrame((state.frame + adv) % n);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function resize() {
+    const r = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(r.width * dpr);
+    canvas.height = Math.round(r.height * dpr);
+    draw();
+  }
+
+  function draw() {
+    if (!state.data) return;
+    const W = canvas.width, H = canvas.height, f = run().frames[state.frame];
+    const [ex, ey, eyaw, ev] = f.ego;
+    const span = Number($("zoom").value);
+    const s = W / span;
+    const follow = $("follow").checked;
+    const anchor = follow ? [ex + 0.25 * span * Math.cos(eyaw), ey + 0.25 * span * Math.sin(eyaw)]
+                          : (state.anchor ||= [ex, ey]);
+    if (follow) state.anchor = null;
+    const X = (x) => W / 2 + (x - anchor[0]) * s;
+    const Y = (y) => H / 2 - (y - anchor[1]) * s;
+    const path = (pts) => { ctx.beginPath(); pts.forEach(([x, y], k) => (k ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)))); };
+
+    ctx.fillStyle = css("--bg");
+    ctx.fillRect(0, 0, W, H);
+    // Lanes: filled surface, then dashed markings.
+    ctx.fillStyle = css("--road");
+    for (const ln of state.data.lanes) {
+      path(ln.l.concat(ln.r.slice().reverse()));
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.strokeStyle = css("--lane-mark");
+    ctx.lineWidth = Math.max(1, 0.12 * s);
+    ctx.setLineDash([3 * s, 4 * s]);
+    for (const ln of state.data.lanes) { path(ln.l); ctx.stroke(); path(ln.r); ctx.stroke(); }
+    ctx.setLineDash([]);
+    // Goal region.
+    ctx.fillStyle = css("--goal");
+    ctx.globalAlpha = 0.22;
+    for (const g of state.data.goal) { path(g); ctx.closePath(); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    // Candidates, cheapest last so they draw on top.
+    if ($("showCands").checked && f.cands.length) {
+      const n = f.cands.length;
+      ctx.lineWidth = Math.max(1, 0.08 * s);
+      for (let k = n - 1; k >= 0; k--) {
+        ctx.strokeStyle = k < n * 0.25 ? css("--cand-hi") : css("--cand-lo");
+        ctx.globalAlpha = k < n * 0.25 ? 0.75 : 0.45;
+        path(f.cands[k]);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    // Executed plan.
+    ctx.strokeStyle = css("--plan");
+    ctx.lineWidth = Math.max(2, 0.35 * s);
+    ctx.lineCap = "round";
+    path(f.plan);
+    ctx.stroke();
+    // Traffic.
+    ctx.fillStyle = css("--obstacle");
+    for (const o of f.obs) { path(o); ctx.closePath(); ctx.fill(); }
+    // Ego box with a heading notch.
+    const [L, Wd] = run().vehicle, c = Math.cos(eyaw), sn = Math.sin(eyaw);
+    const corner = (a, b) => [ex + a * c - b * sn, ey + a * sn + b * c];
+    ctx.fillStyle = css("--ego");
+    path([corner(L / 2, Wd / 2), corner(-L / 2, Wd / 2), corner(-L / 2, -Wd / 2), corner(L / 2, -Wd / 2)]);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = css("--lane-mark");
+    path([corner(L / 2, 0), corner(L / 2 - 1.1, 0.55), corner(L / 2 - 1.1, -0.55)]);
+    ctx.closePath();
+    ctx.fill();
+
+    $("time").textContent = `${(state.frame * state.data.dt).toFixed(1)} s`;
+    $("hud").innerHTML = `<span>${(ev * 3.6).toFixed(0)} km/h</span><span>${f.gen} trajectories</span><span>${f.ms.toFixed(2)} ms</span>`;
+    const st = run().status;
+    $("status").textContent = st === "success" ? "goal reached" : st.replace("_", " ");
+    $("status").dataset.state = st === "success" ? "ok" : "fail";
+  }
+
+  $("play").addEventListener("click", () => { state.playing = !state.playing; $("play").textContent = state.playing ? "Pause" : "Play"; });
+  $("play").textContent = state.playing ? "Pause" : "Play";
+  $("back").addEventListener("click", () => setFrame(state.frame - 1));
+  $("fwd").addEventListener("click", () => setFrame(state.frame + 1));
+  $("scrub").addEventListener("input", (e) => setFrame(Number(e.target.value)));
+  for (const id of ["showCands", "follow", "zoom"]) $(id).addEventListener("input", draw);
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "SELECT" || e.target.tagName === "INPUT" && e.target.type !== "range") return;
+    if (e.code === "Space") { e.preventDefault(); $("play").click(); }
+    if (e.code === "ArrowRight") setFrame(state.frame + 1);
+    if (e.code === "ArrowLeft") setFrame(state.frame - 1);
+  });
+  new ResizeObserver(resize).observe(canvas);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+  init();
+})();
+</script>
+<!-- frenet-playback:end -->
+</body>
+</html>

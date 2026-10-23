@@ -1,0 +1,50 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it and the FISS / FISS+ papers."
+title: "frenet_planner: fast sampling-based Frenet trajectory planners (FOP, FISS, FISS+)"
+type: software
+version: 1.0.0
+license: Apache-2.0
+repository-code: "https://github.com/SS47816/frenet_planner"
+authors:
+  - family-names: Sun
+    given-names: Shuo
+references:
+  - type: article
+    title: "FISS: A Trajectory Planning Framework Using Fast Iterative Search and Sampling Strategy for Autonomous Driving"
+    authors:
+      - {family-names: Sun, given-names: Shuo}
+      - {family-names: Liu, given-names: Zhiyang}
+      - {family-names: Yin, given-names: Huan}
+      - {family-names: Ang, given-names: Marcelo H.}
+    journal: IEEE Robotics and Automation Letters
+    volume: 7
+    issue: 4
+    start: 9985
+    end: 9992
+    year: 2022
+    doi: 10.1109/LRA.2022.3191940
+  - type: conference-paper
+    title: "FISS+: Efficient and Focused Trajectory Generation and Refinement Using Fast Iterative Search and Sampling Strategy"
+    authors:
+      - {family-names: Sun, given-names: Shuo}
+      - {family-names: Chen, given-names: Jie}
+      - {family-names: Sun, given-names: Jiawei}
+      - {family-names: Yuan, given-names: Chengran}
+      - {family-names: Li, given-names: Yuanchen}
+      - {family-names: Zhang, given-names: Tangyike}
+      - {family-names: Ang, given-names: Marcelo H.}
+    collection-title: IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)
+    start: 10527
+    end: 10534
+    year: 2023
+    doi: 10.1109/IROS55552.2023.10341498
+  - type: conference-paper
+    title: "Optimal trajectory generation for dynamic street scenarios in a Frenét Frame"
+    authors:
+      - {family-names: Werling, given-names: Moritz}
+      - {family-names: Ziegler, given-names: Julius}
+      - {family-names: Kammel, given-names: Sören}
+      - {family-names: Thrun, given-names: Sebastian}
+    collection-title: IEEE International Conference on Robotics and Automation (ICRA)
+    year: 2010
+    doi: 10.1109/ROBOT.2010.5509799

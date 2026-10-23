@@ -1,0 +1,19 @@
+changelog:
+  exclude:
+    labels: [ignore-for-release]
+    authors: [dependabot, pre-commit-ci]
+  categories:
+    - title: Planning
+      labels: [planner, behaviour, prediction]
+    - title: Maps and routing
+      labels: [map, lanelet2]
+    - title: Optimization and control
+      labels: [smoother, mpc, control]
+    - title: Integrations
+      labels: [ros1, ros2, python, carla, commonroad]
+    - title: Bug fixes
+      labels: [bug]
+    - title: Documentation
+      labels: [documentation]
+    - title: Other changes
+      labels: ["*"]
