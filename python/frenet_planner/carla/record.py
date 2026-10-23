@@ -43,6 +43,7 @@ class CameraRecorder:
         self.frames: list[np.ndarray] = []
         self.images: queue.Queue = queue.Queue()
         self.camera = None
+        self.last_raw = None  # latest camera image without overlay
         self.out = None
         self.road = None
         self.vehicle = None
@@ -63,7 +64,7 @@ class CameraRecorder:
         self.camera.listen(self.images.put)
         self.ego = ego
 
-    def on_tick(self, t, ego_state, out, world) -> None:
+    def on_tick(self, t, ego_state, out, world, obstacles=None) -> None:
         if out is not None:
             self.out = out
         try:
@@ -71,6 +72,7 @@ class CameraRecorder:
         except queue.Empty:
             return
         frame = np.frombuffer(image.raw_data, dtype=np.uint8).reshape(self.h, self.w, 4)[:, :, 2::-1].copy()
+        self.last_raw = frame
         self.frames.append(self._overlay(frame, ego_state))
 
     def on_end(self) -> None:
@@ -224,6 +226,50 @@ class CameraRecorder:
             )
 
 
+class FoxgloveHook:
+    """Runner hook writing each planning cycle to MCAP and/or a live Foxglove server
+    (see `frenet_planner.viz.SceneRecorder`); adds JPEG frames of a `CameraRecorder`."""
+
+    def __init__(
+        self, planner: str, mcap: str | None = None, live: bool = False, camera=None, image_width=960
+    ):
+        from ..viz import SceneRecorder
+
+        self.recorder = SceneRecorder(mcap, live=live)
+        self.planner = PLANNER_NAMES.get(planner, planner)
+        self.camera = camera
+        self.image_width = image_width
+        self.vehicle = None
+        self._last_out = None
+
+    def on_start(self, world, ego, vehicle, road) -> None:
+        self.vehicle = vehicle
+        self.recorder.lanes((road.lane(i).left, road.lane(i).right) for i in road.lane_ids() if road.lane(i))
+
+    def on_tick(self, t, ego_state, out, world, obstacles=None) -> None:
+        if out is None or out is self._last_out:
+            return  # one frame per planning cycle
+        self._last_out = out
+        from ..viz import obstacle_dict
+
+        jpeg = None
+        if self.camera is not None and self.camera.last_raw is not None:
+            import io
+
+            from PIL import Image
+
+            img = Image.fromarray(self.camera.last_raw)
+            img = img.resize((self.image_width, int(img.height * self.image_width / img.width)))
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=80)
+            jpeg = buf.getvalue()
+        obs = [d for d in (obstacle_dict(o) for o in (obstacles or [])) if d is not None]
+        self.recorder.frame(t, ego_state, self.vehicle, obs, out, self.planner, jpeg)
+
+    def on_end(self) -> None:
+        self.recorder.close()
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--scenario", default="cut_in", choices=closed_loop.SCENARIOS)
@@ -237,9 +283,14 @@ def main(argv=None) -> None:
     ap.add_argument("--gif-start", type=float, default=0.0, help="seconds skipped at the start of the GIF")
     ap.add_argument("--gif-seconds", type=float, default=12.0)
     ap.add_argument("--port", type=int, default=2000)
+    ap.add_argument("--mcap", help="also write the run (scene, plans, stats, camera) as MCAP for Foxglove")
+    ap.add_argument("--foxglove-live", action="store_true", help="stream to Foxglove on ws://localhost:8765")
     args = ap.parse_args(argv)
 
     rec = CameraRecorder(args.planner)
+    hooks = [rec]
+    if args.mcap or args.foxglove_live:
+        hooks.append(FoxgloveHook(args.planner, args.mcap, args.foxglove_live, camera=rec))
     result = closed_loop.run(
         args.scenario,
         args.planner,
@@ -248,7 +299,7 @@ def main(argv=None) -> None:
         args.town,
         args.duration,
         port=args.port,
-        hooks=rec,
+        hooks=hooks,
     )
     if args.mp4:
         rec.save(args.mp4, None)

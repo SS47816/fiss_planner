@@ -45,6 +45,8 @@ class Options:
     keep_candidates: bool = False
     num_threads: int = 1
     smoother: bool = False
+    safety_envelope: bool | None = None  # None: keep the (config's) default
+    proximity_cost: bool | None = None
 
 
 def _make_local_planner(opts: Options, vehicle):
@@ -67,6 +69,11 @@ def _make_local_planner(opts: Options, vehicle):
     cfg.planner.num_threads = opts.num_threads
     cfg.route.max_adjacent_lanes = opts.adjacent_lanes
     cfg.smoother.enabled = opts.smoother
+    if opts.safety_envelope is not None:
+        cfg.planner.safety.enabled = opts.safety_envelope
+    if opts.proximity_cost is False:
+        cost = cfg.planner.cost
+        cost.w_headway = cost.w_ttc = cost.w_clearance = cost.follow_time = 0.0
     return fp.LocalPlanner(cfg, vehicle)
 
 
@@ -133,8 +140,9 @@ class GoalSpeedPolicy:
         return float(np.clip((goal_s - ego_s) / remaining_t, self.v_lo, self.v_hi))
 
 
-def run_scenario(path: str, opts: Options, record: bool = False) -> tuple[dict, dict | None]:
-    """Simulate one scenario. Returns (metrics row, optional per-step record)."""
+def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -> tuple[dict, dict | None]:
+    """Simulate one scenario. Returns (metrics row, optional per-step record).
+    `on_step(t, ego, obstacles, out, road)` (optional) is called after every planning step."""
     import commonroad_dc.pycrcc as pycrcc
     from commonroad.common.file_reader import CommonRoadFileReader
     from commonroad.scenario.state import CustomState
@@ -206,7 +214,9 @@ def run_scenario(path: str, opts: Options, record: bool = False) -> tuple[dict, 
     plan_ms, cycle_ms, generated, validated, checks = [], [], [], [], []
     fallbacks = 0
     emergencies = 0
+    degraded = 0
     smoothed = 0
+    leads = []  # (time headway, ttc, ego speed, keeping the lane) per step
     goal_lanelet_reached = False
     goal_area_reached = False
     record_data = {"steps": []} if record else None
@@ -216,7 +226,7 @@ def run_scenario(path: str, opts: Options, record: bool = False) -> tuple[dict, 
         if scenario.lanelet_network.traffic_lights:
             for sl_id, active in adapter.traffic_light_stop_lines(scenario.lanelet_network, k).items():
                 lp.set_stop_line_active(sl_id, active)
-        obstacles = adapter.obstacles_at(obstacles_all, k, dt, horizon, opts.prediction)
+        obstacles = adapter.obstacles_at(obstacles_all, k, dt, horizon, opts.prediction, road)
         if reference is None:
             rc0 = fp.build_route_corridor(road, route, ego)
             if rc0 is not None:
@@ -236,7 +246,11 @@ def run_scenario(path: str, opts: Options, record: bool = False) -> tuple[dict, 
         checks.append(out.stats.num_collision_checks)
         fallbacks += out.fallback
         emergencies += out.emergency
+        degraded += out.degraded
         smoothed += out.smoothed
+        leads.append((out.stats.lead.time_headway, out.stats.lead.ttc, ego.v, abs(out.start.d_d) < 0.3))
+        if on_step is not None:
+            on_step((k - k0) * dt, ego, obstacles, out, road)
         if len(out.trajectory) < 2:
             status = "no_plan"
             break
@@ -249,6 +263,14 @@ def run_scenario(path: str, opts: Options, record: bool = False) -> tuple[dict, 
                     "ego": (ego.x, ego.y, ego.yaw, ego.v),
                     "plan_ms": out.stats.time_ms,
                     "generated": out.stats.num_generated,
+                    "lead": (
+                        out.stats.lead.id,
+                        out.stats.lead.gap,
+                        out.stats.lead.time_headway,
+                        out.stats.lead.ttc,
+                    ),
+                    "blocking": out.stats.blocking_id,
+                    "mode": "emergency" if out.emergency else "fallback" if out.fallback else "plan",
                     "obstacles": [
                         b.corners().tolist() for b in (o.box_at(0.0) for o in obstacles) if b is not None
                     ],
@@ -295,6 +317,7 @@ def run_scenario(path: str, opts: Options, record: bool = False) -> tuple[dict, 
     kappa = np.array([s.kappa for s in states])
     jerk = np.diff(a) / dt if len(a) > 1 else np.zeros(1)
     xy = np.array([[s.x, s.y] for s in states])
+    moving = [x for x in leads if x[2] > 1.0 and x[3]]  # following: moving and keeping the lane
     row.update(
         status=status,
         success=status == "success",
@@ -305,7 +328,11 @@ def run_scenario(path: str, opts: Options, record: bool = False) -> tuple[dict, 
         steps=len(states) - 1,
         fallback_steps=fallbacks,
         emergency_steps=emergencies,
+        degraded_steps=degraded,
         smoothed_steps=smoothed,
+        min_time_headway=min((x[0] for x in moving), default=math.inf),
+        min_ttc=min((x[1] for x in moving), default=math.inf),
+        time_below_1s_headway=dt * sum(1 for x in moving if x[0] < 1.0),
         distance=float(np.sum(np.linalg.norm(np.diff(xy, axis=0), axis=1))) if len(xy) > 1 else 0.0,
         mean_speed=float(np.mean(v)),
         rms_jerk=float(np.sqrt(np.mean(jerk**2))),
@@ -365,6 +392,8 @@ def summarize(rows: list[dict]):
             "generated": g["generated_mean"].mean(),
             "validated": g["validated_mean"].mean(),
             "rms_jerk": g["rms_jerk"].mean(),
+            "thw_below_1s_s": g["time_below_1s_headway"].mean(),
+            "min_ttc_below_2s_%": 100 * g["min_ttc"].apply(lambda s: (s < 2.0).mean()),
         }
     )
     known = PLANNERS + [p + "+qp" for p in PLANNERS]
@@ -381,7 +410,13 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument(
         "--adjacent-lanes", type=int, default=1, help="lanes sampled on each side (0 = ego lane only)"
     )
-    ap.add_argument("--prediction", choices=["ground_truth", "constant_velocity"], default="ground_truth")
+    ap.add_argument(
+        "--prediction",
+        choices=["ground_truth", "constant_velocity", "lane_following"],
+        default="ground_truth",
+    )
+    ap.add_argument("--no-safety-envelope", action="store_true", help="disable the hard gap/TTC envelope")
+    ap.add_argument("--no-proximity-cost", action="store_true", help="disable gap costs and car following")
     ap.add_argument("--config", help="planner YAML config (sampling counts and planner type are overridden)")
     ap.add_argument("--smoother", action="store_true", help="refine trajectories with the QP smoother")
     ap.add_argument("--min-t", type=float)
@@ -413,6 +448,8 @@ def main(argv: list[str] | None = None) -> None:
                 min_t=args.min_t,
                 max_t=args.max_t,
                 smoother=args.smoother,
+                safety_envelope=False if args.no_safety_envelope else None,
+                proximity_cost=False if args.no_proximity_cost else None,
             ),
         )
         for f in files

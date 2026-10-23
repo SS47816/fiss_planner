@@ -139,17 +139,57 @@ def render(
     return [row for _, row, _ in runs]
 
 
+def record_mcap(path: str, planner: str, mcap: str, smoother: bool = True) -> dict:
+    """Run one scenario and write every planning step to an MCAP file for Foxglove."""
+    from ..viz import SceneRecorder, obstacle_dict
+
+    rec = SceneRecorder(mcap, start_time=0.0)
+    state = {"lanes": False}
+
+    def on_step(t, ego, obstacles, out, road):
+        if not state["lanes"]:
+            rec.lanes(((road.lane(i).left, road.lane(i).right) for i in road.lane_ids() if road.lane(i)), t)
+            state["lanes"] = True
+        obs = [d for d in (obstacle_dict(o) for o in obstacles) if d is not None]
+        rec.frame(t, ego, vehicle, obs, out, planner)
+
+    from . import adapter
+
+    vehicle = adapter.vehicle_params_from_commonroad(_vanagon())
+    try:
+        row, _ = run_scenario(
+            path, Options(planner=planner, smoother=smoother, keep_candidates=True), on_step=on_step
+        )
+    finally:
+        rec.close()
+    return row
+
+
+def _vanagon():
+    from commonroad_dc.feasibility.vehicle_dynamics import VehicleParameterMapping
+
+    return VehicleParameterMapping[Options.vehicle].value
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("scenario")
     ap.add_argument("--planner", default="fiss_plus")
     ap.add_argument("--panels", nargs="+", help="render several planners side by side")
     ap.add_argument("--no-smoother", action="store_true")
-    ap.add_argument("--gif", required=True)
+    ap.add_argument("--gif", help="output GIF (gallery style)")
+    ap.add_argument("--mcap", help="output MCAP for Foxglove (first planner)")
     ap.add_argument("--view", type=float, default=60.0)
     ap.add_argument("--every", type=int, default=1)
     ap.add_argument("--fps", type=int, default=10)
     args = ap.parse_args(argv)
+    if not args.gif and not args.mcap:
+        ap.error("give --gif and/or --mcap")
+    if args.mcap:
+        row = record_mcap(args.scenario, (args.panels or [args.planner])[0], args.mcap, not args.no_smoother)
+        print({k: row[k] for k in ("scenario", "planner", "status", "steps")}, "->", args.mcap)
+        if not args.gif:
+            return
     rows = render(
         args.scenario,
         args.panels or [args.planner],

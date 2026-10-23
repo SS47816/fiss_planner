@@ -133,3 +133,46 @@ def test_embedded_msg_definitions_match_package():
     msg_dir = Path(__file__).resolve().parents[2] / "msgs" / "frenet_planner_msgs" / "msg"
     files = {f.stem: f.read_text() for f in msg_dir.glob("*.msg")}
     assert files == MSG_DEFINITIONS
+
+
+def test_keeping_distance_api():
+    ref = straight()
+    lane = fp.Corridor.parallel_lanes(0.0, ref.length, 3.5, 0, 0)
+    lead = fp.predict_constant_velocity(7, 30.0, 0.0, 0.0, 8.0, 4.5, 1.9, 6.0, 0.1)
+    cfg = fp.make_config("fiss_plus")
+    assert cfg.safety.enabled and cfg.cost.follow_time > 0.0
+    res = fp.make_planner(cfg).plan(fp.FrenetState(10.0, 8.0), ref, lane, [lead], target_speed=15.0)
+    assert res.success
+    assert res.stats.lead.id == 7
+    assert res.stats.lead.gap == pytest.approx(30.0 - 10.0 - 4.5, abs=1e-6)
+    assert res.stats.lead.speed == pytest.approx(8.0, abs=1e-6)
+    assert res.trajectory.cost.proximity >= 0.0
+    assert "safety_distance" in res.stats.rejections
+    assert fp.Rejection.SAFETY_DISTANCE.name == "SAFETY_DISTANCE"
+
+    blocked = [fp.predict_constant_velocity(9, 16.0, 0.0, 0.0, 0.0, 4.5, 1.9, 6.0, 0.1)]
+    bad = fp.make_planner(cfg).plan(fp.FrenetState(0.0, 15.0), ref, lane, blocked, target_speed=15.0)
+    assert not bad.success and bad.stats.blocking_id == 9
+
+
+def test_lane_following_prediction():
+    road = fp.RoadMap()
+    lane = fp.MapLane()
+    lane.id = 1
+    xs = np.arange(0.0, 101.0, 5.0)
+    lane.centerline = np.column_stack([xs, np.zeros_like(xs)])
+    lane.left = np.column_stack([xs, np.full_like(xs, 1.75)])
+    lane.right = np.column_stack([xs, np.full_like(xs, -1.75)])
+    road.add_lane(lane)
+    road.finalize()
+    ob = fp.predict_lane_following(road, 3, 10.0, 0.5, 0.1, 10.0, 4.5, 1.9, 3.0, 0.1)
+    last = ob.prediction[-1]
+    assert last.x == pytest.approx(40.0, abs=0.5)  # along the lane, not along its 0.1 rad heading
+    assert abs(last.y) < 0.1
+
+    tracked = fp.Obstacle.from_arrays(4, 4.5, 1.9, [0.0], [10.0], [0.0], [0.0], False)
+    tracked.prediction = [fp.ObstacleState(0.0, 10.0, 0.0, 0.0, 10.0)]
+    out = fp.complete_predictions([tracked], "lane_following", road, 3.0, 0.1)
+    assert len(out[0].prediction) == 31
+    with pytest.raises(ValueError):
+        fp.complete_predictions([tracked], "kalman")

@@ -24,6 +24,7 @@
 #include "frenet_planner/map/route_corridor.hpp"
 #include "frenet_planner/planning/local_planner.hpp"
 #include "frenet_planner/planning/planner.hpp"
+#include "frenet_planner/prediction/lane_following.hpp"
 #include "frenet_planner/smoothing/piecewise_jerk.hpp"
 #include "frenet_planner/smoothing/smoother.hpp"
 
@@ -81,6 +82,8 @@ const char* rejectionName(Rejection r) {
       return "off_road";
     case Rejection::kCollision:
       return "collision";
+    case Rejection::kSafetyDistance:
+      return "safety_distance";
     case Rejection::kCount:
       break;
   }
@@ -314,7 +317,15 @@ NB_MODULE(_core, m) {
       .def_rw("w_jerk", &CostConfig::w_jerk)
       .def_rw("w_lateral", &CostConfig::w_lateral)
       .def_rw("w_lane_change", &CostConfig::w_lane_change)
-      .def_rw("w_heuristic", &CostConfig::w_heuristic);
+      .def_rw("w_heuristic", &CostConfig::w_heuristic)
+      .def_rw("w_headway", &CostConfig::w_headway)
+      .def_rw("desired_gap", &CostConfig::desired_gap)
+      .def_rw("desired_time_headway", &CostConfig::desired_time_headway)
+      .def_rw("w_ttc", &CostConfig::w_ttc)
+      .def_rw("desired_ttc", &CostConfig::desired_ttc)
+      .def_rw("w_clearance", &CostConfig::w_clearance)
+      .def_rw("desired_clearance", &CostConfig::desired_clearance)
+      .def_rw("follow_time", &CostConfig::follow_time);
   nb::class_<ConstraintConfig>(m, "ConstraintConfig")
       .def(nb::init<>())
       .def_rw("check_curvature", &ConstraintConfig::check_curvature)
@@ -325,7 +336,15 @@ NB_MODULE(_core, m) {
       .def(nb::init<>())
       .def_rw("margin_lon", &CollisionConfig::margin_lon)
       .def_rw("margin_lat", &CollisionConfig::margin_lat)
-      .def_rw("stride", &CollisionConfig::stride);
+      .def_rw("stride", &CollisionConfig::stride)
+      .def_rw("ignore_rear_in_lane", &CollisionConfig::ignore_rear_in_lane);
+  nb::class_<SafetyConfig>(m, "SafetyConfig")
+      .def(nb::init<>())
+      .def_rw("enabled", &SafetyConfig::enabled)
+      .def_rw("min_gap", &SafetyConfig::min_gap)
+      .def_rw("min_time_headway", &SafetyConfig::min_time_headway)
+      .def_rw("min_ttc", &SafetyConfig::min_ttc)
+      .def_rw("reaction_time", &SafetyConfig::reaction_time);
   nb::class_<FissPlusConfig>(m, "FissPlusConfig")
       .def(nb::init<>())
       .def_rw("refine", &FissPlusConfig::refine)
@@ -339,6 +358,7 @@ NB_MODULE(_core, m) {
       .def_rw("cost", &PlannerConfig::cost)
       .def_rw("constraints", &PlannerConfig::constraints)
       .def_rw("collision", &PlannerConfig::collision)
+      .def_rw("safety", &PlannerConfig::safety)
       .def_rw("fiss_plus", &PlannerConfig::fiss_plus)
       .def_rw("num_threads", &PlannerConfig::num_threads)
       .def_rw("keep_candidates", &PlannerConfig::keep_candidates)
@@ -369,7 +389,8 @@ NB_MODULE(_core, m) {
       .value("CURVATURE", Rejection::kCurvature)
       .value("LAT_ACCEL", Rejection::kLatAccel)
       .value("OFF_ROAD", Rejection::kOffRoad)
-      .value("COLLISION", Rejection::kCollision);
+      .value("COLLISION", Rejection::kCollision)
+      .value("SAFETY_DISTANCE", Rejection::kSafetyDistance);
 
   nb::class_<CostTerms>(m, "CostTerms")
       .def_ro("time", &CostTerms::time)
@@ -378,6 +399,7 @@ NB_MODULE(_core, m) {
       .def_ro("jerk", &CostTerms::jerk)
       .def_ro("lateral", &CostTerms::lateral)
       .def_ro("lane_change", &CostTerms::lane_change)
+      .def_ro("proximity", &CostTerms::proximity)
       .def("total", &CostTerms::total);
 
   nb::class_<Trajectory>(m, "Trajectory")
@@ -388,6 +410,8 @@ NB_MODULE(_core, m) {
       .def_ro("cost", &Trajectory::cost)
       .def_ro("is_cartesian", &Trajectory::is_cartesian)
       .def_ro("rejection", &Trajectory::rejection)
+      .def_ro("blocking_id", &Trajectory::blocking_id)
+      .def_ro("blocking_t", &Trajectory::blocking_t)
       .def("__len__", &Trajectory::size)
       .def("total_cost", &Trajectory::totalCost)
       .def("cartesian_state_at", &Trajectory::cartesianStateAt, "i"_a)
@@ -409,6 +433,14 @@ NB_MODULE(_core, m) {
       .TRAJ_ARRAY(a)
       .TRAJ_ARRAY(kappa);
 
+  nb::class_<LeadGap>(m, "LeadGap")
+      .def(nb::init<>())
+      .def_ro("id", &LeadGap::id)
+      .def_ro("gap", &LeadGap::gap)
+      .def_ro("time_headway", &LeadGap::time_headway)
+      .def_ro("ttc", &LeadGap::ttc)
+      .def_ro("speed", &LeadGap::speed);
+
   nb::class_<PlanStats>(m, "PlanStats")
       .def(nb::init<>())
       .def_ro("num_generated", &PlanStats::num_generated)
@@ -416,6 +448,9 @@ NB_MODULE(_core, m) {
       .def_ro("num_collision_checks", &PlanStats::num_collision_checks)
       .def_ro("num_iterations", &PlanStats::num_iterations)
       .def_ro("time_ms", &PlanStats::time_ms)
+      .def_ro("blocking_id", &PlanStats::blocking_id)
+      .def_ro("blocking_t", &PlanStats::blocking_t)
+      .def_ro("lead", &PlanStats::lead)
       .def_prop_ro("rejections", [](const PlanStats& s) {
         nb::dict d;
         for (int i = 1; i < static_cast<int>(Rejection::kCount); ++i) {
@@ -524,6 +559,26 @@ NB_MODULE(_core, m) {
           },
           "x"_a, "y"_a, "yaw"_a, "max_dist"_a = 5.0);
 
+  nb::class_<LaneFollowingConfig>(m, "LaneFollowingConfig")
+      .def(nb::init<>())
+      .def_rw("max_heading_diff", &LaneFollowingConfig::max_heading_diff)
+      .def_rw("max_lane_distance", &LaneFollowingConfig::max_lane_distance)
+      .def_rw("min_speed", &LaneFollowingConfig::min_speed)
+      .def_rw("lateral_time_constant", &LaneFollowingConfig::lateral_time_constant);
+  m.def("predict_lane_following", &predictLaneFollowing, "map"_a, "id"_a, "x"_a, "y"_a, "yaw"_a, "v"_a,
+        "length"_a, "width"_a, "horizon"_a, "dt"_a, "config"_a = LaneFollowingConfig{},
+        nb::call_guard<nb::gil_scoped_release>());
+  m.def(
+      "complete_predictions",
+      [](std::vector<Obstacle> obstacles, const std::string& mode, const RoadMap* map, double horizon,
+         double dt) {
+        completePredictions(obstacles, predictionModeFromString(mode), map, horizon, dt);
+        return obstacles;
+      },
+      "obstacles"_a, "mode"_a = "lane_following", "map"_a = nb::none(), "horizon"_a = 5.5, "dt"_a = 0.1,
+      "Obstacles with predictions for those that carry only their current state "
+      "(mode: as_given | constant_velocity | lane_following).");
+
   nb::class_<RouteCorridorConfig>(m, "RouteCorridorConfig")
       .def(nb::init<>())
       .def_rw("lookahead", &RouteCorridorConfig::lookahead)
@@ -631,6 +686,8 @@ NB_MODULE(_core, m) {
       .def_rw("smoother", &LocalPlannerConfig::smoother)
       .def_rw("desired_speed", &LocalPlannerConfig::desired_speed)
       .def_rw("emergency_decel", &LocalPlannerConfig::emergency_decel)
+      .def_rw("degraded_horizon", &LocalPlannerConfig::degraded_horizon)
+      .def_rw("recovery_decel", &LocalPlannerConfig::recovery_decel)
       .def_rw("use_speed_limit", &LocalPlannerConfig::use_speed_limit)
       .def_rw("use_curvature_speed_limit", &LocalPlannerConfig::use_curvature_speed_limit);
 
@@ -638,6 +695,7 @@ NB_MODULE(_core, m) {
       .def_ro("success", &LocalPlanOutput::success)
       .def_ro("fallback", &LocalPlanOutput::fallback)
       .def_ro("emergency", &LocalPlanOutput::emergency)
+      .def_ro("degraded", &LocalPlanOutput::degraded)
       .def_ro("stitched", &LocalPlanOutput::stitched)
       .def_ro("smoothed", &LocalPlanOutput::smoothed)
       .def_ro("trajectory", &LocalPlanOutput::trajectory)

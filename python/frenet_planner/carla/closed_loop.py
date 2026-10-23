@@ -2,9 +2,9 @@
 
 The simulator runs in synchronous mode. Every planning period the planner
 gets the ego state, the CARLA map (as a RoadMap with route and lane-change
-rules) and all other actors with constant-velocity predictions; the MPC (or
-Stanley) controller tracks the plan at every tick. Collisions and lane
-invasions come from CARLA sensors.
+rules) and all other actors with lane-following (or constant-velocity)
+predictions; the MPC (or Stanley) controller tracks the plan at every tick.
+Collisions and lane invasions come from CARLA sensors.
 
 Start the server first (headless):
     $CARLA_ROOT/CarlaUE4.sh -RenderOffScreen -quality-level=Low &
@@ -46,6 +46,12 @@ class Result:
     lane_invasions: int = 0
     plan_success_rate: float = 0.0
     emergency_rate: float = 0.0
+    fallback_rate: float = 0.0  # cycles executing the rest of the previous plan
+    degraded_rate: float = 0.0  # cycles planned with the shortened collision horizon
+    stopped_without_lead_s: float = 0.0  # standing still with nothing ahead in the path
+    min_ttc_s: float = math.inf  # to the vehicle ahead in the ego's path, while keeping the lane
+    min_time_headway_s: float = math.inf
+    time_below_1s_headway_s: float = 0.0
     plan_ms_mean: float = 0.0
     plan_ms_p95: float = 0.0
     tracking_rms_m: float = 0.0  # distance to the time-indexed reference point
@@ -55,6 +61,36 @@ class Result:
     rms_jerk: float = 0.0
     max_lat_accel: float = 0.0
     extra: dict = field(default_factory=dict)
+
+
+class _Hooks:
+    """Fan out runner callbacks to several hook objects."""
+
+    def __init__(self, hooks):
+        self.hooks = [h for h in (hooks if isinstance(hooks, (list, tuple)) else [hooks]) if h is not None]
+        self.render = any(getattr(h, "render", False) for h in self.hooks)
+
+    def on_start(self, *args):
+        for h in self.hooks:
+            h.on_start(*args)
+
+    def on_tick(self, *args):
+        for h in self.hooks:
+            h.on_tick(*args)
+
+    def on_end(self):
+        for h in self.hooks:
+            h.on_end()
+
+
+def _smoothed_derivative(x: np.ndarray, dt: float, order: int, window: int = 21) -> np.ndarray:
+    """Savitzky-Golay estimate of the `order`-th derivative (cubic fit over `window` samples)."""
+    if len(x) < window:
+        return np.zeros(1)
+    half = window // 2
+    tt = np.arange(-half, half + 1) * dt
+    coeffs = np.linalg.pinv(np.vander(tt, 4, increasing=True))[order] * math.factorial(order)
+    return np.convolve(x, coeffs[::-1], mode="valid")
 
 
 def _carla_agents_path():
@@ -253,12 +289,17 @@ def run(
     port: int = 2000,
     desired_speed: float = 15.0,
     hooks=None,
+    prediction: str = "lane_following",
+    configure=None,
 ) -> Result:
-    """Run one scenario. `hooks` (optional) gets ``on_start(world, ego, vehicle, road)`` once and
-    ``on_tick(t, ego_state, plan_output, world)`` after every simulator tick; setting
-    ``hooks.render = True`` keeps CARLA's rendering on (for cameras)."""
+    """Run one scenario. `hooks` (optional, one or a list) get ``on_start(world, ego, vehicle, road)``
+    once and ``on_tick(t, ego_state, plan_output, world, obstacles)`` after every simulator tick
+    (`obstacles`: those of the last planning cycle); a hook with
+    ``render = True`` keeps CARLA's rendering on (for cameras). `configure` (optional) may edit the
+    LocalPlannerConfig before the run."""
     import carla
 
+    hooks = _Hooks(hooks) if hooks is not None else None
     client = carla.Client(host, port)
     client.set_timeout(60.0)
     world = client.get_world()
@@ -304,6 +345,10 @@ def run(
         cfg.smoother.enabled = smoother
         cfg.stitching.latency = 0.05
         cfg.desired_speed = desired_speed
+        # CARLA traffic reacts to the ego, so followers in its lane keep their distance.
+        cfg.planner.collision.ignore_rear_in_lane = True
+        if configure is not None:
+            configure(cfg)
         lp = fp.LocalPlanner(cfg, vehicle)
         lp.set_map(road, route)
         ctrl = fp.make_controller(controller, vehicle)
@@ -315,8 +360,10 @@ def run(
         plan_every = 2  # 10 Hz planning, 20 Hz control
         traj, traj_t0 = None, 0.0
         out = None
+        obs = []
         cutter_state = None
         stats, track_err, lat_err, lon_err, states, frames = [], [], [], [], [], []
+        leads, fallbacks, stops = [], [], []
         for k in range(steps):
             t = k * dt
             ego_s = adapter.ego_state(ego)
@@ -325,10 +372,31 @@ def run(
                 cutter_state = _drive_cutter(actors[0], cutter_state, ego_s, t, dt, result)
             if k % plan_every == 0:
                 obs = adapter.obstacles(
-                    world, ego.id, cfg.planner.sampling.max_t + 0.5, 0.1, ego_xy=(ego_s.x, ego_s.y)
+                    world,
+                    ego.id,
+                    cfg.planner.sampling.max_t + 0.5,
+                    0.1,
+                    ego_xy=(ego_s.x, ego_s.y),
+                    road_map=road,
+                    prediction=prediction,
                 )
                 out = lp.step(t, ego_s, obs)
-                stats.append((out.success, out.emergency, out.stats.time_ms))
+                stats.append((out.success, out.emergency, out.stats.time_ms, out.fallback, out.degraded))
+                lead = out.stats.lead
+                keeping_lane = (
+                    abs(out.start.d_d) < 0.3
+                )  # gaps while pulling out to overtake are not following
+                leads.append((lead.id, lead.gap, lead.time_headway, lead.ttc, ego_s.v, keeping_lane))
+                if ego_s.v < 0.3 and lead.gap > 30.0 and any(x[4] > 2.0 for x in leads) and len(stops) < 50:
+                    stops.append(
+                        {
+                            "t": round(t, 2),
+                            "blocking_id": out.stats.blocking_id,
+                            "rejections": {k: v for k, v in out.stats.rejections.items() if v},
+                        }
+                    )
+                if (out.emergency or out.fallback or out.degraded) and len(fallbacks) < 200:
+                    fallbacks.append(_blocking_event(world, carla_map, ego, t, out))
                 if len(out.trajectory) >= 2:
                     traj, traj_t0 = out.trajectory, t
                 if gif_dir is not None and k % 4 == 0:
@@ -355,7 +423,7 @@ def run(
                 actuation.apply(ego, cmd, traj.sample(t - traj_t0 + 0.3).v, ego_s.v, vehicle.max_steer)
             world.tick()
             if hooks is not None:
-                hooks.on_tick(t, ego_s, out, world)
+                hooks.on_tick(t, ego_s, out, world, obs)
             if np.linalg.norm(route_xy[-1] - [ego_s.x, ego_s.y]) < 5.0:
                 break
 
@@ -365,10 +433,8 @@ def run(
         v = np.asarray([s.v for s in states])
         # CARLA's reported acceleration is noisy physics output: differentiate a
         # lightly smoothed speed signal instead.
-        v_s = np.convolve(v, np.ones(5) / 5, mode="same") if len(v) > 5 else v
-        a = np.gradient(v_s, dt) if len(v_s) > 1 else np.zeros(1)
         kap = np.asarray([s.kappa for s in states])
-        jerk = np.diff(a) / dt if len(a) > 1 else np.zeros(1)
+        jerk = _smoothed_derivative(v, dt, order=2)
         pt = [s[2] for s in stats]
         result.duration_s = len(states) * dt
         result.distance_m = float(np.sum(np.linalg.norm(np.diff(xy, axis=0), axis=1))) if len(xy) > 1 else 0.0
@@ -377,6 +443,17 @@ def run(
         result.lane_invasions = events["invasions"]
         result.plan_success_rate = float(np.mean([s[0] for s in stats])) if stats else 0.0
         result.emergency_rate = float(np.mean([s[1] for s in stats])) if stats else 0.0
+        result.fallback_rate = float(np.mean([s[3] for s in stats])) if stats else 0.0
+        result.degraded_rate = float(np.mean([s[4] for s in stats])) if stats else 0.0
+        period = plan_every * dt
+        moving = [x for x in leads if x[4] > 1.0 and x[5]]
+        result.min_ttc_s = min((x[3] for x in moving), default=math.inf)
+        result.min_time_headway_s = min((x[2] for x in moving), default=math.inf)
+        result.time_below_1s_headway_s = period * sum(1 for x in moving if x[2] < 1.0)
+        started = next((i for i, x in enumerate(leads) if x[4] > 2.0), len(leads))  # skip the standing start
+        result.stopped_without_lead_s = period * sum(1 for x in leads[started:] if x[4] < 0.3 and x[1] > 30.0)
+        result.extra["fallbacks"] = fallbacks
+        result.extra["stops"] = stops
         result.plan_ms_mean = float(np.mean(pt)) if pt else 0.0
         result.plan_ms_p95 = float(np.percentile(pt, 95)) if pt else 0.0
         result.tracking_rms_m = float(np.sqrt(np.mean(np.square(track_err)))) if track_err else 0.0
@@ -412,6 +489,47 @@ def run(
     return result
 
 
+def _finite(o):
+    """JSON-safe copy: non-finite floats (e.g. no vehicle ahead) become None."""
+    if isinstance(o, float) and not math.isfinite(o):
+        return None
+    if isinstance(o, dict):
+        return {k: _finite(v) for k, v in o.items()}
+    if isinstance(o, list):
+        return [_finite(v) for v in o]
+    return o
+
+
+def _blocking_event(world, carla_map, ego, t: float, out) -> dict:
+    """Why a cycle fell back: the obstacle that blocked the cheapest candidate, relative to the ego."""
+    kind = "emergency" if out.emergency else "fallback" if out.fallback else "degraded"
+    event = {
+        "t": round(t, 2),
+        "kind": kind,
+        "blocking_id": out.stats.blocking_id,
+        "blocking_t": round(out.stats.blocking_t, 2),
+        "rejections": dict(out.stats.rejections),
+    }
+    actor = world.get_actor(out.stats.blocking_id) if out.stats.blocking_id >= 0 else None
+    if actor is not None:
+        et, at = ego.get_transform(), actor.get_transform()
+        dx, dy = at.location.x - et.location.x, at.location.y - et.location.y
+        yaw = math.radians(et.rotation.yaw)
+        ewp, awp = carla_map.get_waypoint(et.location), carla_map.get_waypoint(at.location)
+        vel = actor.get_velocity()
+        event.update(
+            type=actor.type_id,
+            ahead_m=round(dx * math.cos(yaw) + dy * math.sin(yaw), 1),
+            left_m=round(dx * math.sin(yaw) - dy * math.cos(yaw), 1),  # CARLA is left-handed
+            rel_heading_deg=round((at.rotation.yaw - et.rotation.yaw + 180) % 360 - 180, 1),
+            speed=round(math.hypot(vel.x, vel.y), 1),
+            same_road=ewp.road_id == awp.road_id,
+            same_lane=ewp.road_id == awp.road_id and ewp.lane_id == awp.lane_id,
+            junction=awp.is_junction,
+        )
+    return event
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--scenario", nargs="+", default=SCENARIOS, choices=SCENARIOS)
@@ -421,8 +539,13 @@ def main(argv=None) -> None:
     ap.add_argument("--town", default="Town04")
     ap.add_argument("--traffic-town", default="Town04")
     ap.add_argument("--duration", type=float, default=40.0)
-    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--seed", type=int, nargs="+", default=[0])
     ap.add_argument("--gif", default=None, help="directory for top-down GIFs")
+    ap.add_argument("--mcap", default=None, help="directory for MCAP recordings (Foxglove), one per run")
+    ap.add_argument(
+        "--foxglove-live", action="store_true", help="stream runs to Foxglove (ws://localhost:8765)"
+    )
+    ap.add_argument("--prediction", default="lane_following", choices=["lane_following", "constant_velocity"])
     ap.add_argument("--out", default="results/carla.json")
     ap.add_argument("--port", type=int, default=2000)
     ap.add_argument("--append", action="store_true", help="append to an existing --out file")
@@ -431,28 +554,45 @@ def main(argv=None) -> None:
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     results = json.loads(out.read_text()) if args.append and out.exists() else []
-    for scenario in args.scenario:
-        for planner in args.planner:
-            for controller in args.controller:
-                town = args.traffic_town if scenario == "traffic" else args.town
-                t0 = time.time()
-                r = run(
-                    scenario,
-                    planner,
-                    controller,
-                    args.smoother,
-                    town,
-                    args.duration,
-                    args.seed,
-                    args.gif,
-                    port=args.port,
-                )
-                d = r.__dict__
-                row = {k: (round(v, 3) if isinstance(v, float) else v) for k, v in d.items()}
-                print(json.dumps(row), flush=True)
-                d["wall_s"] = time.time() - t0
-                results.append(d)
-                out.write_text(json.dumps(results, indent=2))  # keep partial results if the simulator dies
+    runs = [
+        (sc, pl, ctrl, seed)
+        for sc in args.scenario
+        for pl in args.planner
+        for ctrl in args.controller
+        for seed in (args.seed if sc == "traffic" else args.seed[:1])
+    ]
+    for scenario, planner, controller, seed in runs:
+        town = args.traffic_town if scenario == "traffic" else args.town
+        t0 = time.time()
+        hooks = None
+        if args.mcap or args.foxglove_live:
+            from .record import FoxgloveHook
+
+            mcap = None
+            if args.mcap:
+                Path(args.mcap).mkdir(parents=True, exist_ok=True)
+                mcap = str(Path(args.mcap) / f"{scenario}_{planner}_{controller}_seed{seed}.mcap")
+            hooks = FoxgloveHook(planner, mcap, args.foxglove_live)
+        r = run(
+            scenario,
+            planner,
+            controller,
+            args.smoother,
+            town,
+            args.duration,
+            seed,
+            args.gif,
+            port=args.port,
+            hooks=hooks,
+            prediction=args.prediction,
+        )
+        r.extra["seed"] = seed
+        d = r.__dict__
+        row = {k: (round(v, 3) if isinstance(v, float) else v) for k, v in d.items() if k != "extra"}
+        print(json.dumps(row), flush=True)
+        d["wall_s"] = time.time() - t0
+        results.append(d)
+        out.write_text(json.dumps(_finite(results), indent=2))  # keep partial results if the simulator dies
 
 
 if __name__ == "__main__":

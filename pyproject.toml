@@ -31,6 +31,7 @@ commonroad = [
 ]
 bags = ["rosbags>=0.10"]
 viz = ["matplotlib>=3.6", "pillow"]
+foxglove = ["foxglove-sdk>=0.29"]
 test = ["pytest>=7"]
 
 [project.urls]
@@ -42,7 +43,7 @@ frenet-bench-commonroad = "frenet_planner.commonroad.benchmark:main"
 
 [tool.scikit-build]
 minimum-version = "build-system.requires"
-cmake.args = ["-DFRENET_PLANNER_BUILD_PYTHON=ON", "-DFRENET_PLANNER_FETCH_OSQP=ON"]
+cmake.args = ["-DFRENET_PLANNER_BUILD_PYTHON=ON", "-DFRENET_PLANNER_VENDOR_DEPS=ON"]
 wheel.packages = ["python/frenet_planner"]
 sdist.exclude = [".pixi", "build*", "results", "data/cache"]
 

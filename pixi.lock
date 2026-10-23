@@ -204,8 +204,10 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: https://files.pythonhosted.org/packages/09/7d/af933f0f6e0767995b4e2d705a0665e454d1c19402aa7e895de3951ebb04/scipy-1.17.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/10/9b/81c8c39d95acc791a13de90434478d2952b83ad2a713cc0f92d492570ca2/rosbags-0.11.9-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/13/59/caa4d60a58f129659ea5403e6fb52808f87005dfcbaa03e84f0e07f0033e/mcap-1.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1f/26/eea4112be43c8b7345477ad9150d499303494f32fb5951cb0f6e9104045b/Polygon3-3.0.9.1.tar.gz
       - pypi: https://files.pythonhosted.org/packages/25/3b/b55cb577aa148ed4e383e9700c36f70b651cd434e1c07568f0a86c9d5fbb/lz4-4.4.5-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/4b/b7/b3e584c185e15e2e87d92f2c90fa3d77b18d1eabcba4bdb9ffd59178515f/foxglove_sdk-0.29.0-cp310-abi3-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/4f/bd/0d9f8247b0819385213d09564eda5c52d3673313c2414d51f72883ec24cd/omegaconf-2.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/55/72/8746c4bc488a31641091ccc50e71f92e0a4211e2ef882e00904940531962/osqp-0.6.7.post3-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/72/99/8e10f81806db750ee6acf11c980207c45feddd36066cb708328e5c5aceea/iso3166-3.0.0-py3-none-any.whl
@@ -216,6 +218,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/96/dc/76ab568830a305f09825ec1f96bf2031ab163ab61a52db1a511a4e3f1a91/commonroad_drivability_checker-2025.4.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/9e/c9/b2622292ea83fbb4ec318f5b9ab867d0a28ab43c5717bb85b0a5f6b3b0a4/networkx-3.6.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b8/0c/51f6841f1d84f404f92463fc2b1ba0da357ca1e3db6b7fbda26956c3b82a/ruamel_yaml-0.19.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/bb/1f/e9cfd801a3f9190bf3e759c422bbfd2247db9d7f3d54a56ecde70137791a/zstandard-0.25.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/c3/05/0bcea75e39bcb98192bfe908d2e53d636f87d0d9a365dcd95ffe5c1d9373/commonroad_vehicle_models-3.0.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cf/c9/3eb6466013bbee7f12cf442507ca80d3e31ec1fd68156c57647518a47d27/backports_zstd-1.8.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/d1/75/e5d44be90525cd28503e7f836d077ae6663ec0687a13ba7810b4114b3668/rtree-1.4.1-py3-none-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
@@ -483,7 +486,11 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wayland-protocols-1.49-hd8ed1ab_0.conda
+      - pypi: https://files.pythonhosted.org/packages/13/59/caa4d60a58f129659ea5403e6fb52808f87005dfcbaa03e84f0e07f0033e/mcap-1.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/22/00/986260e4d35444a3a88188deed7fa1b6739b20778d1899fe4b4975121171/carla-0.9.16-cp311-cp311-manylinux_2_31_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/25/3b/b55cb577aa148ed4e383e9700c36f70b651cd434e1c07568f0a86c9d5fbb/lz4-4.4.5-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/4b/b7/b3e584c185e15e2e87d92f2c90fa3d77b18d1eabcba4bdb9ffd59178515f/foxglove_sdk-0.29.0-cp310-abi3-manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/bb/1f/e9cfd801a3f9190bf3e759c422bbfd2247db9d7f3d54a56ecde70137791a/zstandard-0.25.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
   default:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -16729,6 +16736,14 @@ packages:
   - ruamel-yaml
   - typing-extensions>=4.5 ; python_full_version < '3.12'
   requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/13/59/caa4d60a58f129659ea5403e6fb52808f87005dfcbaa03e84f0e07f0033e/mcap-1.5.0-py3-none-any.whl
+  name: mcap
+  version: 1.5.0
+  sha256: 44ba129d381abdca474fbf5bcee036db87d7075d9059b139bf2fee2975c8bd52
+  requires_dist:
+  - lz4
+  - zstandard
+  requires_python: '>=3.7'
 - pypi: https://files.pythonhosted.org/packages/1f/26/eea4112be43c8b7345477ad9150d499303494f32fb5951cb0f6e9104045b/Polygon3-3.0.9.1.tar.gz
   name: polygon3
   version: 3.0.9.1
@@ -16749,6 +16764,22 @@ packages:
   - sphinx-bootstrap-theme ; extra == 'docs'
   - flake8 ; extra == 'flake8'
   requires_python: '>=3.9'
+- pypi: https://files.pythonhosted.org/packages/4b/b7/b3e584c185e15e2e87d92f2c90fa3d77b18d1eabcba4bdb9ffd59178515f/foxglove_sdk-0.29.0-cp310-abi3-manylinux_2_28_x86_64.whl
+  name: foxglove-sdk
+  version: 0.29.0
+  sha256: 78761c9756e157f308cca01add3454dcf560b92d473d8aba5930fbc28531ca32
+  requires_dist:
+  - anywidget ; extra == 'notebook'
+  - mcap ; extra == 'notebook'
+  - traitlets ; extra == 'notebook'
+  - foxglove-client>=0.20.0 ; extra == 'ray'
+  - ray[data]>=2.49,<3 ; extra == 'ray'
+  - foxglove-client>=0.20.0 ; extra == 'torch'
+  - torch>=2.5,<3 ; extra == 'torch'
+  - av>=16,<17 ; extra == 'video'
+  - numpy>=1.23,<3 ; extra == 'video'
+  - mcap>=1.3,<2 ; extra == 'video'
+  requires_python: '>=3.10'
 - pypi: https://files.pythonhosted.org/packages/4f/bd/0d9f8247b0819385213d09564eda5c52d3673313c2414d51f72883ec24cd/omegaconf-2.4.0-py3-none-any.whl
   name: omegaconf
   version: 2.4.0
@@ -16915,6 +16946,14 @@ packages:
   - ruamel-yaml-jinja2>=0.2 ; extra == 'jinja2'
   - ryd ; extra == 'docs'
   - mercurial>5.7 ; extra == 'docs'
+  requires_python: '>=3.9'
+- pypi: https://files.pythonhosted.org/packages/bb/1f/e9cfd801a3f9190bf3e759c422bbfd2247db9d7f3d54a56ecde70137791a/zstandard-0.25.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+  name: zstandard
+  version: 0.25.0
+  sha256: 9300d02ea7c6506f00e627e287e0492a5eb0371ec1670ae852fefffa6164b072
+  requires_dist:
+  - cffi~=1.17 ; python_full_version < '3.14' and platform_python_implementation != 'PyPy' and extra == 'cffi'
+  - cffi>=2.0.0b0 ; python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and extra == 'cffi'
   requires_python: '>=3.9'
 - pypi: https://files.pythonhosted.org/packages/c3/05/0bcea75e39bcb98192bfe908d2e53d636f87d0d9a365dcd95ffe5c1d9373/commonroad_vehicle_models-3.0.2-py3-none-any.whl
   name: commonroad-vehicle-models

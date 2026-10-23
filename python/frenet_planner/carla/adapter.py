@@ -146,13 +146,23 @@ def ego_state(vehicle) -> fp.EgoState:
     return fp.EgoState(x, y, yaw, speed, a, kappa)
 
 
-def obstacles(world, ego_id: int, horizon: float, dt: float, max_range: float = 120.0, ego_xy=None):
-    """Other vehicles and walkers with constant-velocity predictions."""
+def obstacles(
+    world,
+    ego_id: int,
+    horizon: float,
+    dt: float,
+    max_range: float = 120.0,
+    ego_xy=None,
+    road_map=None,
+    prediction: str = "lane_following",
+):
+    """Other vehicles and walkers with predictions: vehicles follow their lane on
+    ``road_map`` (``prediction="lane_following"``), everything else keeps its
+    velocity."""
     out = []
     for actor in world.get_actors():
-        if actor.id == ego_id or not (
-            actor.type_id.startswith("vehicle.") or actor.type_id.startswith("walker.")
-        ):
+        is_vehicle = actor.type_id.startswith("vehicle.")
+        if actor.id == ego_id or not (is_vehicle or actor.type_id.startswith("walker.")):
             continue
         tf = actor.get_transform()
         if (
@@ -165,8 +175,10 @@ def obstacles(world, ego_id: int, horizon: float, dt: float, max_range: float = 
         x, y, yaw = to_planner(tf.location.x, tf.location.y, tf.rotation.yaw)
         speed = math.hypot(vel.x, vel.y)
         heading = math.atan2(-vel.y, vel.x) if speed > 0.5 else yaw
-        ob = fp.predict_constant_velocity(
-            actor.id, x, y, heading, speed, 2 * ext.x + 0.2, 2 * ext.y + 0.2, horizon, dt
-        )
+        size = (2 * ext.x + 0.2, 2 * ext.y + 0.2)
+        if is_vehicle and road_map is not None and prediction == "lane_following":
+            ob = fp.predict_lane_following(road_map, actor.id, x, y, heading, speed, *size, horizon, dt)
+        else:
+            ob = fp.predict_constant_velocity(actor.id, x, y, heading, speed, *size, horizon, dt)
         out.append(ob)
     return out

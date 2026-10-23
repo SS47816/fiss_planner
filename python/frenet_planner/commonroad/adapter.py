@@ -148,11 +148,13 @@ def obstacles_at(
     dt: float,
     horizon: float,
     prediction: str = "ground_truth",
+    road_map: fp.RoadMap | None = None,
 ) -> list[fp.Obstacle]:
     """Planner obstacles at `time_step`, with predictions relative to that time.
 
     ``prediction="ground_truth"`` uses the recorded future states (as in the
-    FISS+ paper); ``"constant_velocity"`` extrapolates the current state."""
+    FISS+ paper); ``"constant_velocity"`` extrapolates the current state and
+    ``"lane_following"`` moves it along its lane of `road_map`."""
     steps = int(round(horizon / dt))
     out: list[fp.Obstacle] = []
     for ob in obstacles:
@@ -170,10 +172,15 @@ def obstacles_at(
         now = ob.state_at_time(time_step)
         if now is None:
             continue
-        if prediction == "constant_velocity":
+        if prediction in ("constant_velocity", "lane_following"):
             x, y, yaw = _box_pose(now, dx, dy, dyaw)
             v = float(getattr(now, "velocity", 0.0) or 0.0)
-            o = fp.predict_constant_velocity(ob.obstacle_id, x, y, yaw, v, length, width, horizon, dt)
+            if prediction == "lane_following" and road_map is not None:
+                o = fp.predict_lane_following(
+                    road_map, ob.obstacle_id, x, y, yaw, v, length, width, horizon, dt
+                )
+            else:
+                o = fp.predict_constant_velocity(ob.obstacle_id, x, y, yaw, v, length, width, horizon, dt)
             o.is_static = False
             out.append(o)
             continue

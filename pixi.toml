@@ -59,6 +59,8 @@ commonroad-io = "==2024.3"
 commonroad-route-planner = "==2025.1.0"
 commonroad-drivability-checker = "==2025.4.0"
 rosbags = ">=0.10"
+foxglove-sdk = "==0.29.0"
+mcap = "==1.5.0"
 
 [feature.bench.tasks]
 cr-bench = { cmd = "python -m frenet_planner.commonroad.benchmark", depends-on = ["py-build"] }
@@ -148,6 +150,8 @@ shapely = ">=2.0"
 
 [feature.carla.pypi-dependencies]
 carla = "==0.9.16"
+foxglove-sdk = "==0.29.0"
+mcap = "==1.5.0"
 
 [feature.carla.tasks]
 carla-closed-loop = { cmd = "python -m frenet_planner.carla.closed_loop", depends-on = ["py-build"] }
