@@ -1,5 +1,13 @@
 # FISS Planner
 
+> [!IMPORTANT]
+> **This repository is no longer maintained.** The maintained implementation of FISS (RA-L 2022), together with
+> FOP and the other planners, now lives in **[SS47816/frenet_planner](https://github.com/SS47816/frenet_planner)**:
+> a C++17 core with Python bindings (`pip install frenet-planner`), ROS 2 / ROS 1 nodes, Lanelet2 /
+> CommonRoad / CARLA support, and a reproducible benchmark. Select it with `planner.type: fiss`.
+> The code below is kept for reference; the version used in the paper is tagged
+> [`paper-ral2022`](https://github.com/SS47816/fiss_planner/tree/paper-ral2022).
+
 ## [RA-L 2022] FISS: A Trajectory Planning Framework using Fast Iterative Search and Sampling Strategy for Autonomous Driving
 
 ![Ubuntu](https://img.shields.io/badge/OS-Ubuntu-informational?style=flat&logo=ubuntu&logoColor=white&color=2bbc8a)
