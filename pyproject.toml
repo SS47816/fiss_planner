@@ -1,0 +1,57 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "nanobind>=2.4"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "frenet-planner"
+version = "1.0.0"
+description = "Fast sampling-based Frenet trajectory planners (FOP, FISS, FISS+) for autonomous driving"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+authors = [{ name = "Shuo Sun" }]
+keywords = ["motion planning", "autonomous driving", "frenet", "trajectory planning", "robotics", "commonroad"]
+classifiers = [
+  "Programming Language :: C++",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Intended Audience :: Science/Research",
+]
+dependencies = ["numpy>=1.22"]
+
+[project.optional-dependencies]
+commonroad = [
+  "commonroad-io>=2024.1,<2026",
+  "commonroad-route-planner>=2025.1; python_version<'3.12'",
+  "commonroad-drivability-checker>=2025.1",
+  "shapely>=2.0",
+  "matplotlib>=3.6",
+  "pandas>=1.5",
+  "tabulate",
+]
+bags = ["rosbags>=0.10"]
+viz = ["matplotlib>=3.6", "pillow"]
+test = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/SS47816/frenet_planner"
+Issues = "https://github.com/SS47816/frenet_planner/issues"
+
+[project.scripts]
+frenet-bench-commonroad = "frenet_planner.commonroad.benchmark:main"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+cmake.args = ["-DFRENET_PLANNER_BUILD_PYTHON=ON", "-DFRENET_PLANNER_FETCH_OSQP=ON"]
+wheel.packages = ["python/frenet_planner"]
+sdist.exclude = [".pixi", "build*", "results", "data/cache"]
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
