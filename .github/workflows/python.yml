@@ -62,6 +62,9 @@ jobs:
         env:
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
           CIBW_SKIP: "*-musllinux_* *-win32 *_i686"
+          # Current NumPy ships Linux wheels for manylinux_2_28 only (glibc >= 2.28).
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: "pytest -q {project}/python/tests -k 'not embedded_msg'"
       - uses: actions/upload-artifact@v4
