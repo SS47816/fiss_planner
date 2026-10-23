@@ -35,7 +35,7 @@ def main() -> None:
         font=font,
         fill=(201, 209, 217),
     )
-    cam = Image.fromarray(imageio.get_reader("results/videos/carla_cut_in_fiss_plus.mp4").get_data(300))
+    cam = Image.fromarray(imageio.get_reader("results/videos/carla_traffic_fiss_plus.mp4").get_data(280))
     cam = cam.resize((600, 338), Image.LANCZOS)
     cmp_ = frame_from(MEDIA / "compare_fop_fiss_fissplus.gif", 0.33)
     cmp_ = cmp_.resize((600, int(cmp_.height * 600 / cmp_.width)), Image.LANCZOS)

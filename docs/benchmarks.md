@@ -118,10 +118,10 @@ Full-length videos (cut-in, parked car, traffic) are attached to the GitHub rele
 | parked car | fop_plus | 0 | 100.0 % | 0.0 % | 7.6 s | 7.6 s | 12.1 m/s | 0.61 ms |
 | parked car | fiss | 0 | 100.0 % | 0.0 % | 7.6 s | 7.6 s | 12.0 m/s | 0.14 ms |
 | parked car | fiss_plus | 0 | 100.0 % | 0.0 % | 4.9 s | 4.9 s | 12.3 m/s | 0.29 ms |
-| cut-in (scripted) | fop | 0 | 95.7 % | 2.7 % | 0.6 s | 0.6 s | 9.4 m/s | 4.55 ms |
-| cut-in (scripted) | fop_plus | 0 | 95.7 % | 2.7 % | 0.5 s | 0.5 s | 9.3 m/s | 1.12 ms |
-| cut-in (scripted) | fiss | 0 | 95.7 % | 2.7 % | 0.6 s | 0.6 s | 9.0 m/s | 0.64 ms |
-| cut-in (scripted) | fiss_plus | 0 | 96.0 % | 3.0 % | 0.5 s | 0.5 s | 9.9 m/s | 0.76 ms |
+| cut-in (scripted) | fop | 0 | 96.7 % | 1.3 % | 0.6 s | 0.1 s | 10.8 m/s | 5.08 ms |
+| cut-in (scripted) | fop_plus | 0 | 96.7 % | 1.7 % | 1.5 s | 0.3 s | 10.7 m/s | 1.02 ms |
+| cut-in (scripted) | fiss | 0 | 99.3 % | 0.7 % | 1.6 s | 0.3 s | 10.7 m/s | 0.29 ms |
+| cut-in (scripted) | fiss_plus | 0 | 99.7 % | 0.3 % | 1.6 s | 0.5 s | 11.2 m/s | 0.35 ms |
 | traffic (49 TM vehicles, 60 s) | fop | 0 | 100.0 % | 0.0 % | 3.4 s | 1.7 s | 13.7 m/s | 4.81 ms |
 | traffic (49 TM vehicles, 60 s) | fop_plus | 0 | 100.0 % | 0.0 % | 3.8 s | 1.8 s | 13.9 m/s | 0.66 ms |
 | traffic (49 TM vehicles, 60 s) | fiss | 0 | 100.0 % | 0.0 % | 4.1 s | 1.8 s | 13.8 m/s | 0.15 ms |
@@ -129,8 +129,8 @@ Full-length videos (cut-in, parked car, traffic) are attached to the GitHub rele
 
 The Stanley+PID runs are in the JSON file; they give the same picture. Minimum TTC and headway are
 measured to the vehicle ahead while keeping the lane. The scripted cut-in merges 8–20 m ahead within
-2.5 s, closing at several metres per second: every planner brakes hard for about a second (the
-emergency cycles), then follows or passes, without a collision.
+2.5 s, closing at several metres per second: every planner brakes briefly (the emergency cycles),
+then follows or moves over a lane, without a collision.
 
 ### Dense traffic, ten seeds (FISS+, MPC)
 
@@ -155,8 +155,8 @@ right after an emergency stop instead of braking on to a standstill.
 | cruise | stanley_pid | 0 | 12.2 cm | 0.84 m |
 | parked car | mpc | 0 | 1.6 cm | 1.04 m |
 | parked car | stanley_pid | 0 | 12.4 cm | 0.84 m |
-| cut-in (scripted) | mpc | 0 | 1.7 cm | 0.74 m |
-| cut-in (scripted) | stanley_pid | 0 | 8.3 cm | 0.68 m |
+| cut-in (scripted) | mpc | 0 | 1.0 cm | 0.99 m |
+| cut-in (scripted) | stanley_pid | 0 | 6.3 cm | 0.73 m |
 | traffic (30 s) | mpc | 0 | 1.1 cm | 1.01 m |
 | traffic (30 s) | stanley_pid | 0 | 9.3 cm | 0.97 m |
 

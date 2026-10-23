@@ -272,7 +272,8 @@ def _drive_cutter(cutter, state, ego_s, t, dt, result, speed=9.0, duration=2.5):
     tf.location.z += 0.1
     cutter.set_transform(tf)
     fwd = tf.get_forward_vector()
-    cutter.set_target_velocity(carla.Vector3D(fwd.x * speed, fwd.y * speed, 0.0))
+    # Physics is off, so CARLA reports no velocity; keep the true one for the planner.
+    state["velocity"] = carla.Vector3D(fwd.x * speed, fwd.y * speed, 0.0)
     return state
 
 
@@ -379,6 +380,7 @@ def run(
                     ego_xy=(ego_s.x, ego_s.y),
                     road_map=road,
                     prediction=prediction,
+                    velocities={actors[0].id: cutter_state["velocity"]} if cutter_state else None,
                 )
                 out = lp.step(t, ego_s, obs)
                 stats.append((out.success, out.emergency, out.stats.time_ms, out.fallback, out.degraded))

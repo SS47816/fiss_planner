@@ -155,10 +155,13 @@ def obstacles(
     ego_xy=None,
     road_map=None,
     prediction: str = "lane_following",
+    velocities=None,
 ):
     """Other vehicles and walkers with predictions: vehicles follow their lane on
     ``road_map`` (``prediction="lane_following"``), everything else keeps its
-    velocity."""
+    velocity. `velocities` ({actor id: CARLA velocity vector}) replaces the
+    simulator's report for actors moved kinematically (physics off), which CARLA
+    reports as standing still."""
     out = []
     for actor in world.get_actors():
         is_vehicle = actor.type_id.startswith("vehicle.")
@@ -171,7 +174,7 @@ def obstacles(
         ):
             continue
         ext = actor.bounding_box.extent
-        vel = actor.get_velocity()
+        vel = (velocities or {}).get(actor.id) or actor.get_velocity()
         x, y, yaw = to_planner(tf.location.x, tf.location.y, tf.rotation.yaw)
         speed = math.hypot(vel.x, vel.y)
         heading = math.atan2(-vel.y, vel.x) if speed > 0.5 else yaw

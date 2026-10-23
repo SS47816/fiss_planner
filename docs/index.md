@@ -4,7 +4,7 @@ Fast sampling-based trajectory planners for autonomous driving: **FOP**, **FOP+*
 (RA-L 2022) and **FISS+** (IROS 2023) in one C++17 core, with Python bindings and ROS 1 / ROS 2
 nodes, Lanelet2 / CommonRoad / CARLA support, an optional QP smoother and an MPC controller.
 
-![FISS+ handling a cut-in in CARLA](media/carla_cut_in.webp)
+![FISS+ driving through dense traffic in CARLA](media/carla_traffic_hero.webp)
 
 **[▶ Interactive replay](demo/index.html)**: step through CommonRoad scenarios with every planner,
 including the candidate trajectories each one explored.

@@ -22,8 +22,8 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/carla_cut_in.webp" width="760" alt="FISS+ handling a cut-in in CARLA"/><br/>
-  <sub>CARLA 0.9.16: a car cuts in; FISS+ brakes, then steers around it. Amber: executed plan · teal: candidate trajectories · inset: planner view.</sub>
+  <img src="docs/media/carla_traffic_hero.webp" width="760" alt="FISS+ driving through dense traffic in CARLA"/><br/>
+  <sub>CARLA 0.9.16: FISS+ drives through 49 vehicles of mixed traffic, changing lanes to pass slower cars. Amber: executed plan · teal: candidate trajectories · inset: planner view.</sub>
 </p>
 
 <p align="center">
@@ -76,7 +76,7 @@
   </tr>
   <tr>
     <td><img src="docs/media/carla_overtake.webp" alt="Overtaking a parked car in CARLA"/><br/><sub>CARLA: overtaking a parked car</sub></td>
-    <td><img src="docs/media/carla_traffic.webp" alt="Driving in traffic in CARLA"/><br/><sub>CARLA: 49 vehicles of mixed traffic</sub></td>
+    <td><img src="docs/media/carla_cut_in.webp" alt="A car cutting in in CARLA"/><br/><sub>CARLA: a car cuts in; FISS+ brakes and moves over a lane</sub></td>
   </tr>
 </table>
 
@@ -225,6 +225,6 @@ If this project helps your research, please cite:
 
 ## Contributing
 
-Issues, discussions and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Upgrading from the 2021 ROS 1 node? See [docs/migration.md](docs/migration.md).
+Issues, discussions and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Licensed under [Apache-2.0](LICENSE).
