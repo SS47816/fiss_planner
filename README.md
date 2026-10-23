@@ -8,6 +8,10 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/SS47816/frenet_planner/actions/workflows/core.yml"><img src="https://github.com/SS47816/frenet_planner/actions/workflows/core.yml/badge.svg?branch=main" alt="core CI"/></a>
+  <a href="https://github.com/SS47816/frenet_planner/actions/workflows/python.yml"><img src="https://github.com/SS47816/frenet_planner/actions/workflows/python.yml/badge.svg?branch=main" alt="Python CI"/></a>
+  <a href="https://github.com/SS47816/frenet_planner/actions/workflows/ros.yml"><img src="https://github.com/SS47816/frenet_planner/actions/workflows/ros.yml/badge.svg?branch=main" alt="ROS CI"/></a>
+  <br/>
   <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white" alt="C++17"/>
   <img src="https://img.shields.io/badge/Python-3.10%E2%80%933.13-3776AB?logo=python&logoColor=white" alt="Python 3.10-3.13"/>
   <img src="https://img.shields.io/badge/ROS%202-Jazzy%20%7C%20Humble-22314E?logo=ros&logoColor=white" alt="ROS 2 Jazzy | Humble"/>
