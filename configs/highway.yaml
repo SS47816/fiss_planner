@@ -13,9 +13,14 @@ cost:
   w_speed: 1.0
   w_lateral: 2.0
   w_lane_change: 3.0
+  desired_time_headway: 1.8   # keep-distance comfort term
+  desired_ttc: 5.0
 collision:
   margin_lon: 1.0
   margin_lat: 0.3
+safety:                       # virtual bumper (hard)
+  min_gap: 3.0
+  min_ttc: 2.0
 vehicle:
   max_speed: 36.0
   max_lat_accel: 3.0

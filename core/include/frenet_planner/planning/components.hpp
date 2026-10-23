@@ -6,6 +6,7 @@
 #pragma once
 
 #include <array>
+#include <limits>
 #include <optional>
 #include <vector>
 
@@ -13,6 +14,7 @@
 #include "frenet_planner/geometry/reference_line.hpp"
 #include "frenet_planner/planning/config.hpp"
 #include "frenet_planner/planning/corridor.hpp"
+#include "frenet_planner/planning/frenet_obstacles.hpp"
 #include "frenet_planner/planning/trajectory.hpp"
 #include "frenet_planner/prediction/obstacle.hpp"
 
@@ -72,19 +74,23 @@ bool convertToCartesian(const ReferenceLine& ref, Trajectory& traj);
 
 class CostEvaluator {
  public:
-  CostEvaluator(const CostConfig& cost, const SamplingConfig& sampling) : w_(cost), max_t_(sampling.max_t) {}
+  CostEvaluator(const CostConfig& cost, const SamplingConfig& sampling, const VehicleParams& vehicle = {},
+                double margin_lat = 0.3)
+      : w_(cost), max_t_(sampling.max_t), gaps_(cost, SafetyConfig{}, vehicle, margin_lat) {}
 
   /// Cost of the terminal terms only. Since the remaining (comfort) terms are
   /// non-negative this is a lower bound of the full cost.
   double estimate(const EndState& end, const LateralSample& lat, double target_speed) const;
   /// Full cost of a generated trajectory (Frenet arrays only), following
   /// Werling et al.: terminal speed/offset/horizon costs plus mean squared
-  /// acceleration and jerk.
-  CostTerms evaluate(const Trajectory& traj, const LateralSample& lat, double target_speed) const;
+  /// acceleration and jerk, plus the proximity terms if obstacles are given.
+  CostTerms evaluate(const Trajectory& traj, const LateralSample& lat, double target_speed,
+                     const FrenetObstacles* obstacles = nullptr) const;
 
  private:
   CostConfig w_;
   double max_t_;
+  GapEvaluator gaps_;
 };
 
 /// Kinematic and corridor constraints on a Cartesian trajectory.
@@ -104,8 +110,14 @@ class ConstraintValidator {
 class CollisionChecker {
  public:
   CollisionChecker(const CollisionConfig& cfg, const VehicleParams& vehicle) : cfg_(cfg), vehicle_(vehicle) {}
-  /// Returns true if collision free; `num_checks` counts box-pair tests.
-  bool isCollisionFree(const Trajectory& traj, const std::vector<Obstacle>& obstacles, int& num_checks) const;
+  /// Returns true if collision free; `num_checks` counts box-pair tests. On a
+  /// collision, `hit_id` / `hit_t` (if given) receive the first obstacle hit
+  /// and when. Only samples with t <= max_t are checked, and obstacles flagged
+  /// in `skip` (indexed like `obstacles`) are ignored.
+  bool isCollisionFree(const Trajectory& traj, const std::vector<Obstacle>& obstacles, int& num_checks,
+                       int* hit_id = nullptr, double* hit_t = nullptr,
+                       double max_t = std::numeric_limits<double>::infinity(),
+                       const std::vector<char>* skip = nullptr) const;
 
  private:
   CollisionConfig cfg_;

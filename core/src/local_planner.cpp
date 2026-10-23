@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 #include "frenet_planner/common/math.hpp"
@@ -130,6 +131,7 @@ void LocalPlanner::setStopLineActive(int stop_line_id, bool active) {
 
 void LocalPlanner::reset() {
   previous_.reset();
+  previous_emergency_ = false;
   previous_ego_lane_ = -1;
   planner_->reset();
 }
@@ -224,7 +226,11 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
   // --- Start state (stitching) ------------------------------------------------
   EgoState start = ego;
   std::optional<Trajectory> prefix;
-  if (st.enabled && previous_ && previous_->size() > 1) {
+  if (previous_emergency_) {
+    // Recover from an emergency stop from the measured state: stitching onto the
+    // stop profile would carry its full braking into every new plan.
+    start.a = std::max(start.a, -config_.recovery_decel);
+  } else if (st.enabled && previous_ && previous_->size() > 1) {
     const double t_rel = t_now - previous_t0_;
     if (t_rel + latency <= previous_->t.back()) {
       const EgoState expected = sampleTrajectory(*previous_, t_rel);
@@ -285,6 +291,36 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
   out.stats = res.stats;
   out.candidates = std::move(res.candidates);
 
+  // Keep executing what is left of the last plan if it is still collision
+  // free; failing that, retry without the safety envelope (a close but
+  // collision-free plan beats hard braking in traffic), then with a shorter
+  // collision horizon; otherwise brake. Planning starts afresh next cycle.
+  std::optional<Trajectory> rest;
+  if (!res.success && previous_) {
+    const double t_rel = t_now - previous_t0_;
+    if (t_rel < previous_->t.back() - config_.planner.sampling.dt) {
+      Trajectory candidate = slice(*previous_, t_rel, previous_->t.back() + 1.0);
+      int checks = 0;
+      const CollisionChecker checker(config_.planner.collision, vehicle_);
+      if (checker.isCollisionFree(candidate, obstacles, checks)) rest = std::move(candidate);
+    }
+  }
+  const auto retry = [&](bool envelope, double horizon) {
+    in.safety_envelope = envelope;
+    in.collision_horizon = horizon;
+    PlanResult r = planner_->plan(in);
+    out.stats.time_ms += r.stats.time_ms;
+    if (!r.success) return;
+    out.degraded = true;
+    res.success = true;
+    res.trajectory = std::move(r.trajectory);
+  };
+  const bool envelope_rejected = res.stats.rejections[static_cast<int>(Rejection::kSafetyDistance)] > 0;
+  if (!res.success && !rest && envelope_rejected && config_.planner.safety.enabled) {
+    retry(false, std::numeric_limits<double>::infinity());
+  }
+  if (!res.success && !rest && config_.degraded_horizon > 0.0) retry(false, config_.degraded_horizon);
+
   if (res.success) {
     out.success = true;
     if (config_.smoother.enabled) {
@@ -302,30 +338,16 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
     }
     previous_ = out.trajectory;
     previous_t0_ = t_now;
+    previous_emergency_ = false;
+  } else if (rest) {
+    out.trajectory = std::move(*rest);
+    out.fallback = true;
   } else {
-    // Keep executing what is left of the last plan if it is still collision
-    // free; otherwise brake. Planning retries next cycle either way.
-    const CollisionChecker checker(config_.planner.collision, vehicle_);
-    bool use_previous = false;
-    if (previous_) {
-      const double t_rel = t_now - previous_t0_;
-      if (t_rel < previous_->t.back() - config_.planner.sampling.dt) {
-        Trajectory rest = slice(*previous_, t_rel, previous_->t.back() + 1.0);
-        int checks = 0;
-        if (checker.isCollisionFree(rest, obstacles, checks)) {
-          out.trajectory = std::move(rest);
-          use_previous = true;
-        }
-      }
-    }
-    if (use_previous) {
-      out.fallback = true;
-    } else {
-      out.trajectory = emergencyStop(out.start, ref);
-      out.emergency = true;
-      previous_ = out.trajectory;
-      previous_t0_ = t_now;
-    }
+    out.trajectory = emergencyStop(out.start, ref);
+    out.emergency = true;
+    previous_ = out.trajectory;
+    previous_t0_ = t_now;
+    previous_emergency_ = true;
   }
   return out;
 }

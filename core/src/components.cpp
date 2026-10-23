@@ -140,8 +140,8 @@ double CostEvaluator::estimate(const EndState& end, const LateralSample& lat, do
          w_.w_lane_change * std::abs(lat.lane) + lat.lane_cost;
 }
 
-CostTerms CostEvaluator::evaluate(const Trajectory& traj, const LateralSample& lat,
-                                  double target_speed) const {
+CostTerms CostEvaluator::evaluate(const Trajectory& traj, const LateralSample& lat, double target_speed,
+                                  const FrenetObstacles* obstacles) const {
   // Terminal terms (time, speed, lateral offset, lane) equal the estimate;
   // comfort terms are mean squared acceleration and jerk.
   const size_t n = traj.size();
@@ -160,6 +160,7 @@ CostTerms CostEvaluator::evaluate(const Trajectory& traj, const LateralSample& l
   c.jerk = w_.w_jerk * jerk * inv_n;
   c.lateral = w_.w_lateral * dd * dd;
   c.lane_change = w_.w_lane_change * std::abs(lat.lane) + lat.lane_cost;
+  if (obstacles != nullptr) c.proximity = gaps_.cost(traj, *obstacles);
   return c;
 }
 
@@ -171,14 +172,19 @@ Rejection ConstraintValidator::check(const Trajectory& traj, const Corridor* cor
   if (!traj.is_cartesian) return Rejection::kInvalid;
   const double kappa_max = vehicle_.maxCurvature();
   const size_t n = traj.size();
+  // A start state at or beyond an acceleration limit (e.g. stitched onto a
+  // full stop, whose Frenet deceleration exceeds the limit slightly on curves)
+  // may not get worse, so the planner can take over instead of failing.
+  constexpr double kAccelSlack = 0.05;  // [m/s^2]
+  const double s_dd0 = n > 0 ? traj.s_dd[0] : 0.0;
+  const double max_accel = std::max(vehicle_.max_accel, s_dd0 + kAccelSlack);
+  const double max_decel = std::max(vehicle_.max_decel, -s_dd0 + kAccelSlack);
   for (size_t i = 0; i < n; ++i) {
     if (!std::isfinite(traj.x[i]) || !std::isfinite(traj.y[i]) || !std::isfinite(traj.s_d[i])) {
       return Rejection::kInvalid;
     }
     if (traj.v[i] > vehicle_.max_speed || traj.s_d[i] < -0.1) return Rejection::kSpeed;
-    if (traj.s_dd[i] > vehicle_.max_accel || traj.s_dd[i] < -vehicle_.max_decel) {
-      return Rejection::kAccel;
-    }
+    if (traj.s_dd[i] > max_accel || traj.s_dd[i] < -max_decel) return Rejection::kAccel;
     if (traj.v[i] >= cfg_.curvature_check_min_speed) {
       if (cfg_.check_curvature && std::abs(traj.kappa[i]) > kappa_max) return Rejection::kCurvature;
       if (cfg_.check_lat_accel && traj.v[i] * traj.v[i] * std::abs(traj.kappa[i]) > vehicle_.max_lat_accel) {
@@ -212,19 +218,25 @@ Rejection ConstraintValidator::check(const Trajectory& traj, const Corridor* cor
 // ----------------------------------------------------------------------------
 
 bool CollisionChecker::isCollisionFree(const Trajectory& traj, const std::vector<Obstacle>& obstacles,
-                                       int& num_checks) const {
+                                       int& num_checks, int* hit_id, double* hit_t, double max_t,
+                                       const std::vector<char>* skip) const {
   if (obstacles.empty()) return true;
   const double len = vehicle_.length + 2.0 * cfg_.margin_lon;
   const double wid = vehicle_.width + 2.0 * cfg_.margin_lat;
   const size_t stride = static_cast<size_t>(std::max(1, cfg_.stride));
   const size_t n = traj.size();
-  for (size_t i = 0; i < n; i += stride) {
+  for (size_t i = 0; i < n && traj.t[i] <= max_t; i += stride) {
     const Box2d ego{traj.x[i], traj.y[i], traj.yaw[i], len, wid};
-    for (const auto& ob : obstacles) {
-      const auto box = ob.boxAt(traj.t[i]);
+    for (size_t k = 0; k < obstacles.size(); ++k) {
+      if (skip != nullptr && k < skip->size() && (*skip)[k]) continue;
+      const auto box = obstacles[k].boxAt(traj.t[i]);
       if (!box) continue;
       ++num_checks;
-      if (overlaps(ego, *box)) return false;
+      if (overlaps(ego, *box)) {
+        if (hit_id != nullptr) *hit_id = obstacles[k].id;
+        if (hit_t != nullptr) *hit_t = traj.t[i];
+        return false;
+      }
     }
   }
   return true;

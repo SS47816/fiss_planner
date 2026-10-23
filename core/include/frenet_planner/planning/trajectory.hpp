@@ -17,19 +17,21 @@ struct CostTerms {
   double jerk = 0.0;
   double lateral = 0.0;
   double lane_change = 0.0;
-  double total() const { return time + speed + accel + jerk + lateral + lane_change; }
+  double proximity = 0.0;  ///< headway, time-to-collision and lateral clearance to obstacles
+  double total() const { return time + speed + accel + jerk + lateral + lane_change + proximity; }
 };
 
 /// Why a candidate was rejected (or kOk).
 enum class Rejection : int {
   kOk = 0,
-  kInvalid,    ///< non-finite values
-  kSpeed,      ///< exceeds max speed or drives backwards
-  kAccel,      ///< exceeds longitudinal acceleration/deceleration limits
-  kCurvature,  ///< exceeds curvature limit
-  kLatAccel,   ///< exceeds lateral acceleration limit
-  kOffRoad,    ///< leaves the drivable corridor
-  kCollision,  ///< collides with a predicted obstacle
+  kInvalid,         ///< non-finite values
+  kSpeed,           ///< exceeds max speed or drives backwards
+  kAccel,           ///< exceeds longitudinal acceleration/deceleration limits
+  kCurvature,       ///< exceeds curvature limit
+  kLatAccel,        ///< exceeds lateral acceleration limit
+  kOffRoad,         ///< leaves the drivable corridor
+  kCollision,       ///< collides with a predicted obstacle
+  kSafetyDistance,  ///< closer to an obstacle ahead than the safety envelope allows
   kCount
 };
 
@@ -50,6 +52,8 @@ struct Trajectory {
   double cost_estimate = 0.0;  ///< cheap end-state estimate (incl. heuristic)
   bool is_cartesian = false;
   Rejection rejection = Rejection::kOk;
+  int blocking_id = -1;     ///< obstacle behind a kCollision / kSafetyDistance rejection
+  double blocking_t = 0.0;  ///< time of that first conflict [s]
 
   size_t size() const { return t.size(); }
   double totalCost() const { return cost.total(); }

@@ -55,6 +55,15 @@ void PlannerConfig::validate() const {
   require(cost.w_time >= 0 && cost.w_speed >= 0 && cost.w_accel >= 0 && cost.w_jerk >= 0 &&
               cost.w_lateral >= 0 && cost.w_lane_change >= 0 && cost.w_heuristic >= 0,
           "cost weights must be non-negative");
+  require(cost.w_headway >= 0 && cost.w_ttc >= 0 && cost.w_clearance >= 0,
+          "proximity weights must be non-negative");
+  require(cost.desired_gap > 0 && cost.desired_time_headway >= 0 && cost.desired_ttc > 0 &&
+              cost.desired_clearance > 0,
+          "desired gap, ttc and clearance must be positive");
+  require(cost.follow_time >= 0, "cost.follow_time must be >= 0");
+  require(
+      safety.min_gap >= 0 && safety.min_time_headway >= 0 && safety.min_ttc >= 0 && safety.reaction_time >= 0,
+      "safety thresholds must be >= 0");
   require(collision.margin_lon >= 0 && collision.margin_lat >= 0, "margins must be >= 0");
   require(collision.stride >= 1, "collision.stride must be >= 1");
   require(fiss_plus.max_refine_iters >= 0, "fiss_plus.max_refine_iters must be >= 0");
@@ -93,8 +102,8 @@ PlannerConfig parse(const YAML::Node& root, VehicleParams* vehicle) {
   PlannerConfig c;
   if (!root || root.IsNull()) return c;
   if (!root.IsMap()) throw std::invalid_argument("config root must be a map");
-  static const char* kSections[] = {"planner",   "sampling",  "cost",   "constraints",
-                                    "collision", "fiss_plus", "vehicle"};
+  static const char* kSections[] = {"planner",   "sampling", "cost",      "constraints",
+                                    "collision", "safety",   "fiss_plus", "vehicle"};
   for (const auto& kv : root) {
     const auto key = kv.first.as<std::string>();
     if (std::find(std::begin(kSections), std::end(kSections), key) == std::end(kSections)) {
@@ -124,7 +133,15 @@ PlannerConfig parse(const YAML::Node& root, VehicleParams* vehicle) {
          {"w_jerk", set(w.w_jerk)},
          {"w_lateral", set(w.w_lateral)},
          {"w_lane_change", set(w.w_lane_change)},
-         {"w_heuristic", set(w.w_heuristic)}});
+         {"w_heuristic", set(w.w_heuristic)},
+         {"w_headway", set(w.w_headway)},
+         {"desired_gap", set(w.desired_gap)},
+         {"desired_time_headway", set(w.desired_time_headway)},
+         {"w_ttc", set(w.w_ttc)},
+         {"desired_ttc", set(w.desired_ttc)},
+         {"w_clearance", set(w.w_clearance)},
+         {"desired_clearance", set(w.desired_clearance)},
+         {"follow_time", set(w.follow_time)}});
   auto& k = c.constraints;
   apply(root["constraints"], "constraints",
         {{"check_curvature", set(k.check_curvature)},
@@ -135,7 +152,15 @@ PlannerConfig parse(const YAML::Node& root, VehicleParams* vehicle) {
   apply(root["collision"], "collision",
         {{"margin_lon", set(col.margin_lon)},
          {"margin_lat", set(col.margin_lat)},
-         {"stride", set(col.stride)}});
+         {"stride", set(col.stride)},
+         {"ignore_rear_in_lane", set(col.ignore_rear_in_lane)}});
+  auto& sf = c.safety;
+  apply(root["safety"], "safety",
+        {{"enabled", set(sf.enabled)},
+         {"min_gap", set(sf.min_gap)},
+         {"min_time_headway", set(sf.min_time_headway)},
+         {"min_ttc", set(sf.min_ttc)},
+         {"reaction_time", set(sf.reaction_time)}});
   auto& f = c.fiss_plus;
   apply(root["fiss_plus"], "fiss_plus",
         {{"refine", set(f.refine)},

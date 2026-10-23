@@ -36,9 +36,18 @@ struct LocalPlannerConfig {
   RouteCorridorConfig route;
   StitchingConfig stitching;
   PathModeConfig path;
-  SmootherConfig smoother;                ///< optional QP refinement of the chosen trajectory
-  double desired_speed = 13.9;            ///< [m/s] used when step() gets no speed
-  double emergency_decel = 0.0;           ///< [m/s^2] fail-safe braking; 0 = vehicle max_decel
+  SmootherConfig smoother;       ///< optional QP refinement of the chosen trajectory
+  double desired_speed = 13.9;   ///< [m/s] used when step() gets no speed
+  double emergency_decel = 0.0;  ///< [m/s^2] fail-safe braking; 0 = vehicle max_decel
+  /// When no candidate is valid and the previous plan is no longer collision
+  /// free, the planner retries without the safety envelope and then checking
+  /// collisions only this far ahead [s] before braking (long-horizon
+  /// predictions are the least reliable). 0 = no short-horizon retry.
+  double degraded_horizon = 2.5;
+  /// After an emergency stop, the next plan starts from the measured state with
+  /// at most this deceleration [m/s^2], so the vehicle resumes once the way is
+  /// clear instead of inheriting full braking from the stop profile.
+  double recovery_decel = 2.0;
   bool use_speed_limit = true;            ///< cap at the ego lane's speed limit
   bool use_curvature_speed_limit = true;  ///< cap at sqrt(max_lat_accel / kappa) ahead
 };
@@ -47,6 +56,7 @@ struct LocalPlanOutput {
   bool success = false;    ///< a new trajectory was planned this cycle
   bool fallback = false;   ///< the remainder of the previous trajectory is returned instead
   bool emergency = false;  ///< no safe plan: maximum-deceleration stop in the current lane
+  bool degraded = false;   ///< planned in a fallback retry (no envelope, or the shorter collision horizon)
   bool stitched = false;   ///< planned from the previous trajectory, not the measured state
   bool smoothed = false;   ///< the QP smoother refined the sampled trajectory
   Trajectory trajectory;   ///< t relative to the step() time
@@ -100,6 +110,7 @@ class LocalPlanner {
   Corridor path_corridor_;
 
   std::optional<Trajectory> previous_;  ///< last output, t relative to previous_t0_
+  bool previous_emergency_ = false;     ///< previous_ is an emergency stop
   double previous_t0_ = 0.0;
   int previous_ego_lane_ = -1;
 

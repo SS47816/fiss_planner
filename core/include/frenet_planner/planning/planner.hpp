@@ -4,8 +4,10 @@
 
 #include <array>
 #include <chrono>
+#include <limits>
 #include <memory>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include "frenet_planner/planning/components.hpp"
@@ -18,6 +20,11 @@ struct PlanningInput {
   const Corridor* corridor = nullptr;                ///< required (see Corridor::uniform)
   const std::vector<Obstacle>* obstacles = nullptr;  ///< optional
   double target_speed = 0.0;                         ///< desired speed [m/s]
+  /// Check collisions and the safety envelope only up to this time [s] (e.g.
+  /// a degraded retry when long-horizon predictions block every candidate).
+  double collision_horizon = std::numeric_limits<double>::infinity();
+  /// Enforce the safety envelope (fallback retries may relax it; collisions are always checked).
+  bool safety_envelope = true;
 };
 
 struct PlanStats {
@@ -27,6 +34,12 @@ struct PlanStats {
   int num_iterations = 0;        ///< outer search iterations (FISS/FISS+)
   std::array<int, static_cast<int>(Rejection::kCount)> rejections{};
   double time_ms = 0.0;  ///< wall-clock planning time
+  /// Obstacle that rejected the cheapest candidate lost to a collision or the
+  /// safety envelope (-1 if none), when, and that candidate's cost.
+  int blocking_id = -1;
+  double blocking_t = 0.0;
+  double blocking_cost = std::numeric_limits<double>::infinity();
+  LeadGap lead;  ///< closest obstacle ahead in the ego's path at the start
 };
 
 struct PlanResult {
@@ -63,7 +76,23 @@ class Planner {
     const EndStateGrid& grid;
     Clock::time_point start_time;
     PlanStats& stats;
+    const FrenetObstacles& obstacles;       ///< obstacles near the corridor, in the Frenet frame
+    const std::vector<char>& rear_in_lane;  ///< obstacles lane-keeping candidates may ignore
+    const std::vector<std::pair<int, double>>& lane_speeds;  ///< (lane offset, target speed)
+
+    /// Target speed of candidates ending in the given lane (car following).
+    double targetSpeed(int lane) const {
+      for (const auto& [offset, speed] : lane_speeds) {
+        if (offset == lane) return speed;
+      }
+      return input.target_speed;
+    }
   };
+
+  /// Lane information of a sample with the lane's car-following speed deficit
+  /// (relative to the desired speed) added to its lane cost, so that slower
+  /// lanes stay less attractive than free ones; returns the lane's target speed.
+  double laneTerms(const Context& ctx, LateralSample& lat) const;
 
   /// Search the grid; on success write the chosen trajectory to `best`.
   virtual bool search(Context& ctx, Trajectory& best, std::vector<Trajectory>* candidates) = 0;
@@ -86,6 +115,7 @@ class Planner {
   CostEvaluator cost_;
   ConstraintValidator constraints_;
   CollisionChecker collisions_;
+  GapEvaluator gaps_;
   std::optional<EndState> prev_best_;
 };
 

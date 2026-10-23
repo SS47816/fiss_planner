@@ -19,6 +19,8 @@ set(FRENET_PLANNER_TESTS
   test_planners
   test_map
   test_control
+  test_safety
+  test_prediction
 )
 
 foreach(name ${FRENET_PLANNER_TESTS})

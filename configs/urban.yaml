@@ -10,9 +10,13 @@ sampling:
 cost:
   w_lane_change: 8.0
   w_jerk: 0.2
+  desired_gap: 2.5
+  desired_time_headway: 1.2
 collision:
   margin_lon: 0.8
   margin_lat: 0.4
+safety:
+  min_gap: 1.5
 vehicle:
   max_speed: 16.7
   max_accel: 2.5

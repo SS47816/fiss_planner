@@ -5,13 +5,17 @@ option(FRENET_PLANNER_BUILD_TESTS "Build unit tests" OFF)
 option(FRENET_PLANNER_BUILD_BENCHMARKS "Build micro-benchmarks" OFF)
 option(FRENET_PLANNER_SANITIZE "Build with AddressSanitizer and UBSan" OFF)
 option(FRENET_PLANNER_WITH_OSQP "Build the OSQP-based smoother and MPC controller if OSQP is found" ON)
+option(FRENET_PLANNER_VENDOR_DEPS
+  "Always fetch and statically link yaml-cpp and OSQP, ignoring installed copies (self-contained Python packages)" OFF)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
 find_package(Threads REQUIRED)
-find_package(yaml-cpp QUIET)
+if(NOT FRENET_PLANNER_VENDOR_DEPS)
+  find_package(yaml-cpp QUIET)
+endif()
 if(NOT yaml-cpp_FOUND)
   # Self-contained builds (e.g. Python wheels): fetch and link yaml-cpp statically.
   message(STATUS "yaml-cpp not found, fetching it")
@@ -31,6 +35,8 @@ endif()
 
 add_library(frenet_planner
   src/box2d.cpp
+  src/frenet_obstacles.cpp
+  src/lane_following.cpp
   src/components.cpp
   src/config.cpp
   src/controller.cpp
@@ -60,8 +66,10 @@ target_link_libraries(frenet_planner PRIVATE yaml-cpp::yaml-cpp PUBLIC Threads::
 set(FRENET_PLANNER_HAS_OSQP OFF)
 option(FRENET_PLANNER_FETCH_OSQP "Fetch and statically link OSQP if it is not installed (wheels)" OFF)
 if(FRENET_PLANNER_WITH_OSQP)
-  find_package(osqp QUIET)
-  if(NOT osqp_FOUND AND FRENET_PLANNER_FETCH_OSQP)
+  if(NOT FRENET_PLANNER_VENDOR_DEPS)
+    find_package(osqp QUIET)
+  endif()
+  if(NOT osqp_FOUND AND (FRENET_PLANNER_FETCH_OSQP OR FRENET_PLANNER_VENDOR_DEPS))
     message(STATUS "Fetching OSQP")
     include(FetchContent)
     set(OSQP_BUILD_SHARED_LIB OFF CACHE BOOL "" FORCE)

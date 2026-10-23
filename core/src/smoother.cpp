@@ -6,36 +6,16 @@
 #include <cmath>
 #include <limits>
 
+#include "frenet_planner/planning/frenet_obstacles.hpp"
 #include "frenet_planner/smoothing/piecewise_jerk.hpp"
 
 namespace frenet_planner {
-
-namespace {
-
-struct FrenetBox {
-  double s_min, s_max, d_min, d_max;
-};
-
-FrenetBox toFrenetBox(const Box2d& box, const ReferenceLine& ref, double s_hint) {
-  FrenetBox fb{std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(),
-               std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
-  for (const auto& c : box.corners()) {
-    const auto p = ref.project(c.x, c.y, s_hint);
-    fb.s_min = std::min(fb.s_min, p.s);
-    fb.s_max = std::max(fb.s_max, p.s);
-    fb.d_min = std::min(fb.d_min, p.d);
-    fb.d_max = std::max(fb.d_max, p.d);
-  }
-  return fb;
-}
-
-}  // namespace
 
 SpaceTimeCorridor buildSpaceTimeCorridor(const Trajectory& traj, const ReferenceLine& ref,
                                          const Corridor& corridor, const std::vector<Obstacle>& obstacles,
                                          const VehicleParams& vehicle, double margin_lat, double margin_lon) {
   constexpr double kInf = std::numeric_limits<double>::infinity();
-  constexpr double kRoadMargin = 0.05;
+  constexpr double kRoadMargin = 0.3;  // also covers the footprint swinging out with heading
   const size_t n = traj.size();
   SpaceTimeCorridor c;
   c.t = traj.t;
@@ -101,17 +81,47 @@ bool smoothTrajectory(Trajectory& traj, const PlanningInput& input, const Planne
     if (l.offset == traj.lane) lane = &l;
   }
 
+  const auto [d_min, d_max] = std::minmax_element(traj.d.begin(), traj.d.end());
+  const FrenetObstacles frenet(obstacles, ref, traj.s.front() - 10.0, traj.s.back() + 50.0, *d_min - 5.0,
+                               *d_max + 5.0, traj.t.back());
+  const GapEvaluator gaps(planner.cost, planner.safety, vehicle, planner.collision.margin_lat);
+
   // --- lateral QP -----------------------------------------------------------
   auto corridor =
       buildSpaceTimeCorridor(traj, ref, *input.corridor, obstacles, vehicle, cfg.margin_lat, cfg.margin_lon);
+  // Where moving into an obstacle's lane band would breach its safety envelope,
+  // stay on the side the sampled trajectory passes it.
+  // The buffers absorb solver tolerance and the longitudinal re-timing below.
+  const double half_band = 0.5 * vehicle.width + planner.collision.margin_lat;
+  const double buffered = half_band + 0.05;
+  FrenetBox fb;
+  double v_ob = 0.0;
+  for (size_t i = 0; i < n; ++i) {
+    if (traj.t[i] < planner.safety.reaction_time) continue;
+    for (const auto& track : frenet.tracks()) {
+      bool in_line = false;
+      if (!track.at(traj.t[i], fb, v_ob, &in_line) || !in_line ||
+          !gaps.breachesEnvelope(traj.s[i] + 1.0, traj.s_d[i], fb, v_ob)) {
+        continue;
+      }
+      if (traj.d[i] - half_band >= fb.d_max) {
+        corridor.d_lo[i] = std::max(corridor.d_lo[i], std::min(traj.d[i], fb.d_max + buffered));
+      } else if (traj.d[i] + half_band <= fb.d_min) {
+        corridor.d_hi[i] = std::min(corridor.d_hi[i], std::max(traj.d[i], fb.d_min - buffered));
+      }
+    }
+  }
   PiecewiseJerkProblem lat;
   lat.dt = dt;
   lat.x0 = {traj.d[0], traj.d_d[0], traj.d_dd[0]};
   lat.x_ref.resize(n);
   const double w_sum = cfg.w_lat_ref + cfg.w_lat_target;
+  constexpr double kTrustRegion = 0.3;  // [m] beyond both the sampled path and the lane center
   for (size_t i = 0; i < n; ++i) {
     const double center = lane ? input.corridor->center(*lane, traj.s[i]) : traj.end.d;
     lat.x_ref[i] = w_sum > 0.0 ? (cfg.w_lat_ref * traj.d[i] + cfg.w_lat_target * center) / w_sum : traj.d[i];
+    corridor.d_lo[i] = std::max(corridor.d_lo[i], std::min(traj.d[i], center) - kTrustRegion);
+    corridor.d_hi[i] = std::min(corridor.d_hi[i], std::max(traj.d[i], center) + kTrustRegion);
   }
   lat.x_lo = corridor.d_lo;
   lat.x_hi = corridor.d_hi;
@@ -130,6 +140,14 @@ bool smoothTrajectory(Trajectory& traj, const PlanningInput& input, const Planne
   shifted.d = lat_sol->x;
   corridor = buildSpaceTimeCorridor(shifted, ref, *input.corridor, obstacles, vehicle, cfg.margin_lat,
                                     cfg.margin_lon);
+  // Do not trade headway for speed: never closer to the obstacle ahead than the
+  // desired gap, or than the sampled trajectory where that is already closer.
+  for (size_t i = 0; i < n; ++i) {
+    const LeadGap lead = gaps.leadGap(traj.s[i], shifted.d[i], traj.s_d[i], frenet, traj.t[i]);
+    if (lead.id < 0) continue;
+    const double desired = planner.cost.desired_gap + planner.cost.desired_time_headway * traj.s_d[i];
+    corridor.s_hi[i] = std::min(corridor.s_hi[i], traj.s[i] + std::max(0.0, lead.gap - desired));
+  }
   PiecewiseJerkProblem lon;
   lon.dt = dt;
   lon.x0 = {traj.s[0], traj.s_d[0], traj.s_dd[0]};
@@ -177,10 +195,12 @@ bool smoothTrajectory(Trajectory& traj, const PlanningInput& input, const Planne
   }
   int checks = 0;
   if (!CollisionChecker(planner.collision, vehicle).isCollisionFree(out, obstacles, checks)) return false;
+  if (!gaps.isSafe(out, frenet)) return false;
 
   LateralSample lat_info{out.end.d, out.lane, lane ? input.corridor->center(*lane, out.s.back()) : out.end.d,
                          lane ? lane->extra_cost : 0.0};
-  out.cost = CostEvaluator(planner.cost, planner.sampling).evaluate(out, lat_info, input.target_speed);
+  out.cost = CostEvaluator(planner.cost, planner.sampling, vehicle, planner.collision.margin_lat)
+                 .evaluate(out, lat_info, input.target_speed, &frenet);
   traj = std::move(out);
   return true;
 }
