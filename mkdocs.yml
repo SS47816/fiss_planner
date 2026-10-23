@@ -24,4 +24,5 @@ nav:
   - Python: python.md
   - ROS 1 / ROS 2: ros.md
   - Benchmarks: benchmarks.md
+  - Foxglove: foxglove.md
   - Upgrading from the 2021 node: migration.md

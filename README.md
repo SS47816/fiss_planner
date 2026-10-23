@@ -8,13 +8,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/SS47816/frenet_planner/actions/workflows/core.yml"><img src="https://github.com/SS47816/frenet_planner/actions/workflows/core.yml/badge.svg" alt="core"/></a>
-  <a href="https://github.com/SS47816/frenet_planner/actions/workflows/python.yml"><img src="https://github.com/SS47816/frenet_planner/actions/workflows/python.yml/badge.svg" alt="python"/></a>
-  <a href="https://github.com/SS47816/frenet_planner/actions/workflows/ros.yml"><img src="https://github.com/SS47816/frenet_planner/actions/workflows/ros.yml/badge.svg" alt="ros"/></a>
-  <a href="https://pypi.org/project/frenet-planner/"><img src="https://img.shields.io/pypi/v/frenet-planner" alt="PyPI"/></a>
-  <img src="https://img.shields.io/badge/ROS%202-Jazzy%20%7C%20Humble-22314E" alt="ROS 2"/>
-  <img src="https://img.shields.io/badge/ROS%201-Noetic-22314E" alt="ROS 1"/>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License"/></a>
+  <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white" alt="C++17"/>
+  <img src="https://img.shields.io/badge/Python-3.10%E2%80%933.13-3776AB?logo=python&logoColor=white" alt="Python 3.10-3.13"/>
+  <img src="https://img.shields.io/badge/ROS%202-Jazzy%20%7C%20Humble-22314E?logo=ros&logoColor=white" alt="ROS 2 Jazzy | Humble"/>
+  <img src="https://img.shields.io/badge/ROS%201-Noetic-22314E?logo=ros&logoColor=white" alt="ROS 1 Noetic"/>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"/></a>
+  <a href="https://doi.org/10.1109/LRA.2022.3191940"><img src="https://img.shields.io/badge/paper-RA--L%202022-b31b1b" alt="FISS, RA-L 2022"/></a>
+  <a href="https://doi.org/10.1109/IROS55552.2023.10341498"><img src="https://img.shields.io/badge/paper-IROS%202023-b31b1b" alt="FISS+, IROS 2023"/></a>
 </p>
 
 <p align="center">
@@ -24,6 +24,7 @@
 
 <p align="center">
   <a href="https://ss47816.github.io/frenet_planner/demo/"><b>▶ Try the interactive replay in your browser</b></a> ·
+  <a href="docs/foxglove.md">Inspect runs in Foxglove</a> ·
   <a href="https://ss47816.github.io/frenet_planner/">Documentation</a> ·
   <a href="examples/quickstart.ipynb">Notebook</a><br/><br/>
   <a href="https://colab.research.google.com/github/SS47816/frenet_planner/blob/main/examples/quickstart.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab"/></a>
@@ -31,7 +32,7 @@
 
 ## Why frenet_planner
 
-- **Sub-millisecond planning.** FISS and FISS+ find near-optimal trajectories while generating 5–12× fewer candidates than exhaustive search. A full planning cycle takes **0.2–1 ms**.
+- **Sub-millisecond planning.** FISS and FISS+ find near-optimal trajectories while generating 5–13× fewer candidates than exhaustive search. A full planning cycle takes **0.2–1 ms**.
 - **Four planners, one interface.** Switch between `fop`, `fop_plus`, `fiss` and `fiss_plus` with one parameter, even while the vehicle is driving.
 - **Map-aware.** Supports Lanelet2, CommonRoad and CARLA maps. The planner:
   - plans real lane changes using each neighbouring lane's own geometry;
@@ -39,13 +40,19 @@
   - caps speed by the speed limit and road curvature;
   - adds a growing cost as the end of the route's lane approaches;
   - stops at red lights.
+- **Keeps its distance.**
+  - Follows slower traffic at a set time headway, and overtakes when a neighbouring lane is free.
+  - Costs for headway, time to collision and lateral clearance shape every candidate.
+  - A hard "virtual bumper" (minimum gap and time to collision) rejects anything closer, with a reaction-time grace for cut-ins.
 - **Safe by construction.**
   - Every trajectory is checked against vehicle limits, road edges and time-stamped obstacle predictions.
+  - Obstacles are predicted along their lanes of the map, including tracked objects that arrive with only their current state.
   - Plans stay consistent between cycles through trajectory stitching.
-  - When nothing is safe, the planner falls back to its previous plan or brakes.
+  - When nothing is safe: keep the previous plan, re-plan over a shorter horizon, and only then brake.
+- **Explainable.** Every cycle reports why candidates were rejected, which obstacle blocked the best one, and the gap, headway and time to collision to the vehicle ahead. Record any run for [Foxglove](docs/foxglove.md) and scrub through it frame by frame.
 - **From planning to control.**
   - An optional QP smoother refines the chosen trajectory inside a space–time driving corridor.
-  - An LTV-MPC tracks it with about 1.5 cm lateral error in CARLA.
+  - An LTV-MPC tracks it with 1–2 cm lateral error in CARLA.
 - **Runs everywhere.** `pip install frenet-planner`, ROS 2 components, a ROS 1 node, or plain CMake.
 
 ## Gallery
@@ -53,7 +60,7 @@
 <table>
   <tr>
     <td colspan="2" align="center"><img src="docs/media/compare_fop_fiss_fissplus.gif" alt="FOP, FISS and FISS+ on the same merge"/><br/>
-    <sub><b>Same merge, three planners.</b> FOP evaluates every candidate (125 per cycle); FISS and FISS+ reach the same decision exploring far fewer.</sub></td>
+    <sub><b>Same merge, three planners.</b> FOP evaluates every candidate (about 170 per cycle here); FISS explores about 12 and FISS+ about 75 to reach the same result.</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/media/us101_fiss_plus.gif" alt="Dense highway traffic on US-101"/><br/><sub>Dense traffic, US-101 (NGSIM recording)</sub></td>
@@ -99,7 +106,7 @@ ros2 launch frenet_planner_ros2 planner.launch.py odom:=/localization/odom \
 ros2 param set /frenet_planner planner.type fiss      # switch planners live
 ```
 
-The planner node publishes `~/trajectory` (time-parameterized x, y, yaw, v, a, κ), `~/path`, `~/candidates` and `~/stats`. The controller node publishes `ackermann_msgs/AckermannDriveStamped`. ROS 1 Noetic has the same interface (`roslaunch frenet_planner_ros1 planner.launch`). See [docs/ros.md](docs/ros.md).
+The planner node publishes `~/trajectory` (time-parameterized x, y, yaw, v, a, κ), `~/path`, `~/candidates`, `~/markers` (scene; `rviz:=true` opens RViz 2) and `~/stats`. The controller node publishes `ackermann_msgs/AckermannDriveStamped`. ROS 1 Noetic has the same interface (`roslaunch frenet_planner_ros1 planner.launch`). See [docs/ros.md](docs/ros.md).
 
 ## Planners
 
@@ -118,17 +125,22 @@ All four share sampling, costs and validation, so they are directly comparable a
 
 | Planner | Success | Collision | Plan time (mean) | Trajectories per cycle |
 |---|---:|---:|---:|---:|
-| `fop` | 70.4 % | 2.1 % | 10.5 ms | 205 |
-| `fop_plus` | 70.4 % | 2.1 % | 1.1 ms | 205 generated · 11 validated |
-| `fiss` | 70.4 % | **1.4 %** | **0.5 ms** | **16** |
-| `fiss_plus` | 70.4 % | 2.1 % | 0.8 ms | 41 |
+| `fop` | 71.1 % | 2.1 % | 6.2 ms | 205 |
+| `fop_plus` | 71.1 % | 2.1 % | 1.0 ms | 205 generated · 10 validated |
+| `fiss` | 69.3 % | **1.4 %** | **0.5 ms** | **16** |
+| `fiss_plus` | 70.0 % | **1.4 %** | 0.7 ms | 41 |
+
+Keeping distance cuts the time spent below 1 s of headway to under a third at the same collision rate.
+With predictions from the current state only, map-aware lane-following prediction succeeds in 65.4 %
+against 62.5 % for constant velocity, with almost a quarter fewer collisions.
 
 **CARLA 0.9.16, closed loop.**
-- **Runs:** 49 runs, all collision-free: lead vehicle, parked car, cut-in and dense traffic, with both controllers.
-- **Planning time:** 0.2–1 ms (FISS/FISS+).
-- **Tracking:** MPC lateral error 1.3–1.5 cm RMS.
+- **Runs:** 40 runs, all collision-free: lead vehicle, parked car, scripted cut-in and dense traffic, with every planner and both controllers.
+- **Dense traffic, ten seeds:** 99.3 % of cycles planned, 0.02 % emergency braking, 0.01 s per run below 1 s of headway, and no stops for passing traffic.
+- **Planning time:** 0.1–0.8 ms (FISS/FISS+).
+- **Tracking:** MPC lateral error 1–2 cm RMS.
 
-**ROS 2 bag replay.** 20 NGSIM recordings were replayed through the ROS 2 node. Plans stay within 1.3 m of the human driver's path over 3 s on average, at 1.7–2.3 ms per cycle.
+**ROS 2 bag replay.** 20 NGSIM recordings were replayed through the ROS 2 node. Plans stay within 1.3–1.4 m of the human driver's path over 3 s on average, at 2.4–3.2 ms per node cycle (FOP+, FISS, FISS+).
 
 Full tables, protocols and ablations are in [docs/benchmarks.md](docs/benchmarks.md); raw results are in [`benchmarks/results/`](benchmarks/results).
 

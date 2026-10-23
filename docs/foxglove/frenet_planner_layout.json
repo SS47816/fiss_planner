@@ -1,0 +1,202 @@
+{
+  "configById": {
+    "3D!frenet": {
+      "followMode": "follow-pose",
+      "followTf": "ego",
+      "cameraState": {
+        "perspective": true,
+        "distance": 70,
+        "phi": 55,
+        "thetaOffset": 0,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          15,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "scene": {
+        "backgroundColor": "#14171c",
+        "enableStats": false,
+        "labelScaleFactor": 1
+      },
+      "transforms": {
+        "frame:ego": {
+          "visible": false
+        },
+        "frame:map": {
+          "visible": false
+        }
+      },
+      "topics": {
+        "/map/lanes": {
+          "visible": true
+        },
+        "/ego": {
+          "visible": true
+        },
+        "/obstacles": {
+          "visible": true
+        },
+        "/plan/trajectory": {
+          "visible": true
+        },
+        "/plan/candidates": {
+          "visible": true
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": true,
+          "layerId": "foxglove.Grid",
+          "frameId": "map",
+          "size": 400,
+          "divisions": 80,
+          "lineWidth": 1,
+          "color": "#2f3440",
+          "position": [
+            0,
+            0,
+            -0.05
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "order": 1
+        }
+      },
+      "publish": {
+        "type": "point"
+      },
+      "imageMode": {}
+    },
+    "Image!camera": {
+      "imageMode": {
+        "imageTopic": "/camera/image"
+      }
+    },
+    "Plot!speed": {
+      "title": "Speed [m/s]",
+      "paths": [
+        {
+          "value": "/plan/stats.speed",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "speed"
+        },
+        {
+          "value": "/plan/stats.target_speed",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "target"
+        }
+      ],
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    },
+    "Plot!gap": {
+      "title": "Vehicle ahead",
+      "paths": [
+        {
+          "value": "/plan/stats.time_headway",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "headway [s]"
+        },
+        {
+          "value": "/plan/stats.ttc",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "TTC [s]"
+        }
+      ],
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    },
+    "Plot!timing": {
+      "title": "Planning",
+      "paths": [
+        {
+          "value": "/plan/stats.plan_ms",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "plan time [ms]"
+        },
+        {
+          "value": "/plan/stats.generated",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "trajectories"
+        }
+      ],
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240
+    },
+    "RawMessages!stats": {
+      "topicPath": "/plan/stats",
+      "diffEnabled": false,
+      "expansion": "all"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1.0
+  },
+  "layout": {
+    "direction": "row",
+    "splitPercentage": 64,
+    "first": {
+      "direction": "column",
+      "splitPercentage": 62,
+      "first": "3D!frenet",
+      "second": "Image!camera"
+    },
+    "second": {
+      "direction": "column",
+      "splitPercentage": 25,
+      "first": "Plot!speed",
+      "second": {
+        "direction": "column",
+        "splitPercentage": 33,
+        "first": "Plot!gap",
+        "second": {
+          "direction": "column",
+          "splitPercentage": 50,
+          "first": "Plot!timing",
+          "second": "RawMessages!stats"
+        }
+      }
+    }
+  }
+}

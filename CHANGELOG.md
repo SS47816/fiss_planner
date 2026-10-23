@@ -16,6 +16,16 @@ in one code base.
 - Werling-style cost with an admissible end-state estimate (used by FISS/FISS+).
 - Kinematic, road-boundary and oriented-box collision validation against time-stamped predictions;
   parallel validation for FOP/FOP+.
+- Keeping distance:
+  - per-lane car following (the speed that closes the gap to the desired headway);
+  - proximity cost: headway, time to collision and lateral clearance;
+  - a hard safety envelope ("virtual bumper": minimum gap, headway and TTC) with a reaction-time
+    grace for cut-ins.
+- Map-aware lane-following prediction, and predictions for obstacles that arrive with only their
+  current state.
+- Fallback ladder: previous plan, a re-plan over a shorter collision horizon, then emergency braking.
+- Explainability: per-reason rejection counts, the obstacle that blocked the cheapest candidate, and
+  gap / headway / TTC to the vehicle ahead in every cycle's statistics.
 
 ### Maps
 - Lane-level `RoadMap` with adapters for Lanelet2 (C++), CommonRoad and CARLA (Python), providing:
@@ -36,6 +46,8 @@ in one code base.
 - ROS 2 (`frenet_planner_ros2`, component nodes) and ROS 1 (`frenet_planner_ros1`) wrappers;
   `frenet_planner_msgs` builds for both.
 - Runtime planner switching through ROS 2 parameters, `dynamic_reconfigure` or Python.
+- Scene markers and an RViz 2 configuration (ROS 2).
+- Foxglove: MCAP recording (or live streaming) of CARLA and CommonRoad runs with a ready-made layout.
 
 ### Quality
 - Test suites:
