@@ -24,13 +24,22 @@ jobs:
       - uses: ros-tooling/setup-ros@v0.7
         with:
           required-ros-distributions: ${{ matrix.distro }}
-      - uses: ros-tooling/action-ros-ci@v0.4
-        with:
-          target-ros2-distro: ${{ matrix.distro }}
-          package-name: frenet_planner frenet_planner_msgs frenet_planner_ros2
-          colcon-defaults: |
-            {"build": {"base-paths": ["core", "msgs", "ros/ros2"]},
-             "test": {"base-paths": ["core", "msgs", "ros/ros2"]}}
+      - name: Install dependencies
+        run: |
+          source /opt/ros/${{ matrix.distro }}/setup.bash
+          rosdep update --rosdistro ${{ matrix.distro }}
+          rosdep install --from-paths core msgs ros/ros2 --ignore-src -y -r --rosdistro ${{ matrix.distro }}
+      - name: Build
+        run: |
+          source /opt/ros/${{ matrix.distro }}/setup.bash
+          colcon build --base-paths core msgs ros/ros2 --event-handlers console_cohesion+ \
+            --cmake-args -DCMAKE_BUILD_TYPE=Release
+      - name: Test
+        run: |
+          source /opt/ros/${{ matrix.distro }}/setup.bash
+          colcon test --base-paths core msgs ros/ros2 --packages-select frenet_planner_ros2 \
+            --event-handlers console_direct+
+          colcon test-result --verbose
 
   ros1:
     name: ROS 1 noetic (RoboStack)
