@@ -1,0 +1,153 @@
+[workspace]
+name = "frenet_planner"
+version = "1.0.0"
+description = "Sampling-based Frenet trajectory planners (FOP, FISS, FISS+) with ROS 1/2 wrappers and benchmarks"
+authors = ["Shuo Sun <ss1057532022@gmail.com>"]
+channels = ["conda-forge"]
+platforms = [{ name = "linux-64-glibc231", platform = "linux-64", glibc = "2.31" }]
+
+# --------------------------------------------------------------------------- #
+# Core C++ development (default)
+# --------------------------------------------------------------------------- #
+[dependencies]
+cmake = ">=3.22"
+ninja = "*"
+cxx-compiler = "*"
+pkg-config = "*"
+yaml-cpp = ">=0.8"
+gtest = ">=1.14"
+benchmark = ">=1.8"
+libosqp = ">=1.0"
+
+[tasks]
+configure = "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFRENET_PLANNER_BUILD_TESTS=ON -DFRENET_PLANNER_BUILD_BENCHMARKS=ON"
+build = { cmd = "cmake --build build", depends-on = ["configure"] }
+test = { cmd = "ctest --test-dir build --output-on-failure", depends-on = ["build"] }
+configure-asan = "cmake -S . -B build-asan -G Ninja -DCMAKE_BUILD_TYPE=Debug -DFRENET_PLANNER_BUILD_TESTS=ON -DFRENET_PLANNER_SANITIZE=ON"
+test-asan = { cmd = "cmake --build build-asan && ctest --test-dir build-asan --output-on-failure", depends-on = ["configure-asan"] }
+bench-micro = { cmd = "./build/core/bench/frenet_planner_bench", depends-on = ["build"] }
+
+# --------------------------------------------------------------------------- #
+# Python bindings and the CommonRoad benchmark (Python 3.11: route planner < 3.12)
+# --------------------------------------------------------------------------- #
+[feature.py.dependencies]
+nanobind = ">=2.4"
+scikit-build-core = ">=0.10"
+numpy = "*"
+pytest = "*"
+ruff = "*"
+
+[feature.py.activation.env]
+PYTHONPATH = "$PIXI_PROJECT_ROOT/python"
+
+[feature.py.tasks]
+py-build = "cmake -S . -B build-py -G Ninja -DCMAKE_BUILD_TYPE=Release -DFRENET_PLANNER_BUILD_PYTHON=ON -DPython_EXECUTABLE=$CONDA_PREFIX/bin/python && cmake --build build-py"
+py-test = { cmd = "pytest -q python/tests", depends-on = ["py-build"] }
+
+[feature.bench.dependencies]
+python = "3.11.*"
+matplotlib = ">=3.8"
+pandas = "*"
+shapely = ">=2.0"
+pillow = "*"
+tqdm = "*"
+tabulate = "*"
+pyyaml = "*"
+
+[feature.bench.pypi-dependencies]
+commonroad-io = "==2024.3"
+commonroad-route-planner = "==2025.1.0"
+commonroad-drivability-checker = "==2025.4.0"
+rosbags = ">=0.10"
+
+[feature.bench.tasks]
+cr-bench = { cmd = "python -m frenet_planner.commonroad.benchmark", depends-on = ["py-build"] }
+
+[environments]
+bench = ["py", "bench"]
+carla = ["py", "carla"]
+
+# --------------------------------------------------------------------------- #
+# ROS 2 Jazzy (RoboStack)
+# --------------------------------------------------------------------------- #
+[feature.jazzy]
+channels = ["https://prefix.dev/robostack-jazzy", "conda-forge"]
+
+[feature.jazzy.dependencies]
+python = "3.12.*"
+ros-jazzy-ros-base = "*"
+ros-jazzy-rclcpp-components = "*"
+ros-jazzy-nav-msgs = "*"
+ros-jazzy-geometry-msgs = "*"
+ros-jazzy-visualization-msgs = "*"
+ros-jazzy-ackermann-msgs = "*"
+ros-jazzy-tf2-ros = "*"
+ros-jazzy-tf2-geometry-msgs = "*"
+ros-jazzy-rosbag2-storage-mcap = "*"
+ros-jazzy-rosbag2-py = "*"
+ros-jazzy-lanelet2 = "*"
+ros-jazzy-lanelet2-maps = "*"
+ros-jazzy-ament-cmake-gtest = "*"
+ros-jazzy-launch-testing-ament-cmake = "*"
+ros-jazzy-rosidl-default-generators = "*"
+colcon-common-extensions = "*"
+numpy = "*"
+pytest = "*"
+
+[feature.jazzy.tasks]
+ros2-build = { cmd = "colcon build --base-paths ../core ../msgs ../ros/ros2 --cmake-args -DCMAKE_BUILD_TYPE=Release -DFRENET_PLANNER_BUILD_TESTS=OFF -DPython3_EXECUTABLE=$CONDA_PREFIX/bin/python -DPython_EXECUTABLE=$CONDA_PREFIX/bin/python -DCMAKE_POLICY_VERSION_MINIMUM=3.5 --event-handlers console_cohesion+", cwd = "build-ros2-ws" }
+ros2-test = { cmd = "colcon test --base-paths ../core ../msgs ../ros/ros2 --packages-select frenet_planner_ros2 --event-handlers console_direct+ && colcon test-result --verbose", cwd = "build-ros2-ws", depends-on = ["ros2-build"] }
+
+[environments.jazzy]
+features = ["jazzy"]
+no-default-feature = false
+
+# --------------------------------------------------------------------------- #
+# ROS 1 Noetic (RoboStack; Noetic is end-of-life, kept for existing stacks)
+# --------------------------------------------------------------------------- #
+[feature.noetic]
+channels = ["https://prefix.dev/robostack-noetic", "conda-forge"]
+
+[feature.noetic.dependencies]
+python = "3.12.*"
+ros-noetic-ros-base = "*"
+ros-noetic-nav-msgs = "*"
+ros-noetic-geometry-msgs = "*"
+ros-noetic-visualization-msgs = "*"
+ros-noetic-ackermann-msgs = "*"
+ros-noetic-tf2-ros = "*"
+ros-noetic-tf2-geometry-msgs = "*"
+ros-noetic-dynamic-reconfigure = "*"
+ros-noetic-message-generation = "*"
+ros-noetic-message-runtime = "*"
+ros-noetic-lanelet2 = "*"
+ros-noetic-lanelet2-maps = "*"
+ros-noetic-rostest = "*"
+catkin_tools = "*"
+empy = "3.3.*"
+
+[feature.noetic.tasks]
+ros1-ws = "mkdir -p build-ros1-ws/src && ln -sfn ../../core build-ros1-ws/src/core && ln -sfn ../../msgs build-ros1-ws/src/msgs && ln -sfn ../../ros/ros1 build-ros1-ws/src/ros1 && ln -sfn ../../ros/common build-ros1-ws/src/common"
+ros1-build = { cmd = "catkin init -w . >/dev/null && catkin config -w . --extend $CONDA_PREFIX --cmake-args -DCMAKE_BUILD_TYPE=Release -DFRENET_PLANNER_BUILD_TESTS=OFF -DPython3_EXECUTABLE=$CONDA_PREFIX/bin/python -DPYTHON_EXECUTABLE=$CONDA_PREFIX/bin/python -DCMAKE_POLICY_VERSION_MINIMUM=3.5 >/dev/null && catkin build -w . --no-status --summarize", cwd = "build-ros1-ws", depends-on = ["ros1-ws"] }
+ros1-test = { cmd = "catkin test -w . frenet_planner_ros1", cwd = "build-ros1-ws", depends-on = ["ros1-build"] }
+
+[environments.noetic]
+features = ["noetic"]
+
+# --------------------------------------------------------------------------- #
+# CARLA 0.9.16 closed loop (simulator tarball: set CARLA_ROOT)
+# --------------------------------------------------------------------------- #
+[feature.carla.dependencies]
+python = "3.11.*"
+imageio = "*"
+imageio-ffmpeg = "*"
+matplotlib = ">=3.8"
+pillow = "*"
+networkx = "*"
+shapely = ">=2.0"
+
+[feature.carla.pypi-dependencies]
+carla = "==0.9.16"
+
+[feature.carla.tasks]
+carla-closed-loop = { cmd = "python -m frenet_planner.carla.closed_loop", depends-on = ["py-build"] }

@@ -1,0 +1,94 @@
+name: python
+
+on:
+  push:
+    branches: [main, v1-modernize]
+    tags: ["v*"]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Build and install
+        run: pip install ".[test]" -v
+      - name: Test
+        run: |
+          cd /tmp && python -c "import frenet_planner as fp; assert fp.has_optimizers()"
+          pytest -q ${{ github.workspace }}/python/tests
+
+  commonroad-demo:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ".[commonroad]"
+      - name: Fetch pinned scenarios
+        run: python benchmarks/commonroad/fetch_scenarios.py --subset hand-crafted --out data/cache/scenarios
+      - name: Closed-loop benchmark (smoke)
+        run: |
+          python -m frenet_planner.commonroad.benchmark --scenarios data/cache/scenarios/hand-crafted \
+            --limit 20 --seed 1 --jobs 4 --out results/ci.csv
+          python - <<'PY'
+          import pandas as pd
+          df = pd.read_csv("results/ci.csv")
+          assert (df.status != "error").all(), df[df.status == "error"]
+          print(df.groupby("planner").success.mean())
+          PY
+
+  wheels:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'push'
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pypa/cibuildwheel@v2.23.3
+        env:
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+          CIBW_SKIP: "*-musllinux_* *-win32 *_i686"
+          CIBW_TEST_REQUIRES: pytest
+          CIBW_TEST_COMMAND: "pytest -q {project}/python/tests -k 'not embedded_msg'"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  sdist:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: pipx run build --sdist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, wheels, sdist]
+    runs-on: ubuntu-24.04
+    environment: pypi
+    permissions:
+      id-token: write  # PyPI trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1

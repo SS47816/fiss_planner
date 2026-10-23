@@ -1,0 +1,49 @@
+name: core
+
+on:
+  push:
+    branches: [main, v1-modernize]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.compiler }} / ${{ matrix.build }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+        build: [RelWithDebInfo, Sanitize]
+    env:
+      CC: ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }}
+      CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libeigen3-dev libyaml-cpp-dev libgtest-dev libbenchmark-dev
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build == 'Sanitize' && 'Debug' || matrix.build }}
+          -DFRENET_PLANNER_BUILD_TESTS=ON -DFRENET_PLANNER_BUILD_BENCHMARKS=ON
+          -DFRENET_PLANNER_SANITIZE=${{ matrix.build == 'Sanitize' && 'ON' || 'OFF' }}
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Benchmark smoke run
+        if: matrix.build != 'Sanitize'
+        run: ./build/core/bench/frenet_planner_bench --benchmark_min_time=0.05s
+
+  pixi:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+      - run: pixi run test
