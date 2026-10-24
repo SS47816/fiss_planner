@@ -182,6 +182,7 @@ const std::vector<Binding>& bindings() {
 }  // namespace
 
 PlannerNode::PlannerNode(const rclcpp::NodeOptions& options) : rclcpp::Node("frenet_planner", options) {
+  log_clock_ = get_clock();
   declareParameters();
   planner_ = std::make_unique<fp::LocalPlanner>(configFromParameters(), vehicle_);
 
@@ -347,7 +348,7 @@ bool PlannerNode::toMapFrame(const std::string& frame, const rclcpp::Time& stamp
     try {
       tf = tf_buffer_->lookupTransform(map_frame_, frame, tf2::TimePointZero);
     } catch (const tf2::TransformException&) {
-      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000, "tf %s -> %s: %s", frame.c_str(),
+      RCLCPP_WARN_THROTTLE(get_logger(), *log_clock_, 2000, "tf %s -> %s: %s", frame.c_str(),
                            map_frame_.c_str(), e.what());
       return false;
     }

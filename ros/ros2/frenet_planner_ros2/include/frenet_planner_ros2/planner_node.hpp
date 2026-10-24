@@ -79,6 +79,8 @@ class PlannerNode : public rclcpp::Node {
 
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  rclcpp::Clock::SharedPtr
+      log_clock_;  ///< for throttled logs in const methods (Humble needs a mutable clock)
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr path_sub_;
   rclcpp::Subscription<frenet_planner_msgs::msg::ObstacleArray>::SharedPtr obstacles_sub_;
