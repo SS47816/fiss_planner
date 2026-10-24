@@ -2,6 +2,7 @@
 // Copyright (c) 2021-2026 Shuo Sun
 #pragma once
 
+#include <cstddef>
 #include <vector>
 
 namespace frenet_planner {

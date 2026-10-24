@@ -3,6 +3,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <vector>
 
 #include "frenet_planner/common/types.hpp"

@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cmath>
+#include <cstddef>
 #include <vector>
 
 namespace frenet_planner {

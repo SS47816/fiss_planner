@@ -6,6 +6,7 @@
 // are cheap interval tests instead of polygon checks.
 #pragma once
 
+#include <cstddef>
 #include <limits>
 #include <vector>
 
