@@ -13,6 +13,7 @@ jobs:
   ros2:
     name: ROS 2 ${{ matrix.distro }}
     runs-on: ubuntu-${{ matrix.ubuntu }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:

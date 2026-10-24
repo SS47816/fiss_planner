@@ -61,7 +61,13 @@ target_include_directories(frenet_planner PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(frenet_planner PRIVATE yaml-cpp::yaml-cpp PUBLIC Threads::Threads)
+# yaml-cpp >= 0.8 exports yaml-cpp::yaml-cpp, older releases (Ubuntu 22.04) only yaml-cpp.
+if(TARGET yaml-cpp::yaml-cpp)
+  set(FRENET_PLANNER_YAML_CPP_TARGET yaml-cpp::yaml-cpp)
+else()
+  set(FRENET_PLANNER_YAML_CPP_TARGET yaml-cpp)
+endif()
+target_link_libraries(frenet_planner PRIVATE ${FRENET_PLANNER_YAML_CPP_TARGET} PUBLIC Threads::Threads)
 
 set(FRENET_PLANNER_HAS_OSQP OFF)
 option(FRENET_PLANNER_FETCH_OSQP "Fetch and statically link OSQP if it is not installed (wheels)" OFF)
