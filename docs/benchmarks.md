@@ -36,56 +36,54 @@ and urban scenes, T-junctions).
 
 | Planner | Success | Collision | Timeout | Plan time mean / p95 | Generated / validated | Headway < 1 s | Min TTC < 2 s | Within 0.5 m |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| fop | 66.8 % | 2.1 % | 26.4 % | 9.41 / 14.58 ms | 207 / 207 | 0.17 s | 15.4 % | 6.4 % |
-| fop_plus | 66.8 % | 2.1 % | 26.4 % | 1.15 / 2.05 ms | 207 / 12 | 0.17 s | 15.4 % | 6.4 % |
-| fiss | 66.1 % | 1.8 % | 27.5 % | 0.56 / 1.19 ms | 17 / 11 | 0.16 s | 15.0 % | 5.7 % |
-| fiss_plus | 65.4 % | 2.5 % | 27.9 % | 0.82 / 1.79 ms | 42 / 15 | 0.18 s | 15.4 % | 6.4 % |
-| fop + QP | 75.7 % | 2.1 % | 17.5 % | 8.55 / 12.64 ms | 207 / 207 | 0.13 s | 16.4 % | 6.8 % |
-| fop_plus + QP | 75.7 % | 2.1 % | 17.5 % | 1.11 / 1.93 ms | 207 / 12 | 0.13 s | 16.4 % | 6.8 % |
-| fiss + QP | 75.0 % | 1.8 % | 18.2 % | 0.51 / 1.06 ms | 17 / 11 | 0.13 s | 16.1 % | 9.3 % |
-| fiss_plus + QP | 74.6 % | 2.5 % | 18.2 % | 0.75 / 1.60 ms | 42 / 15 | 0.13 s | 12.9 % | 9.3 % |
+| fop | 66.4 % | 2.1 % | 26.8 % | 9.24 / 13.96 ms | 209 / 209 | 0.15 s | 17.5 % | 6.4 % |
+| fop_plus | 66.4 % | 2.1 % | 26.8 % | 1.27 / 2.21 ms | 209 / 15 | 0.15 s | 17.5 % | 6.4 % |
+| fiss | 65.4 % | 1.8 % | 28.2 % | 0.66 / 1.39 ms | 19 / 13 | 0.17 s | 16.4 % | 5.4 % |
+| fiss_plus | 65.7 % | 2.1 % | 27.9 % | 0.92 / 1.92 ms | 44 / 17 | 0.16 s | 14.3 % | 7.1 % |
+| fop + QP | 76.1 % | 2.1 % | 16.8 % | 9.11 / 13.48 ms | 210 / 210 | 0.13 s | 15.4 % | 7.5 % |
+| fop_plus + QP | 76.1 % | 2.1 % | 16.8 % | 1.16 / 2.04 ms | 210 / 14 | 0.13 s | 15.4 % | 7.5 % |
+| fiss + QP | 75.7 % | 1.8 % | 17.9 % | 0.65 / 1.35 ms | 19 / 13 | 0.13 s | 15.4 % | 6.8 % |
+| fiss_plus + QP | 74.6 % | 2.1 % | 18.2 % | 0.86 / 1.73 ms | 44 / 17 | 0.14 s | 12.1 % | 7.9 % |
 
-The four search strategies reach practically the same solutions. FISS generates about 12× fewer
-trajectories than FOP and plans about 17× faster. The QP smoother adds about 9 points of success,
+The four search strategies reach practically the same solutions. FISS generates about 11× fewer
+trajectories than FOP and plans about 14× faster. The QP smoother adds 9–10 points of success,
 mostly by converting timeouts.
 
 Most of the remaining failures are timeouts in the NGSIM recordings, whose goals combine a place, a
 time window of 0.1–1 s and a speed interval in dense traffic. All collisions of FISS+ with the QP
 smoother except the two short urban scenarios (`ZAM_Urban-4/5_1_S-1`, within 1.2 s of the start) are
-recorded vehicles running into the ego from behind: three times while it waits at a red light, twice
-after it brakes with a faster vehicle closing in behind (once just after a lane change). Replayed
-traffic cannot react to the ego.
+recorded vehicles running into the ego from behind: three times while it waits at a red light, once
+after it brakes with a faster vehicle closing in behind. Replayed traffic cannot react to the ego.
 
 ### Ablations (fiss_plus with the QP smoother)
 
 | Variant | Success | Collision | Timeout | Headway < 1 s | Min TTC < 2 s | Within 0.5 m |
 |---|---:|---:|---:|---:|---:|---:|
-| default: ego and adjacent lanes, ground-truth prediction | 74.6 % | 2.5 % | 18.2 % | 0.13 s | 12.9 % | 9.3 % |
-| without the safety envelope and proximity cost | 80.4 % | 1.4 % | 12.9 % | 0.48 s | 22.5 % | 20.4 % |
-| ego lane only (as in the papers) | 66.1 % | 4.6 % | 24.6 % | 0.24 s | 18.6 % | 10.0 % |
-| lane-following prediction | 69.3 % | 9.6 % | 13.9 % | 0.13 s | 2.1 % | 10.0 % |
-| constant-velocity prediction | 67.5 % | 10.7 % | 15.0 % | 0.13 s | 2.5 % | 10.4 % |
+| default: ego and adjacent lanes, ground-truth prediction | 74.6 % | 2.1 % | 18.2 % | 0.14 s | 12.1 % | 7.9 % |
+| without the safety envelope and proximity cost | 80.4 % | 2.1 % | 12.9 % | 0.47 s | 22.5 % | 20.7 % |
+| ego lane only (as in the papers) | 67.1 % | 3.9 % | 24.3 % | 0.23 s | 17.5 % | 8.6 % |
+| lane-following prediction | 70.7 % | 8.6 % | 13.6 % | 0.13 s | 1.1 % | 10.0 % |
+| constant-velocity prediction | 69.3 % | 10.0 % | 14.6 % | 0.12 s | 1.4 % | 9.3 % |
 
-- **Keeping distance** cuts the time spent below 1 s of headway to about a quarter, the share of runs
-  that get within 2 s TTC of the vehicle ahead by 40 %, and the share that come within 0.5 m of another
-  road user by half. In the replayed logs it costs 5.8 points of success: 18 runs in dense NGSIM traffic
-  time out because the gaps their lane changes need before the goal window closes are refused, and
-  recorded traffic does not open them. Its three extra collisions are recorded vehicles running into
-  the ego from behind (two of these runs leave the road instead without distance keeping).
+- **Keeping distance** cuts the time spent below 1 s of headway to under a third, the share of runs
+  that get within 2 s TTC of the vehicle ahead almost by half, and the share that come within 0.5 m
+  of another road user by more than half, at the same collision rate. In the replayed logs it costs
+  5.8 points of success: 18 runs in dense NGSIM traffic time out because the gaps their lane changes
+  need before the goal window closes are refused, and recorded traffic does not open them.
 - **Route lane changes.** The planner counts the lane changes the route still needs and makes them in
   time for the goal: several changes start earlier than one, and a slower target lane does not hold
   them back once they are due (see [route urgency](concepts.md#corridor-and-lanes)).
 - **Turning across traffic.** The time gap to crossing and oncoming vehicles is part of the safety
-  envelope. On the development set it brings the runs within 0.5 m of another vehicle from 31 to 1
+  envelope. On the development set it brings the runs within 0.5 m of another vehicle from 30 to 0
   (of 100) at the same success rate. In the T-junction of the gallery (`ZAM_Tjunction-1_101`) the
   closest approach during the left turn grows from 0.3 m to 1.0 m, and the time gap from 0.2 s to
   1.0 s. Larger gaps backfire in replayed logs, where traffic does not yield: the ego starts to give
   way and then stops in the vehicle's path. At 1 s one development scenario ends in a collision, at
-  1.5 s four do.
+  1.5 s five do.
 - **Map-aware lane sampling** (adjacent lanes) avoids conflicts the ego lane alone cannot.
 - **Prediction.** With predictions from the current state only, as a deployed system has them,
-  lane-following prediction gains 1.8 points of success over constant-velocity prediction, with
-  9.6 % instead of 10.7 % collisions. Recorded traffic still does not react to the ego, so the remaining
+  lane-following prediction gains 1.4 points of success over constant-velocity prediction, with
+  8.6 % instead of 10.0 % collisions. Recorded traffic still does not react to the ego, so the remaining
   gap to ground-truth predictions is largely the replay itself. TTC values are measured from each
   cycle's predictions, so they are comparable within a prediction mode only.
 
@@ -135,33 +133,31 @@ Full-length videos (cut-in, parked car, traffic) are attached to the GitHub rele
 
 | Scenario | Planner | Collisions | Plan success | Emergency | Min TTC | Min headway | Min clearance | Mean speed | Plan time |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| lead vehicle | fop | 0 | 100.0 % | 0.0 % | 3.7 s | 1.8 s | 1.9 m | 12.0 m/s | 5.20 ms |
-| lead vehicle | fop_plus | 0 | 100.0 % | 0.0 % | 3.6 s | 1.8 s | 1.9 m | 12.1 m/s | 0.60 ms |
-| lead vehicle | fiss | 0 | 100.0 % | 0.0 % | 4.4 s | 1.9 s | 1.3 m | 11.3 m/s | 0.13 ms |
-| lead vehicle | fiss_plus | 0 | 100.0 % | 0.0 % | 3.7 s | 1.8 s | 1.9 m | 12.2 m/s | 0.24 ms |
-| parked car | fop | 0 | 100.0 % | 0.0 % | 7.6 s | 7.6 s | 1.2 m | 12.2 m/s | 4.50 ms |
-| parked car | fop_plus | 0 | 100.0 % | 0.0 % | 7.6 s | 7.6 s | 1.2 m | 12.2 m/s | 0.58 ms |
-| parked car | fiss | 0 | 100.0 % | 0.0 % | 7.6 s | 7.6 s | 1.2 m | 12.2 m/s | 0.15 ms |
+| lead vehicle | fop | 0 | 100.0 % | 0.0 % | 3.7 s | 1.8 s | 1.9 m | 12.2 m/s | 4.95 ms |
+| lead vehicle | fop_plus | 0 | 100.0 % | 0.0 % | 11.3 s | 11.3 s | 1.3 m | 12.2 m/s | 0.53 ms |
+| lead vehicle | fiss | 0 | 100.0 % | 0.0 % | 4.5 s | 1.9 s | 1.3 m | 11.3 m/s | 0.19 ms |
+| lead vehicle | fiss_plus | 0 | 100.0 % | 0.0 % | 3.7 s | 1.8 s | 1.9 m | 12.2 m/s | 0.28 ms |
+| parked car | fop | 0 | 100.0 % | 0.0 % | 7.6 s | 7.6 s | 1.2 m | 12.2 m/s | 4.35 ms |
+| parked car | fop_plus | 0 | 100.0 % | 0.0 % | 7.6 s | 7.6 s | 1.2 m | 12.2 m/s | 0.55 ms |
+| parked car | fiss | 0 | 100.0 % | 0.0 % | 7.6 s | 7.6 s | 1.2 m | 12.2 m/s | 0.14 ms |
 | parked car | fiss_plus | 0 | 100.0 % | 0.0 % | 4.9 s | 4.9 s | 1.8 m | 12.4 m/s | 0.29 ms |
-| cut-in (scripted) | fop | 0 | 96.0 % | 2.7 % | 0.5 s | 0.1 s | 0.0 m | 10.4 m/s | 6.01 ms |
-| cut-in (scripted) | fop_plus | 0 | 95.7 % | 3.0 % | 0.6 s | 0.2 s | 0.0 m | 10.2 m/s | 1.17 ms |
-| cut-in (scripted) | fiss | 0 | 96.0 % | 2.7 % | 0.4 s | 0.1 s | 0.1 m | 10.2 m/s | 0.65 ms |
-| cut-in (scripted) | fiss_plus | 0 | 96.3 % | 1.7 % | 1.2 s | 0.4 s | 0.3 m | 10.9 m/s | 0.60 ms |
-| traffic (49 TM vehicles, 60 s) | fop | 0 | 100.0 % | 0.0 % | 6.8 s | 3.7 s | 2.0 m | 13.3 m/s | 4.72 ms |
-| traffic (49 TM vehicles, 60 s) | fop_plus | 0 | 100.0 % | 0.0 % | 4.4 s | 2.1 s | 1.5 m | 13.4 m/s | 0.52 ms |
-| traffic (49 TM vehicles, 60 s) | fiss | 0 | 100.0 % | 0.0 % | 4.5 s | 2.1 s | 1.6 m | 13.4 m/s | 0.16 ms |
-| traffic (49 TM vehicles, 60 s) | fiss_plus | 0 | 100.0 % | 0.0 % | 3.9 s | 1.9 s | 1.5 m | 13.4 m/s | 0.27 ms |
+| cut-in (scripted) | fop | 0 | 98.3 % | 1.3 % | 1.3 s | 0.1 s | 0.5 m | 10.5 m/s | 5.79 ms |
+| cut-in (scripted) | fop_plus | 0 | 99.0 % | 0.7 % | 1.2 s | 0.3 s | 0.7 m | 10.9 m/s | 0.77 ms |
+| cut-in (scripted) | fiss | 0 | 99.0 % | 0.7 % | 1.1 s | 0.2 s | 0.7 m | 10.8 m/s | 0.34 ms |
+| cut-in (scripted) | fiss_plus | 0 | 98.3 % | 0.3 % | 1.3 s | 0.5 s | 0.7 m | 11.2 m/s | 0.39 ms |
+| traffic (49 TM vehicles, 60 s) | fop | 0 | 100.0 % | 0.0 % | 7.2 s | 3.8 s | 1.8 m | 13.3 m/s | 4.75 ms |
+| traffic (49 TM vehicles, 60 s) | fop_plus | 0 | 100.0 % | 0.0 % | 4.6 s | 2.2 s | 1.6 m | 13.3 m/s | 0.55 ms |
+| traffic (49 TM vehicles, 60 s) | fiss | 0 | 100.0 % | 0.0 % | 4.5 s | 2.1 s | 1.5 m | 13.4 m/s | 0.20 ms |
+| traffic (49 TM vehicles, 60 s) | fiss_plus | 0 | 100.0 % | 0.0 % | 2.0 s | 0.9 s | 1.4 m | 13.3 m/s | 0.33 ms |
 
 The Stanley+PID runs are in the JSON file; they give the same picture. Minimum TTC and headway are
 measured to the vehicle ahead while keeping the lane. The scripted cut-in merges 8–20 m ahead within
 2.5 s, closing at several metres per second: every planner brakes (the emergency cycles), then follows
-or moves over a lane, without a collision registered by CARLA's collision sensor. It is the tightest
-scenario, and the closest approach hinges on the approach speed: the ego passes the slower car at its
-desired speed, and when the car merges, swerving within the lateral-acceleration limit is possible at
-12.4 m/s but not at 13.4 m/s. With the MPC controller the boxes stay 0.3 m apart with FISS+ and touch
-with FOP and FOP+; over both controllers they touch in four of the eight runs and come within 0.1 m in
-two more, while the car merges alongside. Reference changes of a few centimetres move
-the FISS+ result between 0.0 and 0.9 m, so single runs of this scenario are not a ranking.
+or moves over a lane, without a collision. It is the tightest scenario. When the car merges, no plan
+can keep the safety envelope; the retry that keeps it as a cost then brakes firmly towards the
+car's speed, and the closest approach (box to box) is 0.5–0.8 m over all planners and both
+controllers. Varying the reference line by a few centimetres keeps the FISS+ result between 0.6 m
+and 0.9 m.
 
 ### Dense traffic, ten seeds (FISS+, MPC)
 
@@ -171,33 +167,31 @@ distance keeping, the rear-vehicle rule and the fallback retries.
 
 | Configuration | Runs | Collisions | Plan success | Emergency | Fallback | Headway < 1 s | Median min TTC | Distance | Plan time |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| default | 10 | 0 | 97.2 % | 0.22 % | 2.58 % | 0.24 s | 9.79 s | 669 m | 0.37 ms |
-| constant-velocity prediction, no distance keeping, no rear rule, no retries | 10 | 0 | 93.8 % | 0.97 % | 5.25 % | 6.70 s | 1.11 s | 631 m | 0.58 ms |
+| default | 10 | 0 | 99.5 % | 0.00 % | 0.50 % | 0.00 s | 4.03 s | 666 m | 0.42 ms |
+| constant-velocity prediction, no distance keeping, no rear rule, no retries | 10 | 0 | 99.8 % | 0.05 % | 0.20 % | 4.66 s | 4.07 s | 672 m | 0.54 ms |
 
-Unlike the second row, the defaults do not brake for vehicles passing in the next lane (their
-predictions follow their lanes instead of sweeping across the ego's), keep their distance, and resume
-right after an emergency stop instead of braking on to a standstill. The routes cross the town, and
+Both configurations plan almost every cycle. Without distance keeping the ego spends 4.7 s per run
+less than 1 s behind the vehicle ahead, with the defaults none, and its predictions of vehicles in
+the next lane sweep across its own lane instead of following theirs. The routes cross the town, and
 the ego takes their turns at junctions.
 
-Two default runs end in a jam. In seed 7 the ego covers 285 m, then queues behind a stopped car.
-While it stands, no sampled candidate keeps it at rest within the limits, so the planner alternates
-between the rest of its previous plan and the standstill braking profile (72 % of all fallback
-cycles). In seed 9 it stops at a junction for a vehicle crossing its path (all emergency cycles). The
-other eight runs plan 99.8 % of their cycles, with 0.19 % fallback and no emergency braking. A
-dedicated stopping mode for queues is on the roadmap.
+Two runs end in a jam: in seed 7 the ego queues behind a stopped car, in seed 9 it waits at a junction
+for traffic crossing its path. It comes to rest about 3.5 m behind the stopped car (the desired gap
+is 3 m) and plans 98.7 % and 97.5 % of the cycles of these runs; the other eight plan 99.9 %, with no
+emergency braking.
 
 ### Controllers (FISS+ planner)
 
 | Scenario | Controller | Collisions | Lateral error RMS | Along-track lag RMS |
 |---|---|---:|---:|---:|
-| cruise | mpc | 0 | 1.4 cm | 1.05 m |
-| cruise | stanley_pid | 0 | 12.4 cm | 0.86 m |
+| cruise | mpc | 0 | 1.4 cm | 1.04 m |
+| cruise | stanley_pid | 0 | 12.4 cm | 0.85 m |
 | parked car | mpc | 0 | 1.5 cm | 1.05 m |
 | parked car | stanley_pid | 0 | 12.6 cm | 0.85 m |
-| cut-in (scripted) | mpc | 0 | 0.7 cm | 0.88 m |
-| cut-in (scripted) | stanley_pid | 0 | 7.6 cm | 0.67 m |
+| cut-in (scripted) | mpc | 0 | 0.8 cm | 0.87 m |
+| cut-in (scripted) | stanley_pid | 0 | 6.5 cm | 0.70 m |
 | traffic (30 s) | mpc | 0 | 1.1 cm | 1.01 m |
-| traffic (30 s) | stanley_pid | 0 | 8.5 cm | 0.97 m |
+| traffic (30 s) | stanley_pid | 0 | 8.5 cm | 0.98 m |
 
 Lane invasions are not shown in the tables because evasive lane changes and overtakes trigger them by design. They are
 included in the JSON files. The along-track lag is mostly the 0.05 s latency compensation in the

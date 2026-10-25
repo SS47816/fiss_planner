@@ -49,6 +49,7 @@
   - stops at red lights.
 - **Keeps its distance.**
   - Follows slower traffic at a set time headway, and overtakes when a neighbouring lane is free.
+  - Stops behind stopped vehicles and at red lights at a set gap, with Werling-style following and stopping candidates.
   - Costs for headway, time to collision and lateral clearance shape every candidate.
   - A hard "virtual bumper" (minimum gap and time to collision) rejects anything closer, with a reaction-time grace for cut-ins.
   - Keeps a time gap to crossing and oncoming traffic, so an unprotected turn waits for a gap instead of squeezing past.
@@ -56,7 +57,7 @@
   - Every trajectory is checked against vehicle limits, road edges and time-stamped obstacle predictions.
   - Obstacles are predicted along their lanes of the map, including tracked objects that arrive with only their current state.
   - Plans stay consistent between cycles through trajectory stitching.
-  - When nothing is safe: keep the previous plan, re-plan over a shorter horizon, and only then brake.
+  - When nothing is safe: keep the previous plan, re-plan with the safety envelope as a cost (the plan that breaches it least wins), then over a shorter horizon, and only then brake.
 - **Explainable.** Every cycle reports why candidates were rejected, which obstacle blocked the best one, and the gap, headway and time to collision to the vehicle ahead. Record any run for [Foxglove](docs/foxglove.md) and scrub through it frame by frame.
 - **From planning to control.**
   - An optional QP smoother refines the chosen trajectory inside a space–time driving corridor.
@@ -134,20 +135,20 @@ The code as published with the papers is kept at tag [`paper-ral2022`](https://g
 
 | Planner | Success | Collision | Plan time (mean) | Trajectories per cycle |
 |---|---:|---:|---:|---:|
-| `fop` | 75.7 % | 2.1 % | 8.6 ms | 207 |
-| `fop_plus` | 75.7 % | 2.1 % | 1.1 ms | 207 generated · 12 validated |
-| `fiss` | 75.0 % | **1.8 %** | **0.5 ms** | **17** |
-| `fiss_plus` | 74.6 % | 2.5 % | 0.8 ms | 42 |
+| `fop` | 76.1 % | 2.1 % | 9.1 ms | 210 |
+| `fop_plus` | 76.1 % | 2.1 % | 1.2 ms | 210 generated · 14 validated |
+| `fiss` | 75.7 % | **1.8 %** | **0.7 ms** | **19** |
+| `fiss_plus` | 74.6 % | 2.1 % | 0.9 ms | 44 |
 
-Keeping distance cuts the time spent below 1 s of headway to about a quarter and halves the runs that
-come within 0.5 m of another road user. In the replayed logs it costs success, because recorded
-traffic does not open the gaps it asks for. With predictions from the current state only, map-aware
-lane-following prediction succeeds in 69.3 % against 67.5 % for constant velocity, with fewer
-collisions.
+Keeping distance cuts the time spent below 1 s of headway to under a third and more than halves the
+runs that come within 0.5 m of another road user, at the same collision rate. In the replayed logs it
+costs success, because recorded traffic does not open the gaps it asks for. With predictions from the
+current state only, map-aware lane-following prediction succeeds in 70.7 % against 69.3 % for
+constant velocity, with fewer collisions.
 
 **CARLA 0.9.16, closed loop.**
-- **Runs:** 40 runs without a collision registered by CARLA: lead vehicle, parked car, scripted cut-in and dense traffic, with every planner and both controllers. The scripted cut-in is the tightest: in four of its eight runs the boxes touch as the car merges alongside.
-- **Dense traffic, ten seeds:** no collisions, 0.24 s per run below 1 s of headway, and no stops for passing traffic. 97.2 % of cycles are planned: 99.8 % in the eight runs without a jam.
+- **Runs:** 40 runs, all collision-free: lead vehicle, parked car, scripted cut-in and dense traffic, with every planner and both controllers. In the scripted cut-in, the tightest, the car stays 0.5–0.8 m away.
+- **Dense traffic, ten seeds:** no collisions, no emergency braking, no time below 1 s of headway, and no stops for passing traffic. 99.5 % of cycles are planned; in queues the ego stops a few metres behind the car ahead.
 - **Planning time:** 0.1–0.7 ms (FISS/FISS+).
 - **Tracking:** MPC lateral error 1–2 cm RMS.
 
