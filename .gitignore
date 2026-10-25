@@ -29,6 +29,6 @@ data/cache/
 *.user
 *~
 .DS_Store
-python/frenet_planner/*.so
+python/fiss_planner/*.so
 build-ros2-ws/
 build-ros1-ws/

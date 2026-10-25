@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/map/road_map.hpp"
+#include "fiss_planner/map/road_map.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
 
-#include "frenet_planner/common/math.hpp"
+#include "fiss_planner/common/math.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 double polylineLength(const std::vector<Vec2>& line) {
   double len = 0.0;
@@ -143,4 +143,4 @@ int RoadMap::locate(double x, double y, double yaw, const std::unordered_set<int
   return best;
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

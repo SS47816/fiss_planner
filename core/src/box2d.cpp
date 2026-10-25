@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/collision/box2d.hpp"
+#include "fiss_planner/collision/box2d.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 std::array<Vec2, 4> Box2d::corners() const {
   const double c = std::cos(yaw), s = std::sin(yaw);
@@ -37,4 +37,4 @@ bool overlaps(const Box2d& a, const Box2d& b) {
   return true;
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

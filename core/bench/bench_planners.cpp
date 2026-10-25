@@ -2,9 +2,9 @@
 // Micro-benchmarks of one planning cycle on a two-lane road with traffic.
 #include <benchmark/benchmark.h>
 
-#include "frenet_planner/planning/planner.hpp"
+#include "fiss_planner/planning/planner.hpp"
 
-using namespace frenet_planner;
+using namespace fiss_planner;
 
 namespace {
 struct Fixture {

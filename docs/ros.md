@@ -6,8 +6,8 @@ cycles.
 
 | ROS 2 | ROS 1 |
 |---|---|
-| `ros2 launch frenet_planner_ros2 planner.launch.py` | `roslaunch frenet_planner_ros1 planner.launch` |
-| `ros2 param set /frenet_planner planner.type fiss` | `rosrun dynamic_reconfigure dynparam set /frenet_planner planner_type fiss` |
+| `ros2 launch fiss_planner_ros2 planner.launch.py` | `roslaunch fiss_planner_ros1 planner.launch` |
+| `ros2 param set /fiss_planner planner.type fiss` | `rosrun dynamic_reconfigure dynparam set /fiss_planner planner_type fiss` |
 | components `PlannerNode`, `ControllerNode` | nodes `planner_node`, `controller_node` |
 
 ## Inputs and outputs
@@ -15,17 +15,17 @@ cycles.
 | Topic | Type | |
 |---|---|---|
 | `~/odom` | `nav_msgs/Odometry` | in |
-| `~/obstacles` | `frenet_planner_msgs/ObstacleArray` | in |
+| `~/obstacles` | `fiss_planner_msgs/ObstacleArray` | in |
 | `~/reference_path` | `nav_msgs/Path` | in (path mode) |
 | `~/goal` | `geometry_msgs/PoseStamped` | in (map mode) |
-| `~/stop_lines` | `frenet_planner_msgs/StopLineStateArray` | in (traffic lights) |
-| `~/trajectory` | `frenet_planner_msgs/Trajectory` | out: time-parameterized x, y, yaw, v, a, κ, s, d |
+| `~/stop_lines` | `fiss_planner_msgs/StopLineStateArray` | in (traffic lights) |
+| `~/trajectory` | `fiss_planner_msgs/Trajectory` | out: time-parameterized x, y, yaw, v, a, κ, s, d |
 | `~/path`, `~/reference` | `nav_msgs/Path` | out |
-| `~/stats` | `frenet_planner_msgs/PlannerStats` | out: mode, timings, counts, blocking obstacle, gap / headway / TTC to the vehicle ahead |
+| `~/stats` | `fiss_planner_msgs/PlannerStats` | out: mode, timings, counts, blocking obstacle, gap / headway / TTC to the vehicle ahead |
 | `~/candidates` | `visualization_msgs/MarkerArray` | out (`publish_candidates`) |
 | `~/markers` | `visualization_msgs/MarkerArray` | out (ROS 2): ego, obstacles, predicted paths; vehicle ahead and blocking obstacle highlighted |
 
-Obstacles use `frenet_planner_msgs/ObstacleArray`: a rectangular footprint per object plus a
+Obstacles use `fiss_planner_msgs/ObstacleArray`: a rectangular footprint per object plus a
 predicted trajectory (times relative to the header stamp). A single state with `is_static`
 describes a parked object. A single state *without* `is_static` (a tracked object with its current
 speed) gets a prediction according to `prediction.mode`: `lane_following` (default; along its lane
@@ -37,9 +37,9 @@ The safety envelope and the proximity costs (see [Concepts](concepts.md#keeping-
 parameters like any other and can be tuned live:
 
 ```bash
-ros2 param set /frenet_planner cost.desired_time_headway 2.0
-ros2 param set /frenet_planner safety.min_ttc 2.0
-ros2 param set /frenet_planner safety.crossing_time_gap 1.0   # crossing / oncoming traffic
+ros2 param set /fiss_planner cost.desired_time_headway 2.0
+ros2 param set /fiss_planner safety.min_ttc 2.0
+ros2 param set /fiss_planner safety.crossing_time_gap 1.0   # crossing / oncoming traffic
 ```
 
 `collision.ignore_rear_in_lane` is on in the shipped configuration: followers in the ego's lane
@@ -48,13 +48,13 @@ before an emergency stop.
 
 ## Visualization and recording
 
-`ros2 launch frenet_planner_ros2 planner.launch.py rviz:=true` opens RViz 2 with the reference,
+`ros2 launch fiss_planner_ros2 planner.launch.py rviz:=true` opens RViz 2 with the reference,
 plan, candidates and scene markers. To record a run for [Foxglove](foxglove.md):
 
 ```bash
 ros2 bag record -s mcap -o run /odom /perception/obstacles /tf \
-    /frenet_planner/trajectory /frenet_planner/path /frenet_planner/stats \
-    /frenet_planner/candidates /frenet_planner/markers
+    /fiss_planner/trajectory /fiss_planner/path /fiss_planner/stats \
+    /fiss_planner/candidates /fiss_planner/markers
 ```
 
 ## Maps

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner_ros/lanelet2_adapter.hpp"
+#include "fiss_planner_ros/lanelet2_adapter.hpp"
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/Lanelet.h>
@@ -15,7 +15,7 @@
 #include <cmath>
 #include <stdexcept>
 
-namespace frenet_planner::ros_common {
+namespace fiss_planner::ros_common {
 
 struct Lanelet2Map::Impl {
   lanelet::LaneletMapPtr map;
@@ -125,4 +125,4 @@ std::vector<int> Lanelet2Map::route(double from_x, double from_y, double to_x, d
   return ids;
 }
 
-}  // namespace frenet_planner::ros_common
+}  // namespace fiss_planner::ros_common

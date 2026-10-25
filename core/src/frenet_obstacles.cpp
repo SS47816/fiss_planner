@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/planning/frenet_obstacles.hpp"
+#include "fiss_planner/planning/frenet_obstacles.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-#include "frenet_planner/common/math.hpp"
+#include "fiss_planner/common/math.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 namespace {
 constexpr double kInf = std::numeric_limits<double>::infinity();
@@ -244,4 +244,4 @@ std::vector<char> rearInLane(const FrenetObstacles& obstacles, size_t num_obstac
   return flags;
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

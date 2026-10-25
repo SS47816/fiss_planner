@@ -3,10 +3,10 @@
 
 #include <cmath>
 
-#include "frenet_planner/common/math.hpp"
-#include "frenet_planner/geometry/spline.hpp"
+#include "fiss_planner/common/math.hpp"
+#include "fiss_planner/geometry/spline.hpp"
 
-using namespace frenet_planner;
+using namespace fiss_planner;
 
 TEST(CubicSpline1D, InterpolatesKnots) {
   const std::vector<double> x = {0.0, 1.0, 2.5, 4.0, 7.0, 8.0};

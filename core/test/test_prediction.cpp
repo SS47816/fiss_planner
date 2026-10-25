@@ -3,10 +3,10 @@
 
 #include <cmath>
 
-#include "frenet_planner/common/math.hpp"
-#include "frenet_planner/prediction/lane_following.hpp"
+#include "fiss_planner/common/math.hpp"
+#include "fiss_planner/prediction/lane_following.hpp"
 
-using namespace frenet_planner;
+using namespace fiss_planner;
 
 namespace {
 

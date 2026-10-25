@@ -4,12 +4,12 @@
 #include <cmath>
 #include <memory>
 
-#include "frenet_planner/planning/frenet_obstacles.hpp"
-#include "frenet_planner/planning/local_planner.hpp"
-#include "frenet_planner/planning/planner.hpp"
+#include "fiss_planner/planning/frenet_obstacles.hpp"
+#include "fiss_planner/planning/local_planner.hpp"
+#include "fiss_planner/planning/planner.hpp"
 #include "test_utils.hpp"
 
-using namespace frenet_planner;
+using namespace fiss_planner;
 
 namespace {
 

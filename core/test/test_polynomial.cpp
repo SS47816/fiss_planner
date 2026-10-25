@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <gtest/gtest.h>
 
-#include "frenet_planner/geometry/polynomial.hpp"
+#include "fiss_planner/geometry/polynomial.hpp"
 
-using frenet_planner::QuarticPolynomial;
-using frenet_planner::QuinticPolynomial;
+using fiss_planner::QuarticPolynomial;
+using fiss_planner::QuinticPolynomial;
 
 namespace {
 template <typename P>

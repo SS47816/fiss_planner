@@ -2,7 +2,7 @@
 
 All numbers were measured on one machine: an Intel Core i9-12900K (24 threads) with an RTX 3090 Ti
 for CARLA, running Ubuntu 24.04. Each planning cycle runs on a single core.
-Raw per-run results are in [`benchmarks/results/`](https://github.com/SS47816/frenet_planner/tree/main/benchmarks/results).
+Raw per-run results are in [`benchmarks/results/`](https://github.com/SS47816/fiss_planner/tree/main/benchmarks/results).
 
 ## CommonRoad, closed loop
 
@@ -75,7 +75,7 @@ mostly by converting timeouts.
 
 ## ROS 2 bag replay (open loop)
 
-`frenet_planner.bags.from_commonroad` turns NGSIM recordings into MCAP bags. A logged vehicle is the
+`fiss_planner.bags.from_commonroad` turns NGSIM recordings into MCAP bags. A logged vehicle is the
 ego (`/odom`), its lane chain is the reference (`/planning/reference_path`), and all other traffic is
 published with constant-velocity predictions (`/perception/obstacles`). `bag_replay_eval.py` plays
 each bag through the real ROS 2 node (`plan_on_odom`, sim time) and compares every plan with where
@@ -113,7 +113,7 @@ Scenarios:
 | ![FISS+ reacting to a cut-in in CARLA](media/carla_cut_in.webp) | ![Bird's-eye view of the same cut-in](media/carla_birdseye_cut_in.gif) |
 
 Full-length videos (cut-in, parked car, traffic) are attached to the GitHub release; regenerate them with
-`python -m frenet_planner.carla.record --scenario <name> --mp4 <file>`.
+`python -m fiss_planner.carla.record --scenario <name> --mp4 <file>`.
 
 ### Planners (MPC controller, Town04)
 

@@ -5,10 +5,10 @@
 #include <cmath>
 #include <vector>
 
-#include "frenet_planner/common/math.hpp"
-#include "frenet_planner/geometry/reference_line.hpp"
+#include "fiss_planner/common/math.hpp"
+#include "fiss_planner/geometry/reference_line.hpp"
 
-namespace frenet_planner::test {
+namespace fiss_planner::test {
 
 inline ReferenceLine straightLine(double length, double heading = 0.0) {
   std::vector<double> x, y;
@@ -60,4 +60,4 @@ inline ReferenceLine sCurve() {
   return ReferenceLine(x, y);
 }
 
-}  // namespace frenet_planner::test
+}  // namespace fiss_planner::test

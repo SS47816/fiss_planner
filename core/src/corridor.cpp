@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/planning/corridor.hpp"
+#include "fiss_planner/planning/corridor.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
 
-#include "frenet_planner/common/math.hpp"
+#include "fiss_planner/common/math.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 namespace {
 std::vector<double> makeStations(double s_start, double s_end, double ds) {
@@ -84,4 +84,4 @@ std::pair<double, double> Corridor::roadBounds(double s) const {
   return {lo, hi};
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

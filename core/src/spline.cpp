@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/geometry/spline.hpp"
+#include "fiss_planner/geometry/spline.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 CubicSpline1D::CubicSpline1D(std::vector<double> x, std::vector<double> y, Boundary boundary)
     : x_(std::move(x)), a_(std::move(y)) {
@@ -142,4 +142,4 @@ double CubicSpline2D::curvatureRate(double s) const {
   return num / (n2 * n2 * std::sqrt(n2));
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

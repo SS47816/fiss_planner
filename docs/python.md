@@ -1,15 +1,15 @@
 # Python
 
 ```bash
-pip install frenet-planner               # bindings, smoother and MPC included
-pip install "frenet-planner[commonroad]" # CommonRoad adapter and benchmark
+pip install fiss-planner               # bindings, smoother and MPC included
+pip install "fiss-planner[commonroad]" # CommonRoad adapter and benchmark
 ```
 
 ## A single planning call
 
 ```python
 import numpy as np
-import frenet_planner as fp
+import fiss_planner as fp
 
 x = np.arange(0.0, 300.0, 5.0)
 ref = fp.ReferenceLine(x, np.zeros_like(x))
@@ -42,8 +42,8 @@ lp.request_planner_type(fp.PlannerType.FOP)  # takes effect next cycle
 ```
 
 `road_map` is an `fp.RoadMap` of `fp.MapLane`s; adapters build it from CommonRoad
-(`frenet_planner.commonroad.road_map_from_lanelet_network`) and CARLA
-(`frenet_planner.carla.adapter.road_map_from_carla`).
+(`fiss_planner.commonroad.road_map_from_lanelet_network`) and CARLA
+(`fiss_planner.carla.adapter.road_map_from_carla`).
 
 ## Prediction
 
@@ -55,7 +55,7 @@ obstacles = fp.complete_predictions(obstacles, "lane_following", road_map)  # si
 ## Recording for Foxglove
 
 ```python
-from frenet_planner.viz import SceneRecorder, obstacle_dict   # pip install foxglove-sdk
+from fiss_planner.viz import SceneRecorder, obstacle_dict   # pip install foxglove-sdk
 
 rec = SceneRecorder("run.mcap")              # or SceneRecorder(live=True) for ws://localhost:8765
 rec.lanes((road_map.lane(i).left, road_map.lane(i).right) for i in road_map.lane_ids())

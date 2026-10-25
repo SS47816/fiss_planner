@@ -29,15 +29,15 @@ jobs:
         run: >
           cmake -S . -B build -G Ninja
           -DCMAKE_BUILD_TYPE=${{ matrix.build == 'Sanitize' && 'Debug' || matrix.build }}
-          -DFRENET_PLANNER_BUILD_TESTS=ON -DFRENET_PLANNER_BUILD_BENCHMARKS=ON
-          -DFRENET_PLANNER_SANITIZE=${{ matrix.build == 'Sanitize' && 'ON' || 'OFF' }}
+          -DFISS_PLANNER_BUILD_TESTS=ON -DFISS_PLANNER_BUILD_BENCHMARKS=ON
+          -DFISS_PLANNER_SANITIZE=${{ matrix.build == 'Sanitize' && 'ON' || 'OFF' }}
       - name: Build
         run: cmake --build build
       - name: Test
         run: ctest --test-dir build --output-on-failure
       - name: Benchmark smoke run
         if: matrix.build != 'Sanitize'
-        run: ./build/core/bench/frenet_planner_bench --benchmark_min_time=0.05s
+        run: ./build/core/bench/fiss_planner_bench --benchmark_min_time=0.05s
 
   pixi:
     runs-on: ubuntu-24.04

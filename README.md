@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/media/logo.svg" width="520" alt="frenet_planner"/>
+  <img src="docs/media/logo.svg" width="520" alt="fiss_planner"/>
 </p>
 
 <p align="center">
@@ -8,10 +8,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/SS47816/frenet_planner/actions/workflows/core.yml"><img src="https://github.com/SS47816/frenet_planner/actions/workflows/core.yml/badge.svg?branch=main" alt="core CI"/></a>
-  <a href="https://github.com/SS47816/frenet_planner/actions/workflows/python.yml"><img src="https://github.com/SS47816/frenet_planner/actions/workflows/python.yml/badge.svg?branch=main" alt="Python CI"/></a>
-  <a href="https://github.com/SS47816/frenet_planner/actions/workflows/ros.yml"><img src="https://github.com/SS47816/frenet_planner/actions/workflows/ros.yml/badge.svg?branch=main" alt="ROS CI"/></a>
-  <a href="https://pypi.org/project/frenet-planner/"><img src="https://img.shields.io/pypi/v/frenet-planner?logo=pypi&logoColor=white" alt="PyPI"/></a>
+  <a href="https://github.com/SS47816/fiss_planner/actions/workflows/core.yml"><img src="https://github.com/SS47816/fiss_planner/actions/workflows/core.yml/badge.svg?branch=main" alt="core CI"/></a>
+  <a href="https://github.com/SS47816/fiss_planner/actions/workflows/python.yml"><img src="https://github.com/SS47816/fiss_planner/actions/workflows/python.yml/badge.svg?branch=main" alt="Python CI"/></a>
+  <a href="https://github.com/SS47816/fiss_planner/actions/workflows/ros.yml"><img src="https://github.com/SS47816/fiss_planner/actions/workflows/ros.yml/badge.svg?branch=main" alt="ROS CI"/></a>
+  <a href="https://pypi.org/project/fiss-planner/"><img src="https://img.shields.io/pypi/v/fiss-planner?logo=pypi&logoColor=white" alt="PyPI"/></a>
   <br/>
   <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white" alt="C++17"/>
   <img src="https://img.shields.io/badge/Python-3.10%E2%80%933.13-3776AB?logo=python&logoColor=white" alt="Python 3.10-3.13"/>
@@ -28,12 +28,14 @@
 </p>
 
 <p align="center">
-  <a href="https://ss47816.github.io/frenet_planner/demo/"><b>▶ Try the interactive replay in your browser</b></a> ·
+  <a href="https://ss47816.github.io/fiss_planner/demo/"><b>▶ Try the interactive replay in your browser</b></a> ·
   <a href="docs/foxglove.md">Inspect runs in Foxglove</a> ·
-  <a href="https://ss47816.github.io/frenet_planner/">Documentation</a> ·
+  <a href="https://ss47816.github.io/fiss_planner/">Documentation</a> ·
   <a href="examples/quickstart.ipynb">Notebook</a><br/><br/>
-  <a href="https://colab.research.google.com/github/SS47816/frenet_planner/blob/main/examples/quickstart.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab"/></a>
+  <a href="https://colab.research.google.com/github/SS47816/fiss_planner/blob/main/examples/quickstart.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab"/></a>
 </p>
+
+> **News — v1.0.0 (October 2026).** FISS, FISS+ and the FOP baselines are now one project, here: a C++17 core with `pip install fiss-planner`, ROS 2 / ROS 1 nodes and CARLA / CommonRoad / Lanelet2 support. It continues the former `frenet_planner` (`frenet_optimal_planner`) and `fiss_plus_planner` repositories. [Release notes](https://github.com/SS47816/fiss_planner/releases/tag/v1.0.0) · [Discussions](https://github.com/SS47816/fiss_planner/discussions)
 
 ## Why FISS Planner
 
@@ -59,7 +61,7 @@
 - **From planning to control.**
   - An optional QP smoother refines the chosen trajectory inside a space–time driving corridor.
   - An LTV-MPC tracks it with 1–2 cm lateral error in CARLA.
-- **Runs everywhere.** `pip install frenet-planner`, ROS 2 components, a ROS 1 node, or plain CMake.
+- **Runs everywhere.** `pip install fiss-planner`, ROS 2 components, a ROS 1 node, or plain CMake.
 
 ## Gallery
 
@@ -85,12 +87,12 @@
 ## Quick start
 
 ```bash
-pip install frenet-planner
+pip install fiss-planner
 ```
 
 ```python
 import numpy as np
-import frenet_planner as fp
+import fiss_planner as fp
 
 x = np.arange(0.0, 300.0, 5.0)
 road = fp.ReferenceLine(x, np.zeros_like(x))                     # any polyline
@@ -107,12 +109,12 @@ print(result.success, result.trajectory.lane)  # True 1  -> overtakes in the lef
 **ROS 2**
 
 ```bash
-ros2 launch frenet_planner_ros2 planner.launch.py odom:=/localization/odom \
+ros2 launch fiss_planner_ros2 planner.launch.py odom:=/localization/odom \
     obstacles:=/perception/obstacles lanelet2_map:=/maps/town.osm controller:=true
-ros2 param set /frenet_planner planner.type fiss      # switch planners live
+ros2 param set /fiss_planner planner.type fiss      # switch planners live
 ```
 
-The planner node publishes `~/trajectory` (time-parameterized x, y, yaw, v, a, κ), `~/path`, `~/candidates`, `~/markers` (scene; `rviz:=true` opens RViz 2) and `~/stats`. The controller node publishes `ackermann_msgs/AckermannDriveStamped`. ROS 1 Noetic has the same interface (`roslaunch frenet_planner_ros1 planner.launch`). See [docs/ros.md](docs/ros.md).
+The planner node publishes `~/trajectory` (time-parameterized x, y, yaw, v, a, κ), `~/path`, `~/candidates`, `~/markers` (scene; `rviz:=true` opens RViz 2) and `~/stats`. The controller node publishes `ackermann_msgs/AckermannDriveStamped`. ROS 1 Noetic has the same interface (`roslaunch fiss_planner_ros1 planner.launch`). See [docs/ros.md](docs/ros.md).
 
 ## Planners
 
@@ -156,25 +158,25 @@ Full tables, protocols and ablations are in [docs/benchmarks.md](docs/benchmarks
 
 | | |
 |---|---|
-| **Python** | `pip install frenet-planner` (Linux, macOS; Python 3.10–3.13) |
-| **ROS 2** | `frenet_planner_ros2`: Jazzy, Humble; component nodes, live parameters |
-| **ROS 1** | `frenet_planner_ros1`: Noetic; `dynamic_reconfigure` |
+| **Python** | `pip install fiss-planner` (Linux, macOS; Python 3.10–3.13) |
+| **ROS 2** | `fiss_planner_ros2`: Jazzy, Humble; component nodes, live parameters |
+| **ROS 1** | `fiss_planner_ros1`: Noetic; `dynamic_reconfigure` |
 | **Maps** | Lanelet2 (C++ adapter with routing), CommonRoad, CARLA |
 | **Simulation** | CommonRoad closed-loop benchmark, CARLA closed loop and video recorder, ROS 2 bag tools |
-| **C++** | `find_package(frenet_planner)`; only yaml-cpp, plus OSQP for the optional smoother/MPC |
+| **C++** | `find_package(fiss_planner)`; only yaml-cpp, plus OSQP for the optional smoother/MPC |
 
 <details>
 <summary><b>Build from source / run the tests</b></summary>
 
 ```bash
-git clone https://github.com/SS47816/frenet_planner.git && cd frenet_planner
+git clone https://github.com/SS47816/fiss_planner.git && cd fiss_planner
 # with pixi (no root needed; ROS from RoboStack)
 pixi run test                    # C++ core (GoogleTest)
 pixi run -e bench py-test        # Python bindings
 pixi run -e jazzy ros2-test      # ROS 2 packages
 pixi run -e noetic ros1-test     # ROS 1 packages
 # or into a ROS 2 workspace
-colcon build --base-paths frenet_planner/{core,msgs,ros/ros2}
+colcon build --base-paths fiss_planner/{core,msgs,ros/ros2}
 ```
 </details>
 
@@ -183,12 +185,12 @@ colcon build --base-paths frenet_planner/{core,msgs,ros/ros2}
 
 ```bash
 python benchmarks/commonroad/fetch_scenarios.py --out data/cache/scenarios --bench-set data/cache/bench_set
-pixi run -e bench python -m frenet_planner.commonroad.benchmark --scenarios data/cache/bench_set --smoother
-pixi run -e bench python -m frenet_planner.commonroad.demo data/cache/bench_set/ZAM_Zip-1_50_T-1.xml \
+pixi run -e bench python -m fiss_planner.commonroad.benchmark --scenarios data/cache/bench_set --smoother
+pixi run -e bench python -m fiss_planner.commonroad.demo data/cache/bench_set/ZAM_Zip-1_50_T-1.xml \
     --panels fop fiss fiss_plus --gif compare.gif
 # CARLA (start $CARLA_ROOT/CarlaUE4.sh -RenderOffScreen first)
-pixi run -e carla python -m frenet_planner.carla.closed_loop --planner fop fiss fiss_plus
-pixi run -e carla python -m frenet_planner.carla.record --scenario cut_in --mp4 cut_in.mp4
+pixi run -e carla python -m fiss_planner.carla.closed_loop --planner fop fiss fiss_plus
+pixi run -e carla python -m fiss_planner.carla.record --scenario cut_in --mp4 cut_in.mp4
 ```
 </details>
 

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/smoothing/smoother.hpp"
+#include "fiss_planner/smoothing/smoother.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
-#include "frenet_planner/planning/frenet_obstacles.hpp"
-#include "frenet_planner/smoothing/piecewise_jerk.hpp"
+#include "fiss_planner/planning/frenet_obstacles.hpp"
+#include "fiss_planner/smoothing/piecewise_jerk.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 SpaceTimeCorridor buildSpaceTimeCorridor(const Trajectory& traj, const ReferenceLine& ref,
                                          const Corridor& corridor, const std::vector<Obstacle>& obstacles,
@@ -205,4 +205,4 @@ bool smoothTrajectory(Trajectory& traj, const PlanningInput& input, const Planne
   return true;
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

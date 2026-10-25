@@ -1,10 +1,10 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it and the FISS / FISS+ papers."
-title: "frenet_planner: fast sampling-based Frenet trajectory planners (FOP, FISS, FISS+)"
+title: "FISS Planner: Fast Iterative Search and Sampling trajectory planners (FISS, FISS+, with FOP baselines)"
 type: software
 version: 1.0.0
 license: Apache-2.0
-repository-code: "https://github.com/SS47816/frenet_planner"
+repository-code: "https://github.com/SS47816/fiss_planner"
 authors:
   - family-names: Sun
     given-names: Shuo

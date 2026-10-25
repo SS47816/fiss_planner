@@ -31,7 +31,7 @@ def main() -> None:
         font = ImageFont.load_default()
     d.text(
         (64, 196),
-        "FOP · FISS · FISS+  —  C++17 · Python · ROS 2 · CARLA · Lanelet2",
+        "FISS · FISS+ · FOP  —  C++17 · Python · ROS 2 · CARLA · Lanelet2",
         font=font,
         fill=(201, 209, 217),
     )

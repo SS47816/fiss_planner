@@ -1,8 +1,0 @@
-<launch>
-  <node pkg="frenet_planner_ros1" type="planner_node" name="frenet_planner">
-    <param name="num_right_lanes" value="0"/>
-    <param name="odom_to_center_offset" value="0.0"/>
-    <param name="rate_hz" value="20.0"/>
-  </node>
-  <test test-name="test_planner_node_ros1" pkg="frenet_planner_ros1" type="test_planner_node_ros1" time-limit="60"/>
-</launch>

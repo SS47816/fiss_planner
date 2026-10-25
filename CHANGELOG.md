@@ -1,9 +1,12 @@
 # Changelog
 
-## 1.0.0 — unreleased
+## 1.0.0 — 2026-10-25
 
-The first release of the unified planner family: FOP, FOP+, FISS (RA-L 2022) and FISS+ (IROS 2023)
-in one code base.
+The first release of FISS Planner: FISS (RA-L 2022), FISS+ (IROS 2023) and the FOP / FOP+ baselines
+in one code base. The project continues `SS47816/frenet_planner` (formerly `frenet_optimal_planner`),
+whose package was briefly published as `frenet-planner` 1.0.0, and `SS47816/fiss_plus_planner`.
+`pip install frenet-planner` now installs `fiss-planner`; the paper code stays at the tags
+`paper-ral2022` (this repository) and `paper-iros2023` (`fiss_plus_planner`).
 
 ### Planning
 - ROS-agnostic C++17 core with four interchangeable planners behind one interface (`makePlanner`)
@@ -45,10 +48,10 @@ in one code base.
   simulator.
 
 ### Integrations
-- Python package `frenet-planner` (nanobind) with a CommonRoad benchmark, ROS 2 bag tools and a CARLA
+- Python package `fiss-planner` (nanobind) with a CommonRoad benchmark, ROS 2 bag tools and a CARLA
   closed-loop runner.
-- ROS 2 (`frenet_planner_ros2`, component nodes) and ROS 1 (`frenet_planner_ros1`) wrappers;
-  `frenet_planner_msgs` builds for both.
+- ROS 2 (`fiss_planner_ros2`, component nodes) and ROS 1 (`fiss_planner_ros1`) wrappers;
+  `fiss_planner_msgs` builds for both.
 - Runtime planner switching through ROS 2 parameters, `dynamic_reconfigure` or Python.
 - Scene markers and an RViz 2 configuration (ROS 2).
 - Foxglove: MCAP recording (or live streaming) of CARLA and CommonRoad runs with a ready-made layout.

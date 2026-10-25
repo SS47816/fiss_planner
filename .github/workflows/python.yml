@@ -26,7 +26,7 @@ jobs:
         run: pip install ".[test]" -v
       - name: Test
         run: |
-          cd /tmp && python -c "import frenet_planner as fp; assert fp.has_optimizers()"
+          cd /tmp && python -c "import fiss_planner as fp; assert fp.has_optimizers()"
           pytest -q ${{ github.workspace }}/python/tests
 
   commonroad-demo:
@@ -41,7 +41,7 @@ jobs:
         run: python benchmarks/commonroad/fetch_scenarios.py --subset hand-crafted --out data/cache/scenarios
       - name: Closed-loop benchmark (smoke)
         run: |
-          python -m frenet_planner.commonroad.benchmark --scenarios data/cache/scenarios/hand-crafted \
+          python -m fiss_planner.commonroad.benchmark --scenarios data/cache/scenarios/hand-crafted \
             --limit 20 --seed 1 --jobs 4 --out results/ci.csv
           python - <<'PY'
           import pandas as pd

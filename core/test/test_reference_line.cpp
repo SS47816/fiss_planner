@@ -4,11 +4,11 @@
 #include <cmath>
 #include <random>
 
-#include "frenet_planner/common/math.hpp"
-#include "frenet_planner/geometry/reference_line.hpp"
+#include "fiss_planner/common/math.hpp"
+#include "fiss_planner/geometry/reference_line.hpp"
 #include "test_utils.hpp"
 
-using namespace frenet_planner;
+using namespace fiss_planner;
 
 TEST(ReferenceLine, StraightLineProjection) {
   const auto ref = test::straightLine(100.0);

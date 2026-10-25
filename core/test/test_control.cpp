@@ -4,13 +4,13 @@
 #include <cmath>
 #include <memory>
 
-#include "frenet_planner/control/controller.hpp"
-#include "frenet_planner/planning/local_planner.hpp"
-#include "frenet_planner/smoothing/piecewise_jerk.hpp"
-#include "frenet_planner/smoothing/smoother.hpp"
+#include "fiss_planner/control/controller.hpp"
+#include "fiss_planner/planning/local_planner.hpp"
+#include "fiss_planner/smoothing/piecewise_jerk.hpp"
+#include "fiss_planner/smoothing/smoother.hpp"
 #include "test_utils.hpp"
 
-using namespace frenet_planner;
+using namespace fiss_planner;
 
 TEST(KinematicBicycle, MovesAlongItsHeading) {
   KinematicBicycle car(VehicleParams{}, {3.0, -2.0, kPi / 2, 5.0, 0.0, 0.0});

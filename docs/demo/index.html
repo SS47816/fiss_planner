@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- frenet-playback:start -->
-<title>frenet_planner Playback</title>
+<!-- fiss-playback:start -->
+<title>fiss_planner Playback</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -97,12 +97,12 @@ input[type="range"] { flex: 1 1 220px; min-width: 0; accent-color: var(--plan); 
 .note code { font-family: var(--font-mono); font-size: 0.82rem; }
 .err { color: var(--obstacle); }
 </style>
-<!-- frenet-playback:head-end -->
+<!-- fiss-playback:head-end -->
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>frenet_planner <span>playback</span></h1>
+    <h1>fiss_planner <span>playback</span></h1>
     <p class="sub">Closed-loop replays of CommonRoad scenarios. Every planning cycle is recorded: the executed plan, the candidates each planner generated, and the recorded traffic around the ego.</p>
   </header>
 
@@ -147,7 +147,7 @@ input[type="range"] { flex: 1 1 220px; min-width: 0; accent-color: var(--plan); 
           </select></label>
         <label>Zoom <input type="range" id="zoom" min="30" max="140" value="70" aria-label="View width in meters" style="flex:0 0 110px"></label>
       </div>
-      <p class="note">Recorded traffic is replayed from the dataset and does not react to the ego. Plans use ground-truth predictions and the QP smoother. Regenerate with <code>python -m frenet_planner.commonroad.export_web</code>.</p>
+      <p class="note">Recorded traffic is replayed from the dataset and does not react to the ego. Plans use ground-truth predictions and the QP smoother. Regenerate with <code>python -m fiss_planner.commonroad.export_web</code>.</p>
     </section>
   </div>
 </div>
@@ -176,7 +176,7 @@ input[type="range"] { flex: 1 1 220px; min-width: 0; accent-color: var(--plan); 
     const sel = $("scenario");
     for (const s of state.index) sel.add(new Option(s.id.replaceAll("_", " "), s.id));
     let saved = null;
-    try { saved = localStorage.getItem("frenet-playback-scenario"); } catch (_) {}
+    try { saved = localStorage.getItem("fiss-playback-scenario"); } catch (_) {}
     if (saved && state.index.some((s) => s.id === saved)) sel.value = saved;
     sel.addEventListener("change", () => loadScenario(sel.value));
     await loadScenario(sel.value);
@@ -184,7 +184,7 @@ input[type="range"] { flex: 1 1 220px; min-width: 0; accent-color: var(--plan); 
   }
 
   async function loadScenario(id) {
-    try { localStorage.setItem("frenet-playback-scenario", id); } catch (_) {}
+    try { localStorage.setItem("fiss-playback-scenario", id); } catch (_) {}
     state.data = await loadJSON(`data/${id}.json`);
     const keys = Object.keys(state.data.runs);
     if (!keys.includes(state.planner)) state.planner = keys.includes("fiss_plus") ? "fiss_plus" : keys[0];
@@ -336,6 +336,6 @@ input[type="range"] { flex: 1 1 220px; min-width: 0; accent-color: var(--plan); 
   init();
 })();
 </script>
-<!-- frenet-playback:end -->
+<!-- fiss-playback:end -->
 </body>
 </html>

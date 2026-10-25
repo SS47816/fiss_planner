@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 120" role="img" aria-labelledby="t">
-  <title id="t">frenet_planner</title>
+  <title id="t">fiss_planner</title>
   <!-- Mark: a reference line (dashed lane), its Frenet axes and a fan of candidate trajectories. -->
   <g fill="none" stroke-linecap="round">
     <path d="M10 92 C 40 92, 70 88, 108 70" stroke="#7c8494" stroke-width="3" stroke-dasharray="7 6"/>
@@ -14,5 +14,5 @@
   <circle cx="20" cy="92" r="6" fill="#3fa9ff"/>
   <text x="14" y="56" font-family="Barlow, Helvetica, Arial, sans-serif" font-size="13" fill="#3fa9ff">d</text>
   <text x="50" y="108" font-family="Barlow, Helvetica, Arial, sans-serif" font-size="13" fill="#3fa9ff">s</text>
-  <text x="138" y="80" font-family="'Barlow Condensed', 'Arial Narrow', Helvetica, sans-serif" font-size="50" font-weight="700" fill="#8b98a5" textLength="380" lengthAdjust="spacingAndGlyphs">frenet<tspan fill="#f2b33d">_</tspan>planner</text>
+  <text x="138" y="80" font-family="'Barlow Condensed', 'Arial Narrow', Helvetica, sans-serif" font-size="50" font-weight="700" fill="#8b98a5" textLength="330" lengthAdjust="spacingAndGlyphs"><tspan fill="#4fd1c5">fiss</tspan><tspan fill="#f2b33d">_</tspan>planner</text>
 </svg>

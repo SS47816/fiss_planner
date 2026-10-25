@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
 //
-// Python bindings of the frenet_planner core (nanobind).
+// Python bindings of the fiss_planner core (nanobind).
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/array.h>
@@ -16,21 +16,21 @@
 #include <memory>
 #include <sstream>
 
-#include "frenet_planner/collision/box2d.hpp"
-#include "frenet_planner/common/types.hpp"
-#include "frenet_planner/control/controller.hpp"
-#include "frenet_planner/geometry/reference_line.hpp"
-#include "frenet_planner/map/road_map.hpp"
-#include "frenet_planner/map/route_corridor.hpp"
-#include "frenet_planner/planning/local_planner.hpp"
-#include "frenet_planner/planning/planner.hpp"
-#include "frenet_planner/prediction/lane_following.hpp"
-#include "frenet_planner/smoothing/piecewise_jerk.hpp"
-#include "frenet_planner/smoothing/smoother.hpp"
+#include "fiss_planner/collision/box2d.hpp"
+#include "fiss_planner/common/types.hpp"
+#include "fiss_planner/control/controller.hpp"
+#include "fiss_planner/geometry/reference_line.hpp"
+#include "fiss_planner/map/road_map.hpp"
+#include "fiss_planner/map/route_corridor.hpp"
+#include "fiss_planner/planning/local_planner.hpp"
+#include "fiss_planner/planning/planner.hpp"
+#include "fiss_planner/prediction/lane_following.hpp"
+#include "fiss_planner/smoothing/piecewise_jerk.hpp"
+#include "fiss_planner/smoothing/smoother.hpp"
 
 namespace nb = nanobind;
 using namespace nb::literals;
-using namespace frenet_planner;
+using namespace fiss_planner;
 
 namespace {
 

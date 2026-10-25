@@ -2,18 +2,18 @@
 // Copyright (c) 2021-2026 Shuo Sun
 //
 // Linear time-varying MPC on kinematic bicycle error dynamics.
-#ifdef FRENET_PLANNER_HAS_OSQP
+#ifdef FISS_PLANNER_HAS_OSQP
 
 #include <algorithm>
 #include <cmath>
 #include <vector>
 
-#include "frenet_planner/common/math.hpp"
-#include "frenet_planner/control/controller.hpp"
-#include "frenet_planner/planning/local_planner.hpp"
+#include "fiss_planner/common/math.hpp"
+#include "fiss_planner/control/controller.hpp"
+#include "fiss_planner/planning/local_planner.hpp"
 #include "qp.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 MpcController::MpcController(const VehicleParams& vehicle, const MpcConfig& config)
     : vehicle_(vehicle), cfg_(config), backup_(vehicle) {}
@@ -114,6 +114,6 @@ ControlCommand MpcController::compute(const EgoState& ego, const Trajectory& tra
   return cmd;
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner
 
 #endif

@@ -1,6 +1,6 @@
 # Security policy
 
-frenet_planner is research software for motion planning. It is not certified for use in production
+fiss_planner is research software for motion planning. It is not certified for use in production
 vehicles; any deployment on a real vehicle needs its own safety case, an independent safety layer and
 a trained safety driver.
 

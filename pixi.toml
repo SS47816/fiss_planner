@@ -1,5 +1,5 @@
 [workspace]
-name = "frenet_planner"
+name = "fiss_planner"
 version = "1.0.0"
 description = "Sampling-based Frenet trajectory planners (FOP, FISS, FISS+) with ROS 1/2 wrappers and benchmarks"
 authors = ["Shuo Sun <ss1057532022@gmail.com>"]
@@ -20,12 +20,12 @@ benchmark = ">=1.8"
 libosqp = ">=1.0"
 
 [tasks]
-configure = "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFRENET_PLANNER_BUILD_TESTS=ON -DFRENET_PLANNER_BUILD_BENCHMARKS=ON"
+configure = "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFISS_PLANNER_BUILD_TESTS=ON -DFISS_PLANNER_BUILD_BENCHMARKS=ON"
 build = { cmd = "cmake --build build", depends-on = ["configure"] }
 test = { cmd = "ctest --test-dir build --output-on-failure", depends-on = ["build"] }
-configure-asan = "cmake -S . -B build-asan -G Ninja -DCMAKE_BUILD_TYPE=Debug -DFRENET_PLANNER_BUILD_TESTS=ON -DFRENET_PLANNER_SANITIZE=ON"
+configure-asan = "cmake -S . -B build-asan -G Ninja -DCMAKE_BUILD_TYPE=Debug -DFISS_PLANNER_BUILD_TESTS=ON -DFISS_PLANNER_SANITIZE=ON"
 test-asan = { cmd = "cmake --build build-asan && ctest --test-dir build-asan --output-on-failure", depends-on = ["configure-asan"] }
-bench-micro = { cmd = "./build/core/bench/frenet_planner_bench", depends-on = ["build"] }
+bench-micro = { cmd = "./build/core/bench/fiss_planner_bench", depends-on = ["build"] }
 
 # --------------------------------------------------------------------------- #
 # Python bindings and the CommonRoad benchmark (Python 3.11: route planner < 3.12)
@@ -41,7 +41,7 @@ ruff = "*"
 PYTHONPATH = "$PIXI_PROJECT_ROOT/python"
 
 [feature.py.tasks]
-py-build = "cmake -S . -B build-py -G Ninja -DCMAKE_BUILD_TYPE=Release -DFRENET_PLANNER_BUILD_PYTHON=ON -DPython_EXECUTABLE=$CONDA_PREFIX/bin/python && cmake --build build-py"
+py-build = "cmake -S . -B build-py -G Ninja -DCMAKE_BUILD_TYPE=Release -DFISS_PLANNER_BUILD_PYTHON=ON -DPython_EXECUTABLE=$CONDA_PREFIX/bin/python && cmake --build build-py"
 py-test = { cmd = "pytest -q python/tests", depends-on = ["py-build"] }
 
 [feature.bench.dependencies]
@@ -63,7 +63,7 @@ foxglove-sdk = "==0.29.0"
 mcap = "==1.5.0"
 
 [feature.bench.tasks]
-cr-bench = { cmd = "python -m frenet_planner.commonroad.benchmark", depends-on = ["py-build"] }
+cr-bench = { cmd = "python -m fiss_planner.commonroad.benchmark", depends-on = ["py-build"] }
 
 [environments]
 bench = ["py", "bench"]
@@ -97,8 +97,8 @@ numpy = "*"
 pytest = "*"
 
 [feature.jazzy.tasks]
-ros2-build = { cmd = "colcon build --base-paths ../core ../msgs ../ros/ros2 --cmake-args -DCMAKE_BUILD_TYPE=Release -DFRENET_PLANNER_BUILD_TESTS=OFF -DPython3_EXECUTABLE=$CONDA_PREFIX/bin/python -DPython_EXECUTABLE=$CONDA_PREFIX/bin/python -DCMAKE_POLICY_VERSION_MINIMUM=3.5 --event-handlers console_cohesion+", cwd = "build-ros2-ws" }
-ros2-test = { cmd = "colcon test --base-paths ../core ../msgs ../ros/ros2 --packages-select frenet_planner_ros2 --event-handlers console_direct+ && colcon test-result --verbose", cwd = "build-ros2-ws", depends-on = ["ros2-build"] }
+ros2-build = { cmd = "colcon build --base-paths ../core ../msgs ../ros/ros2 --cmake-args -DCMAKE_BUILD_TYPE=Release -DFISS_PLANNER_BUILD_TESTS=OFF -DPython3_EXECUTABLE=$CONDA_PREFIX/bin/python -DPython_EXECUTABLE=$CONDA_PREFIX/bin/python -DCMAKE_POLICY_VERSION_MINIMUM=3.5 --event-handlers console_cohesion+", cwd = "build-ros2-ws" }
+ros2-test = { cmd = "colcon test --base-paths ../core ../msgs ../ros/ros2 --packages-select fiss_planner_ros2 --event-handlers console_direct+ && colcon test-result --verbose", cwd = "build-ros2-ws", depends-on = ["ros2-build"] }
 
 [environments.jazzy]
 features = ["jazzy"]
@@ -130,8 +130,8 @@ empy = "3.3.*"
 
 [feature.noetic.tasks]
 ros1-ws = "mkdir -p build-ros1-ws/src && ln -sfn ../../core build-ros1-ws/src/core && ln -sfn ../../msgs build-ros1-ws/src/msgs && ln -sfn ../../ros/ros1 build-ros1-ws/src/ros1 && ln -sfn ../../ros/common build-ros1-ws/src/common"
-ros1-build = { cmd = "catkin init -w . >/dev/null && catkin config -w . --extend $CONDA_PREFIX --cmake-args -DCMAKE_BUILD_TYPE=Release -DFRENET_PLANNER_BUILD_TESTS=OFF -DPython3_EXECUTABLE=$CONDA_PREFIX/bin/python -DPYTHON_EXECUTABLE=$CONDA_PREFIX/bin/python -DCMAKE_POLICY_VERSION_MINIMUM=3.5 >/dev/null && catkin build -w . --no-status --summarize", cwd = "build-ros1-ws", depends-on = ["ros1-ws"] }
-ros1-test = { cmd = "catkin test -w . frenet_planner_ros1", cwd = "build-ros1-ws", depends-on = ["ros1-build"] }
+ros1-build = { cmd = "catkin init -w . >/dev/null && catkin config -w . --extend $CONDA_PREFIX --cmake-args -DCMAKE_BUILD_TYPE=Release -DFISS_PLANNER_BUILD_TESTS=OFF -DPython3_EXECUTABLE=$CONDA_PREFIX/bin/python -DPYTHON_EXECUTABLE=$CONDA_PREFIX/bin/python -DCMAKE_POLICY_VERSION_MINIMUM=3.5 >/dev/null && catkin build -w . --no-status --summarize", cwd = "build-ros1-ws", depends-on = ["ros1-ws"] }
+ros1-test = { cmd = "catkin test -w . fiss_planner_ros1", cwd = "build-ros1-ws", depends-on = ["ros1-build"] }
 
 [environments.noetic]
 features = ["noetic"]
@@ -154,4 +154,4 @@ foxglove-sdk = "==0.29.0"
 mcap = "==1.5.0"
 
 [feature.carla.tasks]
-carla-closed-loop = { cmd = "python -m frenet_planner.carla.closed_loop", depends-on = ["py-build"] }
+carla-closed-loop = { cmd = "python -m fiss_planner.carla.closed_loop", depends-on = ["py-build"] }

@@ -8,12 +8,12 @@ candidate, the predicted paths, gap / headway / time to collision to the vehicle
 times and (in CARLA) the camera.
 
 The recordings of the demo runs are attached to the GitHub release
-([carla_cut_in.mcap, carla_traffic.mcap, commonroad_zip.mcap](https://github.com/SS47816/frenet_planner/releases)).
+([carla_cut_in.mcap, carla_traffic.mcap, commonroad_zip.mcap](https://github.com/SS47816/fiss_planner/releases)).
 
 ## Open a recording
 
 1. Download a `.mcap` file and the layout
-   [`docs/foxglove/frenet_planner_layout.json`](https://github.com/SS47816/frenet_planner/blob/main/docs/foxglove/frenet_planner_layout.json).
+   [`docs/foxglove/fiss_planner_layout.json`](https://github.com/SS47816/fiss_planner/blob/main/docs/foxglove/fiss_planner_layout.json).
 2. Open the file in Foxglove (desktop app or app.foxglove.dev; a free account is required) or
    Lichtblick.
 3. Import the layout (*Layouts → Import from file*).
@@ -35,13 +35,13 @@ TTC, planning time and trajectory count, and the raw planner statistics.
 ## Record your own
 
 ```bash
-pip install "frenet-planner[foxglove,commonroad]"
+pip install "fiss-planner[foxglove,commonroad]"
 # CommonRoad scenario
-python -m frenet_planner.commonroad.demo ZAM_Zip-1_50_T-1.xml --mcap zip.mcap
+python -m fiss_planner.commonroad.demo ZAM_Zip-1_50_T-1.xml --mcap zip.mcap
 # CARLA with the chase camera (start the simulator first)
-python -m frenet_planner.carla.record --scenario cut_in --mcap cut_in.mcap
+python -m fiss_planner.carla.record --scenario cut_in --mcap cut_in.mcap
 # CARLA batch runs, one file per run
-python -m frenet_planner.carla.closed_loop --scenario traffic --mcap recordings/
+python -m fiss_planner.carla.closed_loop --scenario traffic --mcap recordings/
 ```
 
 Add `--foxglove-live` to the CARLA commands and connect Foxglove to `ws://localhost:8765` to watch a

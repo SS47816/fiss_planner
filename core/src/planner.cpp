@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/planning/planner.hpp"
+#include "fiss_planner/planning/planner.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -10,7 +10,7 @@
 
 #include "planners.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 namespace {
 const std::vector<Obstacle> kNoObstacles;
@@ -236,4 +236,4 @@ std::unique_ptr<Planner> makePlanner(const PlannerConfig& config, const VehicleP
   throw std::invalid_argument("makePlanner: unknown planner type");
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

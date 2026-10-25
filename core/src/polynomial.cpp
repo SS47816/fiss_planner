@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/geometry/polynomial.hpp"
+#include "fiss_planner/geometry/polynomial.hpp"
 
 #include <stdexcept>
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 // Closed-form solutions of the boundary-value problems. With
 // u_k = c_k * T^k for the unknown coefficients, the linear systems reduce to
@@ -63,4 +63,4 @@ double QuarticPolynomial::ddx(double t) const { return 2.0 * c_[2] + t * (6.0 * 
 
 double QuarticPolynomial::dddx(double t) const { return 6.0 * c_[3] + t * 24.0 * c_[4]; }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

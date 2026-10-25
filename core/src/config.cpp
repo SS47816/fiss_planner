@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/planning/config.hpp"
+#include "fiss_planner/planning/config.hpp"
 
 #include <yaml-cpp/yaml.h>
 
@@ -10,7 +10,7 @@
 #include <map>
 #include <stdexcept>
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 std::string toString(PlannerType type) {
   switch (type) {
@@ -208,4 +208,4 @@ PlannerConfig parsePlannerConfig(const std::string& yaml_text, VehicleParams* ve
   return parse(root, vehicle);
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

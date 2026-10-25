@@ -9,9 +9,9 @@
 #include <utility>
 #include <vector>
 
-#include "frenet_planner/planning/planner.hpp"
+#include "fiss_planner/planning/planner.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 /// Werling et al. (2010): generate every candidate, validate all of them and
 /// return the cheapest valid one.
@@ -91,4 +91,4 @@ class FissPlusPlanner : public GridSearchPlanner {
   bool refine(Context& ctx, Trajectory& best, std::vector<Trajectory>* candidates);
 };
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/smoothing/piecewise_jerk.hpp"
+#include "fiss_planner/smoothing/piecewise_jerk.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -8,17 +8,17 @@
 
 #include "qp.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 bool hasOptimizers() {
-#ifdef FRENET_PLANNER_HAS_OSQP
+#ifdef FISS_PLANNER_HAS_OSQP
   return true;
 #else
   return false;
 #endif
 }
 
-#ifndef FRENET_PLANNER_HAS_OSQP
+#ifndef FISS_PLANNER_HAS_OSQP
 
 std::optional<PiecewiseJerkSolution> solvePiecewiseJerk(const PiecewiseJerkProblem&) { return std::nullopt; }
 
@@ -88,4 +88,4 @@ std::optional<PiecewiseJerkSolution> solvePiecewiseJerk(const PiecewiseJerkProbl
 
 #endif
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/control/controller.hpp"
+#include "fiss_planner/control/controller.hpp"
 
 #include <algorithm>
 #include <array>
@@ -8,10 +8,10 @@
 #include <limits>
 #include <stdexcept>
 
-#include "frenet_planner/common/math.hpp"
-#include "frenet_planner/planning/local_planner.hpp"
+#include "fiss_planner/common/math.hpp"
+#include "fiss_planner/planning/local_planner.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 // ----------------------------------------------------------------------------
 // Kinematic bicycle
@@ -118,7 +118,7 @@ ControlCommand StanleyPidController::compute(const EgoState& ego, const Trajecto
   return cmd;
 }
 
-#ifndef FRENET_PLANNER_HAS_OSQP
+#ifndef FISS_PLANNER_HAS_OSQP
 MpcController::MpcController(const VehicleParams& vehicle, const MpcConfig& config)
     : vehicle_(vehicle), cfg_(config), backup_(vehicle) {}
 ControlCommand MpcController::compute(const EgoState& ego, const Trajectory& traj, double t) {
@@ -133,4 +133,4 @@ std::unique_ptr<Controller> makeController(const std::string& name, const Vehicl
   throw std::invalid_argument("unknown controller '" + name + "' (expected mpc or stanley_pid)");
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

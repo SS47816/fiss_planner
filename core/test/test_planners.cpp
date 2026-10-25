@@ -4,10 +4,10 @@
 #include <cmath>
 #include <memory>
 
-#include "frenet_planner/planning/planner.hpp"
+#include "fiss_planner/planning/planner.hpp"
 #include "test_utils.hpp"
 
-using namespace frenet_planner;
+using namespace fiss_planner;
 
 namespace {
 

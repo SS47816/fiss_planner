@@ -2,7 +2,7 @@
 
 import math
 
-import frenet_planner as fp
+import fiss_planner as fp
 import numpy as np
 import pytest
 
@@ -128,9 +128,9 @@ def test_smoother_flag():
 def test_embedded_msg_definitions_match_package():
     from pathlib import Path
 
-    from frenet_planner.bags.msg_definitions import MSG_DEFINITIONS
+    from fiss_planner.bags.msg_definitions import MSG_DEFINITIONS
 
-    msg_dir = Path(__file__).resolve().parents[2] / "msgs" / "frenet_planner_msgs" / "msg"
+    msg_dir = Path(__file__).resolve().parents[2] / "msgs" / "fiss_planner_msgs" / "msg"
     files = {f.stem: f.read_text() for f in msg_dir.glob("*.msg")}
     assert files == MSG_DEFINITIONS
 

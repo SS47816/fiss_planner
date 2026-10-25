@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/planning/components.hpp"
+#include "fiss_planner/planning/components.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
 
-#include "frenet_planner/common/math.hpp"
-#include "frenet_planner/geometry/polynomial.hpp"
+#include "fiss_planner/common/math.hpp"
+#include "fiss_planner/geometry/polynomial.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 // ----------------------------------------------------------------------------
 // EndStateGrid
@@ -295,4 +295,4 @@ bool CollisionChecker::keepsTimeGap(const Trajectory& traj, const std::vector<Ob
   return true;
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

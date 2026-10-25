@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <gtest/gtest.h>
 
-#include "frenet_planner/planning/config.hpp"
+#include "fiss_planner/planning/config.hpp"
 
-using namespace frenet_planner;
+using namespace fiss_planner;
 
 TEST(Config, PlannerTypeNames) {
   EXPECT_EQ(plannerTypeFromString("FOP"), PlannerType::kFop);
@@ -48,7 +48,7 @@ TEST(Config, RejectsUnknownKeysAndInvalidValues) {
 TEST(Config, ShippedPresetsLoad) {
   for (const char* name : {"highway", "urban", "paper_fiss"}) {
     VehicleParams v;
-    EXPECT_NO_THROW(loadPlannerConfig(std::string(FRENET_PLANNER_CONFIG_DIR) + "/" + name + ".yaml", &v))
+    EXPECT_NO_THROW(loadPlannerConfig(std::string(FISS_PLANNER_CONFIG_DIR) + "/" + name + ".yaml", &v))
         << name;
   }
 }

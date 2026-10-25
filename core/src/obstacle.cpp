@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/prediction/obstacle.hpp"
+#include "fiss_planner/prediction/obstacle.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-#include "frenet_planner/common/math.hpp"
+#include "fiss_planner/common/math.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 std::optional<Box2d> Obstacle::boxAt(double t) const {
   if (prediction.empty()) return std::nullopt;
@@ -46,4 +46,4 @@ Obstacle predictConstantVelocity(int id, double x, double y, double yaw, double 
   return ob;
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

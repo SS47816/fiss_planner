@@ -3,11 +3,11 @@
 
 #include <random>
 
-#include "frenet_planner/collision/box2d.hpp"
-#include "frenet_planner/common/math.hpp"
-#include "frenet_planner/prediction/obstacle.hpp"
+#include "fiss_planner/collision/box2d.hpp"
+#include "fiss_planner/common/math.hpp"
+#include "fiss_planner/prediction/obstacle.hpp"
 
-using namespace frenet_planner;
+using namespace fiss_planner;
 
 namespace {
 // Brute-force reference: two convex quads overlap iff a corner of one lies in

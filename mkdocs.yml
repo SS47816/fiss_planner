@@ -1,6 +1,6 @@
-site_name: frenet_planner
-site_description: Fast sampling-based Frenet trajectory planners (FOP, FISS, FISS+) for autonomous driving
-repo_url: https://github.com/SS47816/frenet_planner
+site_name: FISS Planner
+site_description: Fast Iterative Search and Sampling trajectory planners (FISS, FISS+, FOP) for autonomous driving
+repo_url: https://github.com/SS47816/fiss_planner
 edit_uri: edit/main/docs/
 theme:
   name: material

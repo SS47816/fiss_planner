@@ -3,11 +3,11 @@
 
 #include <cmath>
 
-#include "frenet_planner/common/math.hpp"
-#include "frenet_planner/planning/components.hpp"
+#include "fiss_planner/common/math.hpp"
+#include "fiss_planner/planning/components.hpp"
 #include "test_utils.hpp"
 
-using namespace frenet_planner;
+using namespace fiss_planner;
 
 TEST(Math, LinspaceIncludesEndpointsExactly) {
   const auto v = linspace(3.0, 5.0, 7);

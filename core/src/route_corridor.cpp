@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/map/route_corridor.hpp"
+#include "fiss_planner/map/route_corridor.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
 #include <unordered_set>
 
-#include "frenet_planner/common/math.hpp"
+#include "fiss_planner/common/math.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 namespace {
 
@@ -291,4 +291,4 @@ std::optional<RouteCorridor> buildRouteCorridor(const RoadMap& map, const std::v
   return out;
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/prediction/lane_following.hpp"
+#include "fiss_planner/prediction/lane_following.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <stdexcept>
 
-#include "frenet_planner/common/math.hpp"
+#include "fiss_planner/common/math.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 namespace {
 
@@ -125,4 +125,4 @@ void completePredictions(std::vector<Obstacle>& obstacles, PredictionMode mode, 
   }
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2021-2026 Shuo Sun
-#include "frenet_planner/geometry/reference_line.hpp"
+#include "fiss_planner/geometry/reference_line.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
 
-#include "frenet_planner/common/math.hpp"
+#include "fiss_planner/common/math.hpp"
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 namespace {
 constexpr double kMinSpeed = 1e-3;
@@ -172,4 +172,4 @@ EgoState ReferenceLine::toCartesian(const FrenetState& fs) const {
   return out;
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

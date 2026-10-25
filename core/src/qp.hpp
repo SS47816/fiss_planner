@@ -5,7 +5,7 @@
 //   min 0.5 z'Pz + q'z  s.t.  lo <= A z <= hi
 #pragma once
 
-#ifdef FRENET_PLANNER_HAS_OSQP
+#ifdef FISS_PLANNER_HAS_OSQP
 
 #include <osqp.h>
 
@@ -17,7 +17,7 @@
 #include <utility>
 #include <vector>
 
-namespace frenet_planner::detail {
+namespace fiss_planner::detail {
 
 /// Dense vector with call-style indexing.
 struct Vec {
@@ -113,6 +113,6 @@ class SparseQp {
   std::vector<double> lo_, hi_;
 };
 
-}  // namespace frenet_planner::detail
+}  // namespace fiss_planner::detail
 
 #endif

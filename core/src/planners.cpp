@@ -7,7 +7,7 @@
 #include <limits>
 #include <numeric>
 
-namespace frenet_planner {
+namespace fiss_planner {
 
 namespace {
 void convertAll(const ReferenceLine& ref, std::vector<Trajectory>& trajs) {
@@ -308,4 +308,4 @@ bool FissPlusPlanner::refine(Context& ctx, Trajectory& best, std::vector<Traject
   return improved;
 }
 
-}  // namespace frenet_planner
+}  // namespace fiss_planner

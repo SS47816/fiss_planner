@@ -5,11 +5,11 @@ execute_process(
 find_package(nanobind CONFIG REQUIRED)
 
 nanobind_add_module(_core NB_STATIC STABLE_ABI src/bindings.cpp)
-target_link_libraries(_core PRIVATE frenet_planner)
+target_link_libraries(_core PRIVATE fiss_planner)
 
 if(SKBUILD)
-  install(TARGETS _core LIBRARY DESTINATION frenet_planner)
+  install(TARGETS _core LIBRARY DESTINATION fiss_planner)
 else()
   # In-tree development build: place the module next to the Python sources.
-  set_target_properties(_core PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/frenet_planner)
+  set_target_properties(_core PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/fiss_planner)
 endif()

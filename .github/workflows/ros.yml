@@ -38,7 +38,7 @@ jobs:
       - name: Test
         run: |
           source /opt/ros/${{ matrix.distro }}/setup.bash
-          colcon test --base-paths core msgs ros/ros2 --packages-select frenet_planner_ros2 \
+          colcon test --base-paths core msgs ros/ros2 --packages-select fiss_planner_ros2 \
             --event-handlers console_direct+
           colcon test-result --verbose
 
