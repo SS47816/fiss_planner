@@ -25,6 +25,11 @@ def _pct(rows, pred) -> str:
     return f"{100.0 * sum(1 for r in rows if pred(r)) / max(1, len(rows)):.1f} %"
 
 
+def _close(r) -> bool:
+    """The run came within 0.5 m (box to box) of another road user."""
+    return r.get("min_clearance") not in ("", None) and float(r["min_clearance"]) < 0.5
+
+
 def _mean(rows, key) -> float:
     vals = [float(r[key]) for r in rows if r.get(key) not in ("", None) and math.isfinite(float(r[key]))]
     return statistics.fmean(vals) if vals else math.nan
@@ -38,8 +43,8 @@ def commonroad(name: str, title: str) -> str:
         f"**{title}**",
         "",
         "| Planner | Success | Collision | Timeout | Plan time mean / p95 | Generated / validated "
-        "| Headway < 1 s | Min TTC < 2 s |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|",
+        "| Headway < 1 s | Min TTC < 2 s | Within 0.5 m |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for p in [p for base in PLANNERS for p in (base, base + "+qp") if p in by]:
         rows = by[p]
@@ -51,7 +56,8 @@ def commonroad(name: str, title: str) -> str:
             f"| {_mean(rows, 'plan_ms_mean'):.2f} / {_mean(rows, 'plan_ms_p95'):.2f} ms "
             f"| {_mean(rows, 'generated_mean'):.0f} / {_mean(rows, 'validated_mean'):.0f} "
             f"| {_mean(rows, 'time_below_1s_headway'):.2f} s "
-            f"| {_pct(rows, lambda r: r.get('min_ttc') not in ('', None) and float(r['min_ttc']) < 2.0)} |"
+            f"| {_pct(rows, lambda r: r.get('min_ttc') not in ('', None) and float(r['min_ttc']) < 2.0)} "
+            f"| {_pct(rows, _close)} |"
         )
     return "\n".join(out)
 
@@ -82,8 +88,9 @@ def carla(name: str, title: str, group=("scenario", "planner", "controller")) ->
 
 def ablations(variants: list[tuple[str, str]]) -> str:
     out = [
-        "| Variant (fiss_plus + QP) | Success | Collision | Timeout | Headway < 1 s | Min TTC < 2 s |",
-        "|---|---:|---:|---:|---:|---:|",
+        "| Variant (fiss_plus + QP) | Success | Collision | Timeout | Headway < 1 s | Min TTC < 2 s "
+        "| Within 0.5 m |",
+        "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for name, label in variants:
         if not (RESULTS / name).exists():
@@ -94,7 +101,8 @@ def ablations(variants: list[tuple[str, str]]) -> str:
             f"| {_pct(rows, lambda r: r['status'] == 'collision')} "
             f"| {_pct(rows, lambda r: r['status'] == 'timeout')} "
             f"| {_mean(rows, 'time_below_1s_headway'):.2f} s "
-            f"| {_pct(rows, lambda r: r.get('min_ttc') not in ('', None) and float(r['min_ttc']) < 2.0)} |"
+            f"| {_pct(rows, lambda r: r.get('min_ttc') not in ('', None) and float(r['min_ttc']) < 2.0)} "
+            f"| {_pct(rows, _close)} |"
         )
     return "\n".join(out)
 

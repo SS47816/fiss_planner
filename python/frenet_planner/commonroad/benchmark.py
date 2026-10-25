@@ -140,6 +140,30 @@ class GoalSpeedPolicy:
         return float(np.clip((goal_s - ego_s) / remaining_t, self.v_lo, self.v_hi))
 
 
+def min_post_encroachment_time(track: list, dt: float, window: float = 3.0) -> float:
+    """Smallest time gap [s] between the ego and a crossing or oncoming vehicle
+    (heading more than 45 deg apart) occupying the same space; 0 = collision.
+    `track` holds (ego box, {obstacle id: box}) per time step."""
+    import frenet_planner as fp
+
+    w = int(round(window / dt))
+    best = math.inf
+    for i, (ego, _) in enumerate(track):
+        r_ego = 0.5 * math.hypot(ego.length, ego.width)
+        for j in range(max(0, i - w), min(len(track), i + w + 1)):
+            gap = abs(i - j) * dt
+            if gap >= best:
+                continue
+            for box in track[j][1].values():
+                if abs(math.remainder(box.yaw - ego.yaw, math.tau)) <= math.pi / 4:
+                    continue
+                reach = r_ego + 0.5 * math.hypot(box.length, box.width)
+                if math.hypot(box.cx - ego.cx, box.cy - ego.cy) < reach and fp.overlaps(ego, box):
+                    best = gap
+                    break
+    return best
+
+
 def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -> tuple[dict, dict | None]:
     """Simulate one scenario. Returns (metrics row, optional per-step record).
     `on_step(t, ego, obstacles, out, road)` (optional) is called after every planning step."""
@@ -150,6 +174,7 @@ def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -
     from commonroad_dc.collision.collision_detection.pycrcc_collision_dispatch import create_collision_checker
     from commonroad_dc.feasibility.vehicle_dynamics import VehicleParameterMapping
     from commonroad_route_planner.route_planner import RoutePlanner
+    from shapely.geometry import Polygon
 
     import frenet_planner as fp
 
@@ -217,6 +242,8 @@ def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -
     degraded = 0
     smoothed = 0
     leads = []  # (time headway, ttc, ego speed, keeping the lane) per step
+    min_clearance = math.inf  # smallest box-to-box distance to any obstacle
+    track = []  # (ego box, {moving obstacle id: box}) per step
     goal_lanelet_reached = False
     goal_area_reached = False
     record_data = {"steps": []} if record else None
@@ -254,13 +281,21 @@ def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -
         if len(out.trajectory) < 2:
             status = "no_plan"
             break
+        now = ego  # the state at time step k, matching `obstacles` and the plan
+        ego_box = fp.Box2d(now.x, now.y, now.yaw, vehicle.length, vehicle.width)
+        current = [(o, b) for o, b in ((o, o.box_at(0.0)) for o in obstacles) if b is not None]
+        boxes = [b for _, b in current]
+        if boxes:
+            ego_poly = Polygon(ego_box.corners())
+            min_clearance = min(min_clearance, min(ego_poly.distance(Polygon(b.corners())) for b in boxes))
+        track.append((ego_box, {o.id: b for o, b in current if not o.is_static}))
         ego = out.trajectory.sample(dt)
         states.append(ego)
         if record_data is not None:
             record_data["steps"].append(
                 {
                     "time_step": k,
-                    "ego": (ego.x, ego.y, ego.yaw, ego.v),
+                    "ego": (now.x, now.y, now.yaw, now.v),
                     "plan_ms": out.stats.time_ms,
                     "generated": out.stats.num_generated,
                     "lead": (
@@ -271,9 +306,7 @@ def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -
                     ),
                     "blocking": out.stats.blocking_id,
                     "mode": "emergency" if out.emergency else "fallback" if out.fallback else "plan",
-                    "obstacles": [
-                        b.corners().tolist() for b in (o.box_at(0.0) for o in obstacles) if b is not None
-                    ],
+                    "obstacles": [b.corners().tolist() for b in boxes],
                     "traj": np.column_stack([out.trajectory.x, out.trajectory.y]).tolist(),
                     "candidates": [np.column_stack([c.x, c.y]).tolist() for c in out.candidates[:400]]
                     if opts.keep_candidates
@@ -333,6 +366,8 @@ def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -
         min_time_headway=min((x[0] for x in moving), default=math.inf),
         min_ttc=min((x[1] for x in moving), default=math.inf),
         time_below_1s_headway=dt * sum(1 for x in moving if x[0] < 1.0),
+        min_clearance=min_clearance,
+        min_pet=min_post_encroachment_time(track, dt),
         distance=float(np.sum(np.linalg.norm(np.diff(xy, axis=0), axis=1))) if len(xy) > 1 else 0.0,
         mean_speed=float(np.mean(v)),
         rms_jerk=float(np.sqrt(np.mean(jerk**2))),

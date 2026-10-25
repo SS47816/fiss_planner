@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <b>Fast, map-aware trajectory planning for autonomous driving.</b><br/>
-  FOP · FISS · FISS+ in one C++17 core, with Python bindings, ROS 2 / ROS 1 nodes and an MPC controller.
+  <b>Fast Iterative Search and Sampling: map-aware trajectory planning for autonomous driving.</b><br/>
+  FISS (RA-L 2022) · FISS+ (IROS 2023) and the FOP baselines in one C++17 core, with Python bindings, ROS 2 / ROS 1 nodes and an MPC controller.
 </p>
 
 <p align="center">
@@ -35,9 +35,9 @@
   <a href="https://colab.research.google.com/github/SS47816/frenet_planner/blob/main/examples/quickstart.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab"/></a>
 </p>
 
-## Why frenet_planner
+## Why FISS Planner
 
-- **Sub-millisecond planning.** FISS and FISS+ find near-optimal trajectories while generating 5–13× fewer candidates than exhaustive search. A full planning cycle takes **0.2–1 ms**.
+- **Sub-millisecond planning.** FISS and FISS+ find near-optimal trajectories while generating 5–11× fewer candidates than exhaustive search. A full planning cycle takes **0.2–1 ms**.
 - **Four planners, one interface.** Switch between `fop`, `fop_plus`, `fiss` and `fiss_plus` with one parameter, even while the vehicle is driving.
 - **Map-aware.** Supports Lanelet2, CommonRoad and CARLA maps. The planner:
   - plans real lane changes using each neighbouring lane's own geometry;
@@ -49,6 +49,7 @@
   - Follows slower traffic at a set time headway, and overtakes when a neighbouring lane is free.
   - Costs for headway, time to collision and lateral clearance shape every candidate.
   - A hard "virtual bumper" (minimum gap and time to collision) rejects anything closer, with a reaction-time grace for cut-ins.
+  - Keeps a time gap to crossing and oncoming traffic, so an unprotected turn waits for a gap instead of squeezing past.
 - **Safe by construction.**
   - Every trajectory is checked against vehicle limits, road edges and time-stamped obstacle predictions.
   - Obstacles are predicted along their lanes of the map, including tracked objects that arrive with only their current state.
@@ -69,7 +70,7 @@
   </tr>
   <tr>
     <td width="50%"><img src="docs/media/us101_fiss_plus.gif" alt="Dense highway traffic on US-101"/><br/><sub>Dense traffic, US-101 (NGSIM recording)</sub></td>
-    <td width="50%"><img src="docs/media/tjunction_fiss_plus.gif" alt="Turning at a T-junction"/><br/><sub>Left turn at a T-junction</sub></td>
+    <td width="50%"><img src="docs/media/tjunction_fiss_plus.gif" alt="Turning at a T-junction"/><br/><sub>Unprotected left turn at a T-junction: FISS+ lets the oncoming car pass first</sub></td>
   </tr>
   <tr>
     <td><img src="docs/media/merge_fiss_plus.gif" alt="Zipper merge"/><br/><sub>Zipper merge</sub></td>
@@ -123,6 +124,7 @@ The planner node publishes `~/trajectory` (time-parameterized x, y, yaw, v, a, �
 | `fiss_plus` | best-first exploration plus continuous end-state refinement | [Sun et al., IROS 2023](https://doi.org/10.1109/IROS55552.2023.10341498) |
 
 All four share sampling, costs and validation, so they are directly comparable and interchangeable.
+The code as published with the papers is kept at tag [`paper-ral2022`](https://github.com/SS47816/fiss_planner/tree/paper-ral2022) (FISS) of this repository and at [`fiss_plus_planner@paper-iros2023`](https://github.com/SS47816/fiss_plus_planner/tree/paper-iros2023) (FISS+).
 
 ## Results
 
@@ -130,19 +132,20 @@ All four share sampling, costs and validation, so they are directly comparable a
 
 | Planner | Success | Collision | Plan time (mean) | Trajectories per cycle |
 |---|---:|---:|---:|---:|
-| `fop` | 71.1 % | 2.1 % | 6.2 ms | 205 |
-| `fop_plus` | 71.1 % | 2.1 % | 1.0 ms | 205 generated · 10 validated |
-| `fiss` | 69.3 % | **1.4 %** | **0.5 ms** | **16** |
-| `fiss_plus` | 70.0 % | **1.4 %** | 0.7 ms | 41 |
+| `fop` | 70.7 % | 2.1 % | 8.7 ms | 205 |
+| `fop_plus` | 70.7 % | 2.1 % | 1.1 ms | 205 generated · 12 validated |
+| `fiss` | 69.3 % | **1.4 %** | **0.6 ms** | **18** |
+| `fiss_plus` | 69.6 % | **1.4 %** | 0.8 ms | 43 |
 
-Keeping distance cuts the time spent below 1 s of headway to under a third at the same collision rate.
-With predictions from the current state only, map-aware lane-following prediction succeeds in 65.4 %
-against 62.5 % for constant velocity, with almost a quarter fewer collisions.
+Keeping distance cuts the time spent below 1 s of headway to under a third and nearly halves the runs
+that come within 0.5 m of another road user, at the same collision rate. With predictions from the
+current state only, map-aware lane-following prediction succeeds in 65.0 % against 62.5 % for constant
+velocity, with a fifth fewer collisions.
 
 **CARLA 0.9.16, closed loop.**
 - **Runs:** 40 runs, all collision-free: lead vehicle, parked car, scripted cut-in and dense traffic, with every planner and both controllers.
-- **Dense traffic, ten seeds:** 99.3 % of cycles planned, 0.02 % emergency braking, 0.01 s per run below 1 s of headway, and no stops for passing traffic.
-- **Planning time:** 0.1–0.8 ms (FISS/FISS+).
+- **Dense traffic, ten seeds:** no collisions, 0.06 s per run below 1 s of headway, and no stops for passing traffic. 97.2 % of cycles are planned: 99.5 % in the nine runs without a traffic jam.
+- **Planning time:** 0.1–0.7 ms (FISS/FISS+).
 - **Tracking:** MPC lateral error 1–2 cm RMS.
 
 **ROS 2 bag replay.** 20 NGSIM recordings were replayed through the ROS 2 node. Plans stay within 1.3–1.4 m of the human driver's path over 3 s on average, at 2.4–3.2 ms per node cycle (FOP+, FISS, FISS+).

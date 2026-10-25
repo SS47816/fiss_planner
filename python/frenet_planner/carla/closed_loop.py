@@ -52,6 +52,7 @@ class Result:
     min_ttc_s: float = math.inf  # to the vehicle ahead in the ego's path, while keeping the lane
     min_time_headway_s: float = math.inf
     time_below_1s_headway_s: float = 0.0
+    min_clearance_m: float = math.inf  # smallest box-to-box distance to any other road user
     plan_ms_mean: float = 0.0
     plan_ms_p95: float = 0.0
     tracking_rms_m: float = 0.0  # distance to the time-indexed reference point
@@ -299,6 +300,7 @@ def run(
     ``render = True`` keeps CARLA's rendering on (for cameras). `configure` (optional) may edit the
     LocalPlannerConfig before the run."""
     import carla
+    from shapely.geometry import Polygon
 
     hooks = _Hooks(hooks) if hooks is not None else None
     client = carla.Client(host, port)
@@ -383,6 +385,15 @@ def run(
                     velocities={actors[0].id: cutter_state["velocity"]} if cutter_state else None,
                 )
                 out = lp.step(t, ego_s, obs)
+                ego_box = Polygon(
+                    fp.Box2d(ego_s.x, ego_s.y, ego_s.yaw, vehicle.length, vehicle.width).corners()
+                )
+                gaps = [
+                    ego_box.distance(Polygon(b.corners()))
+                    for b in (o.box_at(0.0) for o in obs)
+                    if b is not None
+                ]
+                result.min_clearance_m = min([result.min_clearance_m, *gaps])
                 stats.append((out.success, out.emergency, out.stats.time_ms, out.fallback, out.degraded))
                 lead = out.stats.lead
                 keeping_lane = (
