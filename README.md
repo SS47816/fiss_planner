@@ -68,7 +68,7 @@
 <table>
   <tr>
     <td colspan="2" align="center"><img src="docs/media/compare_fop_fiss_fissplus.gif" alt="FOP, FISS and FISS+ on the same merge"/><br/>
-    <sub><b>Same merge, three planners.</b> FOP evaluates every candidate (about 170 per cycle here); FISS explores about 12 and FISS+ about 75 to reach the same result.</sub></td>
+    <sub><b>Same merge, three planners.</b> FOP evaluates every candidate (about 170 per cycle here); FISS explores about 11 and FISS+ about 50 to reach the same result.</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/media/us101_fiss_plus.gif" alt="Dense highway traffic on US-101"/><br/><sub>Dense traffic, US-101 (NGSIM recording)</sub></td>
