@@ -117,6 +117,8 @@ def test_route_goal_and_smoothing_bindings():
     lp = fp.LocalPlanner(fp.LocalPlannerConfig())
     lp.set_map(m, [1, 2, 3, 13], goal=(130.0, 3.5))
     assert lp.step(0.0, ego).success
+    lpc = fp.LocalPlannerConfig()
+    assert lpc.planner.sampling.follow_lead and lpc.envelope_retry_weight == 1000.0
     x, y = fp.smooth_polyline([0.0, 10.0, 20.0], [0.0, 0.05, 0.0], 20.0, 0.1)
     assert len(x) == len(y) >= 21  # resampled every metre
     assert max(abs(v) for v in y) <= 0.05 + 1e-9

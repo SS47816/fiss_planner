@@ -376,6 +376,22 @@ TEST(LocalPlanner, MapModeChangesIntoASlowerRouteLaneBeforeTheGoal) {
   EXPECT_NEAR(loop.ego.y, 3.5, 0.5);
 }
 
+// Coming to rest, plans do not start with more deceleration than lets them
+// stop within the horizon without backing up (3 v / max_t).
+TEST(LocalPlanner, LimitsTheStartDecelerationWhenComingToRest) {
+  LocalPlannerConfig cfg;
+  LocalPlanner planner(cfg, VehicleParams{});
+  planner.setReferencePath({0.0, 300.0}, {0.0, 0.0});
+  EgoState ego = at(10.0, 0.0, 0.5);
+  ego.a = -2.0;
+  const auto slow = planner.step(0.0, ego, {});
+  EXPECT_NEAR(slow.start.s_dd, -3.0 * 0.5 / cfg.planner.sampling.max_t, 1e-6);
+  planner.reset();
+  ego = at(10.0, 0.0, 5.0);
+  ego.a = -2.0;
+  EXPECT_NEAR(planner.step(0.0, ego, {}).start.s_dd, -2.0, 1e-6);  // braking at speed is kept
+}
+
 TEST(LocalPlanner, CurvatureLimitsTargetSpeed) {
   LocalPlannerConfig cfg;
   cfg.desired_speed = 25.0;

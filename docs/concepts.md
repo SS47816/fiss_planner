@@ -72,6 +72,16 @@ so a free neighbouring lane stays attractive and the ego overtakes when that pay
 fades with the urgency of the ego lane (`1 − u`): a faster lane that the route requires leaving
 does not hold back the change into a slower one.
 
+**Following and stopping** (Werling et al., `sampling.follow_lead`). Besides the grid, every cycle
+tries candidates in the ego lane that end behind the vehicle ahead at its speed after
+T = 1 s, 2 s, … `max_t`, at the desired gap (`desired_gap + desired_time_headway · v`) or just
+outside the safety envelope (0.5 m beyond its gap), and continue at that speed. Behind a stopped
+vehicle or an active stop line they stop at that gap instead, over the time a constant deceleration
+would take (never shorter than the deceleration limit allows); from rest they stay or creep up to
+the gap. Their position-controlled ends and short durations give firm braking and exact stops the
+grid's speed-controlled samples (3–5 s) cannot. The cheapest valid candidate of grid and follower
+wins, in all four planners alike.
+
 **Proximity cost** (`CostTerms.proximity`, per-sample means like the comfort terms):
 
 | Term | Penalizes | Default |
@@ -92,7 +102,8 @@ An obstacle already in the path, or one that cuts into the ego's lane, is checke
 after a close cut-in the braking candidates stay feasible. Lane changes towards an obstacle get no
 such grace; samples that move laterally away from an obstacle (pulling out to overtake) are held
 to its time to collision but not to the gap floor, so an overtake that cannot be completed still
-leaves room to brake. The optional QP smoother respects the same envelope.
+leaves room to brake. Standing still never breaches the gap floor (it closes no gap), so a vehicle
+that came to rest too close may stay. The optional QP smoother respects the same envelope.
 
 **Turning across traffic.** The gap and TTC rules cover traffic heading within 45° of the ego.
 Towards crossing and oncoming vehicles the envelope is a post-encroachment time instead: a
@@ -129,7 +140,10 @@ A candidate is accepted if it is finite and within speed, acceleration, curvatur
 lateral-acceleration limits, stays inside the road bounds (heading-aware footprint), respects the
 safety envelope, and its inflated box does not overlap any obstacle's predicted box at the same
 time (separating-axis test with a circle pre-check). A start state already at or beyond a limit
-(e.g. stitched onto a full stop) may not get worse rather than failing outright.
+(e.g. stitched onto a full stop) may not get worse rather than failing outright. Below 1 m/s,
+where curvature is not checked, a candidate may not move more sideways than along the lane (more
+than 45° off it): a car cannot crab. Samples slower than 0.05 m/s keep the heading they came with,
+since the direction of so small a velocity means nothing.
 
 With `collision.ignore_rear_in_lane` (on in the CARLA runner and the ROS configs), lane-keeping
 candidates ignore obstacles that start behind the ego in its own lane: with traffic that reacts,
@@ -154,15 +168,22 @@ within tolerance (otherwise from the measured state). If no candidate is valid, 
 this order:
 
 1. keep the rest of the previous plan while it is still collision free (`fallback`);
-2. if the safety envelope rejected candidates, re-plan without it but with the full collision
-   check: a close but collision-free plan is safer than hard braking in traffic (`degraded`);
-3. re-plan with collisions checked only over the first `degraded_horizon` seconds (2.5 s), since
-   long-horizon predictions are the least reliable (`degraded`);
+2. if the safety envelope rejected candidates, re-plan with the envelope as a cost instead of a
+   check, with the full collision check: a close but collision-free plan is safer than hard
+   braking in traffic, and the one that breaches the envelope least wins (`degraded`). The breach
+   is the worst relative shortfall of the gap below its floor or of the time to collision below
+   `min_ttc`, charged at `envelope_retry_weight` (1000) per unit, so after a close cut-in the
+   retry brakes firmly instead of comfortably;
+3. re-plan the same way with collisions checked only over the first `degraded_horizon` seconds
+   (2.5 s), since long-horizon predictions are the least reliable (`degraded`);
 4. brake at the limit in its lane (`emergency`).
 
 After an emergency stop the next plan starts from the measured state, with its initial
 deceleration capped at `recovery_decel` (2 m/s²): stitching onto the stop profile would carry full
 braking into every new plan and bring the vehicle to a standstill even once the way is clear.
+Likewise, below 1 m/s plans start with at most the deceleration `3 v / max_t`, with which a
+polynomial stop within the horizon does not back up: a vehicle coming to rest does not keep
+decelerating once it stands.
 
 ## Control
 

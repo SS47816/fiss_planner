@@ -128,6 +128,31 @@ TEST(ConstraintValidator, RejectsLimitViolations) {
   EXPECT_TRUE(r == Rejection::kCurvature || r == Rejection::kLatAccel) << static_cast<int>(r);
 }
 
+// A car cannot crab: crawling (below the curvature check speed) more sideways
+// than along the lane is rejected, crawling along it is not.
+TEST(ConstraintValidator, RejectsCrabbingAtACrawl) {
+  const auto ref = test::straightLine(200.0);
+  const ConstraintValidator validator(ConstraintConfig{}, VehicleParams{});
+  Trajectory crab;  // 0.5 m/s forward, 1 m sideways within 2 s
+  generateFrenet(FrenetState{0.0, 0.5, 0.0, 0.0, 0.0, 0.0}, EndState{1.0, 0.5, 2.0}, 0.1, crab);
+  convertToCartesian(ref, crab);
+  EXPECT_EQ(validator.check(crab, nullptr), Rejection::kCurvature);
+  Trajectory creep;  // 0.5 m/s with a 10 cm shift over 4 s
+  generateFrenet(FrenetState{0.0, 0.5, 0.0, 0.0, 0.0, 0.0}, EndState{0.1, 0.5, 4.0}, 0.1, creep);
+  convertToCartesian(ref, creep);
+  EXPECT_EQ(validator.check(creep, nullptr), Rejection::kOk);
+}
+
+// At rest the direction of the (tiny) velocity is meaningless: samples keep the
+// heading they came with instead of turning towards it.
+TEST(ConvertToCartesian, KeepsTheHeadingAtStandstill) {
+  const auto ref = test::straightLine(200.0);
+  Trajectory hold;  // stopped, drifting 1 cm sideways
+  generateFrenet(FrenetState{10.0, 0.0, 0.0, 0.0, 0.0, 0.0}, EndState{0.01, 0.0, 3.0}, 0.1, hold);
+  ASSERT_TRUE(convertToCartesian(ref, hold));
+  for (double yaw : hold.yaw) EXPECT_NEAR(yaw, 0.0, 1e-9);
+}
+
 TEST(ConstraintValidator, RoadBounds) {
   const auto ref = test::straightLine(200.0);
   const auto corridor = Corridor::uniform(0.0, 200.0, -1.75, 1.75);

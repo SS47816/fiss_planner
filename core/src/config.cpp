@@ -124,7 +124,8 @@ PlannerConfig parse(const YAML::Node& root, VehicleParams* vehicle) {
          {"max_t", set(s.max_t)},
          {"dt", set(s.dt)},
          {"min_speed", set(s.min_speed)},
-         {"lane_margin", set(s.lane_margin)}});
+         {"lane_margin", set(s.lane_margin)},
+         {"follow_lead", set(s.follow_lead)}});
   auto& w = c.cost;
   apply(root["cost"], "cost",
         {{"w_time", set(w.w_time)},

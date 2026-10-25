@@ -114,14 +114,18 @@ bool convertToCartesian(const ReferenceLine& ref, Trajectory& traj) {
   const size_t n = traj.size();
   for (auto* v : {&traj.x, &traj.y, &traj.yaw, &traj.v, &traj.a, &traj.kappa}) v->resize(n);
   bool finite = true;
+  // Near standstill the direction of travel is not defined by the (tiny)
+  // velocity: such samples keep the heading and curvature they came with.
+  constexpr double kStandstill = 0.05;  // [m/s]
   for (size_t i = 0; i < n; ++i) {
     const EgoState st = ref.toCartesian(traj.frenetStateAt(i));
+    const bool hold = i > 0 && st.v < kStandstill;
     traj.x[i] = st.x;
     traj.y[i] = st.y;
-    traj.yaw[i] = st.yaw;
+    traj.yaw[i] = hold ? traj.yaw[i - 1] : st.yaw;
     traj.v[i] = st.v;
     traj.a[i] = st.a;
-    traj.kappa[i] = st.kappa;
+    traj.kappa[i] = hold ? traj.kappa[i - 1] : st.kappa;
     finite = finite && std::isfinite(st.x) && std::isfinite(st.y) && std::isfinite(st.yaw) &&
              std::isfinite(st.kappa);
   }
@@ -185,7 +189,16 @@ Rejection ConstraintValidator::check(const Trajectory& traj, const Corridor* cor
     }
     if (traj.v[i] > vehicle_.max_speed || traj.s_d[i] < -0.1) return Rejection::kSpeed;
     if (traj.s_dd[i] > max_accel || traj.s_dd[i] < -max_decel) return Rejection::kAccel;
-    if (traj.v[i] >= cfg_.curvature_check_min_speed) {
+    if (traj.v[i] < cfg_.curvature_check_min_speed) {
+      // Too slow for a meaningful curvature, but a car cannot crab: when
+      // crawling it may not move more sideways than along the lane.
+      constexpr double kStandstill = 0.05;             // [m/s]
+      constexpr double kMaxCrawlHeading = 0.25 * kPi;  // [rad] relative to the reference line
+      if (cfg_.check_curvature && traj.v[i] >= kStandstill &&
+          std::abs(std::atan2(traj.d_d[i], traj.s_d[i])) > kMaxCrawlHeading) {
+        return Rejection::kCurvature;
+      }
+    } else {
       if (cfg_.check_curvature && std::abs(traj.kappa[i]) > kappa_max) return Rejection::kCurvature;
       if (cfg_.check_lat_accel && traj.v[i] * traj.v[i] * std::abs(traj.kappa[i]) > vehicle_.max_lat_accel) {
         return Rejection::kLatAccel;

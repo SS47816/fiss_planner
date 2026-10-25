@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 
@@ -330,4 +331,71 @@ TEST(CollisionChecker, KeepsATimeGapToCrossingTraffic) {
   // Following traffic and parked cars are not affected.
   EXPECT_TRUE(checker.keepsTimeGap(traj, {car(5, 60.0, 0.0, 10.0)}, gap, checks));
   EXPECT_TRUE(checker.keepsTimeGap(traj, {car(6, 30.0, 4.0, 0.0, kPi / 2)}, gap, checks));
+}
+
+// Standing still never closes a gap, so it never breaches the gap floor, even
+// closer than the floor; approaching does, with a breach between 0 and 1.
+TEST(GapEvaluator, StandingStillNeverBreachesTheFloorAndBreachIsGraded) {
+  const Road road;
+  const GapEvaluator gaps(CostConfig{}, SafetyConfig{}, VehicleParams{}, 0.3);
+  const auto stopped = road.project({car(7, 10.0 + 4.5 + 1.0, 0.0, 0.0)});  // 1 m ahead
+  Trajectory hold = cruise(10.0, 0.0);
+  EXPECT_TRUE(gaps.isSafe(hold, stopped));
+  EXPECT_DOUBLE_EQ(gaps.breach(hold, stopped), 0.0);
+  // Merging behind a car at the same speed (no grace): the smaller the gap
+  // below the 5 m floor, the larger the breach.
+  Trajectory merge;
+  merge.end = {3.5, 10.0, 3.0};
+  generateFrenet({10.0, 10.0, 0.0, 0.0, 0.0, 0.0}, merge.end, 0.1, merge);
+  const double b = gaps.breach(merge, road.project({car(8, 10.0 + 4.5 + 4.5, 3.5, 10.0)}));
+  const double b2 = gaps.breach(merge, road.project({car(8, 10.0 + 4.5 + 3.5, 3.5, 10.0)}));
+  EXPECT_NEAR(b, 0.1, 0.01);  // 4.5 m of 5 m
+  EXPECT_NEAR(b2, 0.3, 0.01);
+}
+
+// A car 7 m ahead, 4.4 m/s slower: no plan keeps the envelope. The retry keeps
+// it as a cost and brakes firmly; without that cost it would not brake.
+TEST(LocalPlanner, RetryBrakesFirmlyWhenTheEnvelopeCannotBeKept) {
+  const auto plan = [](double weight) {
+    LocalPlannerConfig cfg;
+    cfg.path.num_left_lanes = cfg.path.num_right_lanes = 0;
+    cfg.envelope_retry_weight = weight;
+    LocalPlanner lp(cfg, VehicleParams{});
+    lp.setReferencePath({-20.0, 400.0}, {0.0, 0.0});
+    return lp.step(0.0, {0.0, 0.0, 0.0, 13.4, 0.0, 0.0}, {car(1, 4.5 + 7.1, 0.0, 9.0)}, 15.0);
+  };
+  const auto soft = plan(LocalPlannerConfig{}.envelope_retry_weight);
+  const auto off = plan(0.0);
+  ASSERT_TRUE(soft.success && soft.degraded);
+  ASSERT_TRUE(off.success && off.degraded);
+  const auto min_a = [](const Trajectory& t) { return *std::min_element(t.a.begin(), t.a.end()); };
+  EXPECT_LT(min_a(soft.trajectory), -4.0);
+  EXPECT_LT(min_a(soft.trajectory), min_a(off.trajectory) - 1.0);
+  EXPECT_LT(soft.trajectory.v[10], 10.5);  // near the car's speed after a second
+}
+
+// Crawling towards a stopped car 3 m ahead: the stopping candidate brings the
+// ego to rest without backing up, and keeps the safety envelope's gap.
+TEST(Planner, StopsBehindAStoppedCarFromACrawl) {
+  for (const auto type :
+       {PlannerType::kFop, PlannerType::kFopPlus, PlannerType::kFiss, PlannerType::kFissPlus}) {
+    const Road road;
+    const Corridor lane = Corridor::parallelLanes(0.0, 400.0, 3.5, 0, 0);
+    const std::vector<Obstacle> obstacles = {car(3, 10.0 + 4.5 + 3.0, 0.0, 0.0)};
+    PlannerConfig cfg;
+    cfg.type = type;
+    auto planner = makePlanner(cfg, VehicleParams{});
+    PlanningInput in;
+    in.start = {10.0, 1.0, -0.2, 0.0, 0.0, 0.0};
+    in.reference = &road.ref;
+    in.corridor = &lane;
+    in.obstacles = &obstacles;
+    in.target_speed = 12.0;
+    const auto res = planner->plan(in);
+    ASSERT_TRUE(res.success) << toString(type);
+    const auto& t = res.trajectory;
+    EXPECT_NEAR(t.s_d.back(), 0.0, 1e-6) << toString(type);
+    EXPECT_GT(*std::min_element(t.s_d.begin(), t.s_d.end()), -1e-3) << toString(type);
+    EXPECT_GE(10.0 + 4.5 + 3.0 - 2.25 - (t.s.back() + 2.25), SafetyConfig{}.min_gap - 1e-6) << toString(type);
+  }
 }

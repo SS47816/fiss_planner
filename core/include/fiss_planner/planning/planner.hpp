@@ -25,6 +25,9 @@ struct PlanningInput {
   double collision_horizon = std::numeric_limits<double>::infinity();
   /// Enforce the safety envelope (fallback retries may relax it; collisions are always checked).
   bool safety_envelope = true;
+  /// Without the envelope enforced: cost per unit of its breach (see
+  /// GapEvaluator::breach), so the plan that breaches it least wins.
+  double envelope_weight = 0.0;
 };
 
 struct PlanStats {
@@ -100,10 +103,20 @@ class Planner {
   /// Search the grid; on success write the chosen trajectory to `best`.
   virtual bool search(Context& ctx, Trajectory& best, std::vector<Trajectory>* candidates) = 0;
 
+  /// Following and stopping (Werling et al.): candidates in the ego lane that
+  /// end behind the vehicle ahead at the desired or the safety envelope's gap
+  /// and its speed after T = 1 s, 2 s, ..., continued at that speed; behind a
+  /// stopped vehicle or stop line, a stop at that gap. The cheapest valid one
+  /// replaces `best` if cheaper; returns whether a trajectory was found.
+  bool followLead(Context& ctx, Trajectory& best, bool found, std::vector<Trajectory>* candidates) const;
+
   /// Generate a trajectory (Frenet + cost) for a grid sample.
   Trajectory generate(Context& ctx, int i, int j, int k) const;
   /// Generate a trajectory (Frenet + cost) for an arbitrary end state.
   Trajectory generate(Context& ctx, const EndState& end) const;
+  /// Cost of a generated trajectory; with the envelope relaxed (soft), its
+  /// breach is added to the proximity term.
+  CostTerms costOf(const Context& ctx, const Trajectory& traj, const LateralSample& lat, double target) const;
   /// Estimated cost of an unexplored grid sample, including the history heuristic.
   double estimate(const Context& ctx, int i, int j, int k) const;
   /// Convert to Cartesian and run constraint and collision checks. Thread-safe;

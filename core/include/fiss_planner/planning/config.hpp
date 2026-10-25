@@ -28,6 +28,9 @@ struct SamplingConfig {
   double dt = 0.1;            ///< trajectory time resolution [s]
   double min_speed = 0.0;     ///< lowest sampled target speed [m/s]
   double lane_margin = 0.15;  ///< clearance kept to lane edges when sampling [m]
+  /// Also try following/stopping candidates behind the vehicle (or stop line)
+  /// ahead, ending at a gap and its speed after 1 s, 2 s, ... (Werling et al.).
+  bool follow_lead = true;
 };
 
 /// Weights of the trajectory cost. Speed, lateral and time terms are evaluated

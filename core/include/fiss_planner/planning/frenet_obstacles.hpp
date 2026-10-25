@@ -82,6 +82,11 @@ class GapEvaluator {
   /// fields and returns false.
   bool isSafe(Trajectory& traj, const FrenetObstacles& obstacles,
               double max_t = std::numeric_limits<double>::infinity()) const;
+  /// How far the trajectory breaches the safety envelope (0 if it does not):
+  /// the worst relative shortfall of the gap below its floor, or of the time
+  /// to collision below min_ttc, over samples with t <= max_t (in [0, 1]).
+  double breach(const Trajectory& traj, const FrenetObstacles& obstacles,
+                double max_t = std::numeric_limits<double>::infinity()) const;
   /// Whether an ego at station s moving at s_d would breach the safety envelope
   /// of an obstacle ahead with extent `box` and speed `v_ob` if it shared its lane band.
   bool breachesEnvelope(double s, double s_d, const FrenetBox& box, double v_ob) const;

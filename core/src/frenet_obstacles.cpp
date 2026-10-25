@@ -143,56 +143,87 @@ double GapEvaluator::cost(const Trajectory& traj, const FrenetObstacles& obstacl
   return (w_.w_headway * headway + w_.w_ttc * ttc + w_.w_clearance * clearance) / count;
 }
 
-bool GapEvaluator::isSafe(Trajectory& traj, const FrenetObstacles& obstacles, double max_t) const {
+namespace {
+
+/// Walks the safety envelope of a trajectory. `on_breach(k, t, severity)` is
+/// called for every sample and obstacle in breach (severity in (0, 1]) and
+/// returns whether to stop.
+template <typename OnBreach>
+void walkEnvelope(const Trajectory& traj, const FrenetObstacles& obstacles, double max_t,
+                  const SafetyConfig& safety, double half_length, double half_band, OnBreach&& on_breach) {
   const size_t n = traj.size();
-  if (!safety_.enabled || obstacles.empty() || n == 0) return true;
+  if (!safety.enabled || obstacles.empty() || n == 0) return;
   const auto& tracks = obstacles.tracks();
-  const auto in_band = [this](const FrenetBox& b, double d) {
-    return b.d_max > d - half_band_ && b.d_min < d + half_band_;
+  const auto in_band = [half_band](const FrenetBox& b, double d) {
+    return b.d_max > d - half_band && b.d_min < d + half_band;
   };
   // An obstacle that is in the ego's path from the start, or that moves into
   // the lane band the ego starts in (a cut-in), grants a reaction time from
   // when it appears and may not be approached closer than it appeared.
   // Obstacles the ego moves towards itself (by changing lanes) grant neither.
-  std::vector<double> check_from(tracks.size(), safety_.reaction_time);
-  std::vector<double> allowance(tracks.size(), kInf);
+  std::vector<double> check_from(tracks.size(), safety.reaction_time);
+  std::vector<double> allowance(tracks.size(), std::numeric_limits<double>::infinity());
   std::vector<char> seen(tracks.size(), 0);
   FrenetBox fb;
   double v_ob = 0.0;
   for (size_t i = 0; i < n && traj.t[i] <= max_t; ++i) {
     const double t = traj.t[i], s = traj.s[i], d = traj.d[i], v = std::max(0.0, traj.s_d[i]);
-    const double required = safety_.min_gap + safety_.min_time_headway * v;
+    const double required = safety.min_gap + safety.min_time_headway * v;
     for (size_t k = 0; k < tracks.size(); ++k) {
       bool in_line = false;
       if (!tracks[k].at(t, fb, v_ob, &in_line) || !in_line || !in_band(fb, d) ||
           fb.s_min + fb.s_max <= 2.0 * s) {
         continue;
       }
-      const double gap = fb.s_min - s - half_length_;
+      const double gap = fb.s_min - s - half_length;
       if (!seen[k]) {
         seen[k] = 1;
         if (i == 0 || in_band(fb, traj.d[0])) {
           allowance[k] = gap;
-          check_from[k] = t + safety_.reaction_time;
+          check_from[k] = t + safety.reaction_time;
         }
       }
       if (t < check_from[k] - 1e-9) continue;
       // Pulling out (moving laterally away from it) is not following it, so the
       // gap floor is waived; the time to collision must still hold in case the
-      // lane change cannot be completed.
+      // lane change cannot be completed. Standing still never closes a gap.
+      constexpr double kStandstill = 0.1;  // [m/s]
       const bool pulling_out =
           traj.d_d[i] * (d - 0.5 * (fb.d_min + fb.d_max)) > 0.0 && std::abs(traj.d_d[i]) > 0.2;
-      const double closing = v - v_ob;
-      const bool too_close = !pulling_out && gap < std::min(required, allowance[k]);
-      const bool closing_fast = closing > 1e-3 && gap < safety_.min_ttc * closing;
-      if (too_close || closing_fast) {
-        traj.blocking_id = tracks[k].id;
-        traj.blocking_t = t;
-        return false;
+      const double floor = std::min(required, allowance[k]);
+      double severity = 0.0;
+      if (!pulling_out && v > kStandstill && gap < floor) {
+        severity = std::clamp((floor - gap) / std::max(floor, 1e-3), 1e-6, 1.0);
       }
+      const double closing = v - v_ob;
+      if (closing > 1e-3 && gap < safety.min_ttc * closing) {
+        severity = std::max(severity, std::clamp(1.0 - gap / (safety.min_ttc * closing), 1e-6, 1.0));
+      }
+      if (severity > 0.0 && on_breach(tracks[k].id, t, severity)) return;
     }
   }
-  return true;
+}
+
+}  // namespace
+
+bool GapEvaluator::isSafe(Trajectory& traj, const FrenetObstacles& obstacles, double max_t) const {
+  bool safe = true;
+  walkEnvelope(traj, obstacles, max_t, safety_, half_length_, half_band_, [&](int id, double t, double) {
+    traj.blocking_id = id;
+    traj.blocking_t = t;
+    safe = false;
+    return true;
+  });
+  return safe;
+}
+
+double GapEvaluator::breach(const Trajectory& traj, const FrenetObstacles& obstacles, double max_t) const {
+  double worst = 0.0;
+  walkEnvelope(traj, obstacles, max_t, safety_, half_length_, half_band_, [&](int, double, double severity) {
+    worst = std::max(worst, severity);
+    return worst >= 1.0;
+  });
+  return worst;
 }
 
 bool GapEvaluator::breachesEnvelope(double s, double s_d, const FrenetBox& box, double v_ob) const {

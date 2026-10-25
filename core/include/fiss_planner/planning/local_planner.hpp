@@ -44,6 +44,9 @@ struct LocalPlannerConfig {
   /// collisions only this far ahead [s] before braking (long-horizon
   /// predictions are the least reliable). 0 = no short-horizon retry.
   double degraded_horizon = 2.5;
+  /// The retries keep the envelope as a cost: per unit of breach (see
+  /// GapEvaluator::breach), so the plan that breaches it least wins. 0 = off.
+  double envelope_retry_weight = 1000.0;
   /// After an emergency stop, the next plan starts from the measured state with
   /// at most this deceleration [m/s^2], so the vehicle resumes once the way is
   /// clear instead of inheriting full braking from the stop profile.

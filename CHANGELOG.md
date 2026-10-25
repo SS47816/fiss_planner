@@ -18,6 +18,17 @@
   `route.smoothing_length` / `route.smoothing_tolerance`): lanes digitized with vertex noise give
   smooth curvature, curvature speed limits and accelerations.
 
+- Following and stopping candidates (Werling et al., `sampling.follow_lead`): in the ego lane, end
+  behind the vehicle ahead at its speed after 1 s, 2 s, ... at the desired gap or just outside the
+  safety envelope; behind a stopped vehicle or stop line, stop at that gap (from rest: stay, or
+  creep up to it). They compete with the grid in all four planners.
+- The fallback retries keep the safety envelope as a cost (`envelope_retry_weight`,
+  `GapEvaluator::breach`): when no candidate keeps it, the plan that breaches it least wins, so a
+  close cut-in is met with firm braking.
+- Standing still never breaches the envelope's gap floor. Below 1 m/s, plans start with at most the
+  deceleration `3 v / max_t`, candidates may not crab (more than 45° off the lane), and samples
+  slower than 0.05 m/s keep their heading.
+
 ### Integrations
 - The ROS 1/2 nodes pass the goal pose to the planner; the CARLA runner passes the route's end.
 - CommonRoad benchmark: the planner gets the goal region as its destination, and the target speed

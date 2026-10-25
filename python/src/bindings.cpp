@@ -316,6 +316,7 @@ NB_MODULE(_core, m) {
   nb::class_<SamplingConfig>(m, "SamplingConfig")
       .def(nb::init<>())
       .def_rw("num_width", &SamplingConfig::num_width)
+      .def_rw("follow_lead", &SamplingConfig::follow_lead)
       .def_rw("num_speed", &SamplingConfig::num_speed)
       .def_rw("num_t", &SamplingConfig::num_t)
       .def_rw("min_t", &SamplingConfig::min_t)
@@ -712,6 +713,7 @@ NB_MODULE(_core, m) {
       .def_rw("desired_speed", &LocalPlannerConfig::desired_speed)
       .def_rw("emergency_decel", &LocalPlannerConfig::emergency_decel)
       .def_rw("degraded_horizon", &LocalPlannerConfig::degraded_horizon)
+      .def_rw("envelope_retry_weight", &LocalPlannerConfig::envelope_retry_weight)
       .def_rw("recovery_decel", &LocalPlannerConfig::recovery_decel)
       .def_rw("use_speed_limit", &LocalPlannerConfig::use_speed_limit)
       .def_rw("use_curvature_speed_limit", &LocalPlannerConfig::use_curvature_speed_limit);

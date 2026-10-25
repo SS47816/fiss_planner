@@ -101,6 +101,8 @@ const std::vector<Binding>& bindings() {
         bindPlanner("sampling.num_t", &PlannerConfig::sampling, &SamplingConfig::num_t, "horizon samples"));
     v.push_back(bindPlanner("sampling.min_t", &PlannerConfig::sampling, &SamplingConfig::min_t, "[s]"));
     v.push_back(bindPlanner("sampling.max_t", &PlannerConfig::sampling, &SamplingConfig::max_t, "[s]"));
+    v.push_back(bindPlanner("sampling.follow_lead", &PlannerConfig::sampling, &SamplingConfig::follow_lead,
+                            "following/stopping candidates behind the vehicle ahead"));
     v.push_back(
         bindPlanner("sampling.min_speed", &PlannerConfig::sampling, &SamplingConfig::min_speed, "[m/s]"));
     v.push_back(bindPlanner("cost.w_time", &PlannerConfig::cost, &CostConfig::w_time, ""));
@@ -173,6 +175,11 @@ const std::vector<Binding>& bindings() {
          [](const LocalPlannerConfig& c) { return rclcpp::ParameterValue(c.degraded_horizon); },
          [](LocalPlannerConfig& c, const rclcpp::Parameter& p) { c.degraded_horizon = p.as_double(); },
          "[s] collision horizon of the last retry before braking; 0 = off"});
+    v.push_back(
+        {"envelope_retry_weight",
+         [](const LocalPlannerConfig& c) { return rclcpp::ParameterValue(c.envelope_retry_weight); },
+         [](LocalPlannerConfig& c, const rclcpp::Parameter& p) { c.envelope_retry_weight = p.as_double(); },
+         "cost per unit of safety-envelope breach in the retries; 0 = ignore the envelope there"});
     v.push_back({"recovery_decel",
                  [](const LocalPlannerConfig& c) { return rclcpp::ParameterValue(c.recovery_decel); },
                  [](LocalPlannerConfig& c, const rclcpp::Parameter& p) { c.recovery_decel = p.as_double(); },

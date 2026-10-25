@@ -271,6 +271,12 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
 
   out.start = ref.toFrenet(start);
   out.start.s_d = std::max(0.0, out.start.s_d);
+  // A vehicle about to stop does not keep decelerating once at rest: below
+  // 1 m/s, plans start with at most the deceleration (3 v / max_t) with which
+  // stopping within the horizon does not back up.
+  if (out.start.s_d < 1.0) {
+    out.start.s_dd = std::max(out.start.s_dd, -3.0 * out.start.s_d / config_.planner.sampling.max_t);
+  }
   const double desired = desired_speed > 0.0 ? desired_speed : config_.desired_speed;
   out.target_speed = targetSpeed(ref, out.start.s, start.v, desired, lane_limit);
 
@@ -295,8 +301,9 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
   out.candidates = std::move(res.candidates);
 
   // Keep executing what is left of the last plan if it is still collision
-  // free; failing that, retry without the safety envelope (a close but
-  // collision-free plan beats hard braking in traffic), then with a shorter
+  // free; failing that, retry with the safety envelope as a cost instead of a
+  // check (a close but collision-free plan beats hard braking in traffic, and
+  // the one that breaches the envelope least wins), then with a shorter
   // collision horizon; otherwise brake. Planning starts afresh next cycle.
   std::optional<Trajectory> rest;
   if (!res.success && previous_) {
@@ -310,6 +317,7 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
   }
   const auto retry = [&](bool envelope, double horizon) {
     in.safety_envelope = envelope;
+    in.envelope_weight = config_.envelope_retry_weight;
     in.collision_horizon = horizon;
     PlanResult r = planner_->plan(in);
     out.stats.time_ms += r.stats.time_ms;

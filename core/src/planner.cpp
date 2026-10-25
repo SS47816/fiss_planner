@@ -8,6 +8,8 @@
 #include <stdexcept>
 #include <thread>
 
+#include "fiss_planner/common/math.hpp"
+#include "fiss_planner/geometry/polynomial.hpp"
 #include "planners.hpp"
 
 namespace fiss_planner {
@@ -24,6 +26,31 @@ void accumulate(PlanStats& into, const PlanStats& from) {
     into.blocking_t = from.blocking_t;
     into.blocking_cost = from.blocking_cost;
   }
+}
+
+/// Longitudinal quintic to (s1, v1, 0) at T, continued at v1; lateral quintic
+/// to (d1, 0, 0) over max(T, t_lat), then held; sampled up to `horizon`.
+Trajectory followTrajectory(const FrenetState& st, double s1, double v1, double T, double d1, double t_lat,
+                            double horizon, double dt) {
+  const QuinticPolynomial lon(st.s, st.s_d, st.s_dd, s1, v1, 0.0, T);
+  const double T_lat = std::max(T, t_lat);
+  const QuinticPolynomial lat(st.d, st.d_d, st.d_dd, d1, 0.0, 0.0, T_lat);
+  const double total = std::max(horizon, T_lat);
+  Trajectory traj;
+  traj.end = {d1, v1, total};
+  traj.t = timeSamples(total, dt);
+  for (double t : traj.t) {
+    const bool lon_on = t <= T, lat_on = t <= T_lat;
+    traj.s.push_back(lon_on ? lon.x(t) : s1 + v1 * (t - T));
+    traj.s_d.push_back(lon_on ? lon.dx(t) : v1);
+    traj.s_dd.push_back(lon_on ? lon.ddx(t) : 0.0);
+    traj.s_ddd.push_back(lon_on ? lon.dddx(t) : 0.0);
+    traj.d.push_back(lat_on ? lat.x(t) : d1);
+    traj.d_d.push_back(lat_on ? lat.dx(t) : 0.0);
+    traj.d_dd.push_back(lat_on ? lat.ddx(t) : 0.0);
+    traj.d_ddd.push_back(lat_on ? lat.dddx(t) : 0.0);
+  }
+  return traj;
 }
 }  // namespace
 
@@ -105,7 +132,9 @@ PlanResult Planner::plan(const PlanningInput& input) {
   if (const LaneBand* ego = input.corridor->egoLane())
     ctx.deficit_weight = 1.0 - std::clamp(ego->urgency, 0.0, 1.0);
   Trajectory best;
-  result.success = search(ctx, best, config_.keep_candidates ? &result.candidates : nullptr);
+  auto* candidates = config_.keep_candidates ? &result.candidates : nullptr;
+  result.success = search(ctx, best, candidates);
+  if (config_.sampling.follow_lead) result.success = followLead(ctx, best, result.success, candidates);
   if (result.success) {
     prev_best_ = best.end;
     result.trajectory = std::move(best);
@@ -114,6 +143,75 @@ PlanResult Planner::plan(const PlanningInput& input) {
   }
   result.stats.time_ms = std::chrono::duration<double, std::milli>(Clock::now() - t0).count();
   return result;
+}
+
+bool Planner::followLead(Context& ctx, Trajectory& best, bool found,
+                         std::vector<Trajectory>* candidates) const {
+  const LeadGap& lead = ctx.stats.lead;
+  const LaneBand* ego_lane = ctx.input.corridor->egoLane();
+  if (lead.id < 0 || ego_lane == nullptr) return found;
+  const FrenetTrack* track = nullptr;
+  for (const auto& tr : ctx.obstacles.tracks()) {
+    if (tr.id == lead.id) track = &tr;
+  }
+  if (track == nullptr) return found;
+
+  const auto& sc = config_.sampling;
+  const auto& w = config_.cost;
+  const auto& safety = config_.safety;
+  const FrenetState& st = ctx.input.start;
+  const double v0 = std::max(0.0, st.s_d);
+  constexpr double kMovingLead = 0.5;   // [m/s] slower leads are stopped for
+  constexpr double kTightMargin = 0.5;  // [m] beyond the safety envelope's gap
+  const auto consider = [&](double s1, double v1, double T) {
+    // Into the lane center. A vehicle cannot move sideways at rest, so a stop
+    // ends its lateral motion when it stops, and from a crawl keeps its offset.
+    const bool stop = v1 < kMovingLead;
+    const double d1 = stop && v0 < 1.0 ? st.d : ctx.input.corridor->center(*ego_lane, s1);
+    Trajectory traj = followTrajectory(st, s1, v1, T, d1, stop ? 0.0 : sc.min_t, sc.max_t, sc.dt);
+    LateralSample lat = ctx.grid.lateralInfo(d1);
+    const double target = laneTerms(ctx, lat);
+    traj.lane = lat.lane;
+    traj.cost = costOf(ctx, traj, lat, target);
+    ++ctx.stats.num_generated;
+    if (validate(ctx, traj, ctx.stats) && (!found || traj.totalCost() < best.totalCost())) {
+      best = traj;
+      found = true;
+    }
+    if (candidates) candidates->push_back(std::move(traj));
+  };
+
+  for (double T = 1.0; T <= sc.max_t + 1e-9; T += 1.0) {
+    FrenetBox box;
+    double v_lead = 0.0;
+    if (!track->at(T, box, v_lead)) break;
+    v_lead = std::max(0.0, v_lead);
+    for (const double gap : {w.desired_gap + w.desired_time_headway * v_lead,
+                             safety.min_gap + safety.min_time_headway * v_lead + kTightMargin}) {
+      const double s1 = box.s_min - 0.5 * vehicle_.length - gap;
+      if (v_lead >= kMovingLead) {  // following: its gap and speed after T
+        if (s1 > st.s) consider(s1, v_lead, T);
+        continue;
+      }
+      if (v0 > 0.1) {
+        // Stopping behind it (or at a stop line) over the time a constant
+        // deceleration takes; the quintic's peak is 1.5x that deceleration, so
+        // it never stops shorter than the limit allows.
+        const double dist = std::max(s1 - st.s, 0.75 * v0 * v0 / vehicle_.max_decel);
+        consider(st.s + dist, 0.0, std::min(2.0 * dist / v0, sc.max_t));
+      } else {
+        // At rest: stay, or creep up to the gap (a rest-to-rest quintic peaks
+        // at 5.77 dist / T^2; keep that within 80 % of the limit).
+        consider(st.s, 0.0, 1.0);
+        const double dist = s1 - st.s;
+        if (dist > 0.1) {
+          consider(s1, 0.0, std::clamp(std::sqrt(5.77 * dist / (0.8 * vehicle_.max_accel)), 1.0, sc.max_t));
+        }
+      }
+    }
+    if (v_lead < kMovingLead) break;  // a stop does not depend on T
+  }
+  return found;
 }
 
 Trajectory Planner::generate(Context& ctx, int i, int j, int k) const {
@@ -128,9 +226,18 @@ Trajectory Planner::generate(Context& ctx, const EndState& end) const {
   LateralSample lat = ctx.grid.lateralInfo(end.d);
   const double target = laneTerms(ctx, lat);
   traj.lane = lat.lane;
-  traj.cost = cost_.evaluate(traj, lat, target, &ctx.obstacles);
+  traj.cost = costOf(ctx, traj, lat, target);
   ++ctx.stats.num_generated;
   return traj;
+}
+
+CostTerms Planner::costOf(const Context& ctx, const Trajectory& traj, const LateralSample& lat,
+                          double target) const {
+  CostTerms c = cost_.evaluate(traj, lat, target, &ctx.obstacles);
+  if (!ctx.input.safety_envelope && ctx.input.envelope_weight > 0.0) {
+    c.proximity += ctx.input.envelope_weight * gaps_.breach(traj, ctx.obstacles, ctx.input.collision_horizon);
+  }
+  return c;
 }
 
 double Planner::estimate(const Context& ctx, int i, int j, int k) const {
