@@ -309,3 +309,25 @@ TEST(LocalPlanner, ResumesAfterAnEmergencyStopOnceTheWayIsClear) {
   EXPECT_GE(out.trajectory.s_dd.front(), -cfg.recovery_decel - 1e-6);
   EXPECT_GT(out.trajectory.s_d.back(), 11.4);  // resumes towards the desired speed
 }
+
+TEST(CollisionChecker, KeepsATimeGapToCrossingTraffic) {
+  const Road road;
+  const CollisionChecker checker(CollisionConfig{}, VehicleParams{});
+  const double gap = SafetyConfig{}.crossing_time_gap;
+  int checks = 0;
+  // Ego cruises at 10 m/s and reaches x = 30 at t = 2.8 s.
+  Trajectory traj = cruise(2.0, 10.0);
+  ASSERT_TRUE(convertToCartesian(road.ref, traj));
+  // A car crossing the road at x = 30 clears the ego's lane at about t = 2.3 s,
+  // just before the ego arrives: no collision, but too close behind it.
+  const Obstacle crossing = car(4, 30.0, -20.0, 10.0, kPi / 2);
+  EXPECT_TRUE(checker.isCollisionFree(traj, {crossing}, checks));
+  int hit = -1;
+  EXPECT_FALSE(checker.keepsTimeGap(traj, {crossing}, gap, checks, &hit));
+  EXPECT_EQ(hit, 4);
+  EXPECT_TRUE(checker.keepsTimeGap(traj, {crossing}, 0.0, checks));  // off
+
+  // Following traffic and parked cars are not affected.
+  EXPECT_TRUE(checker.keepsTimeGap(traj, {car(5, 60.0, 0.0, 10.0)}, gap, checks));
+  EXPECT_TRUE(checker.keepsTimeGap(traj, {car(6, 30.0, 4.0, 0.0, kPi / 2)}, gap, checks));
+}

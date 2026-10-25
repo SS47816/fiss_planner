@@ -177,6 +177,11 @@ bool Planner::validate(const Context& ctx, Trajectory& traj, PlanStats& stats) c
     if (!collisions_.isCollisionFree(traj, obstacles, stats.num_collision_checks, &traj.blocking_id,
                                      &traj.blocking_t, horizon, skip_rear ? &ctx.rear_in_lane : nullptr)) {
       traj.rejection = Rejection::kCollision;
+    } else if (ctx.input.safety_envelope && config_.safety.enabled &&
+               !collisions_.keepsTimeGap(traj, obstacles, config_.safety.crossing_time_gap,
+                                         stats.num_collision_checks, &traj.blocking_id, &traj.blocking_t,
+                                         horizon)) {
+      traj.rejection = Rejection::kSafetyDistance;
     }
   }
   if ((traj.rejection == Rejection::kCollision || traj.rejection == Rejection::kSafetyDistance) &&

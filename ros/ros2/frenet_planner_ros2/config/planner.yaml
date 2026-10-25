@@ -19,6 +19,7 @@ frenet_planner:
     # Keeping distance: hard envelope (virtual bumper) and comfort costs
     safety.min_gap: 2.0
     safety.min_ttc: 1.5
+    safety.crossing_time_gap: 0.75        # post-encroachment time to crossing/oncoming vehicles
     cost.desired_time_headway: 1.5
     collision.ignore_rear_in_lane: true   # followers keep their distance (real traffic reacts)
     # Path mode (no map): lanes around ~/reference_path

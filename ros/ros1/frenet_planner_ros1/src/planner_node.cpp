@@ -129,6 +129,7 @@ class PlannerNode {
     sf.min_time_headway = c.min_time_headway;
     sf.min_ttc = c.min_ttc;
     sf.reaction_time = c.reaction_time;
+    sf.crossing_time_gap = c.crossing_time_gap;
     cfg.degraded_horizon = c.degraded_horizon;
     cfg.recovery_decel = c.recovery_decel;
     try {

@@ -65,6 +65,14 @@ such grace; samples that move laterally away from an obstacle (pulling out to ov
 to its time to collision but not to the gap floor, so an overtake that cannot be completed still
 leaves room to brake. The optional QP smoother respects the same envelope.
 
+**Turning across traffic.** The gap and TTC rules cover traffic heading within 45° of the ego.
+Towards crossing and oncoming vehicles the envelope is a post-encroachment time instead: a
+candidate may not occupy space such a vehicle occupies within `crossing_time_gap` (0.75 s) before
+or after it, so an unprotected left turn either waits for a gap or goes clearly ahead, instead of
+squeezing past within the collision margin. Like the other envelope rules it gives way when no
+candidate satisfies it (see the fallbacks below), so the rule alone never forces a stop halfway
+through a turn.
+
 ## Prediction
 
 Obstacles carry their own predicted states, so any predictor can be plugged in.
@@ -114,7 +122,7 @@ timing. The result is used only if it passes the same validation.
 
 `LocalPlanner` plans from the previous trajectory at `t + latency` while the vehicle tracks it
 within tolerance (otherwise from the measured state). If no candidate is valid, it falls back in
-three steps:
+this order:
 
 1. keep the rest of the previous plan while it is still collision free (`fallback`);
 2. if the safety envelope rejected candidates, re-plan without it but with the full collision

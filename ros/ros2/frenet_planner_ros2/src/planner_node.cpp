@@ -34,14 +34,14 @@ struct Binding {
 };
 
 template <typename T>
-Binding bind(const std::string& name, T LocalPlannerConfig::*section, double T::*field,
+Binding bind(const std::string& name, T LocalPlannerConfig::* section, double T::* field,
              const std::string& desc) {
   return {name, [=](const LocalPlannerConfig& c) { return rclcpp::ParameterValue((c.*section).*field); },
           [=](LocalPlannerConfig& c, const rclcpp::Parameter& p) { (c.*section).*field = p.as_double(); },
           desc};
 }
 template <typename T>
-Binding bindInt(const std::string& name, T LocalPlannerConfig::*section, int T::*field,
+Binding bindInt(const std::string& name, T LocalPlannerConfig::* section, int T::* field,
                 const std::string& desc) {
   return {name, [=](const LocalPlannerConfig& c) { return rclcpp::ParameterValue((c.*section).*field); },
           [=](LocalPlannerConfig& c, const rclcpp::Parameter& p) {
@@ -50,7 +50,7 @@ Binding bindInt(const std::string& name, T LocalPlannerConfig::*section, int T::
           desc};
 }
 template <typename T>
-Binding bindBool(const std::string& name, T LocalPlannerConfig::*section, bool T::*field,
+Binding bindBool(const std::string& name, T LocalPlannerConfig::* section, bool T::* field,
                  const std::string& desc) {
   return {name, [=](const LocalPlannerConfig& c) { return rclcpp::ParameterValue((c.*section).*field); },
           [=](LocalPlannerConfig& c, const rclcpp::Parameter& p) { (c.*section).*field = p.as_bool(); },
@@ -59,7 +59,7 @@ Binding bindBool(const std::string& name, T LocalPlannerConfig::*section, bool T
 
 /// Planner-config fields reached through LocalPlannerConfig::planner.
 template <typename S, typename F>
-Binding bindPlanner(const std::string& name, S fp::PlannerConfig::*section, F S::*field,
+Binding bindPlanner(const std::string& name, S fp::PlannerConfig::* section, F S::* field,
                     const std::string& desc) {
   return {name,
           [=](const LocalPlannerConfig& c) { return rclcpp::ParameterValue((c.planner.*section).*field); },
@@ -133,6 +133,9 @@ const std::vector<Binding>& bindings() {
     v.push_back(bindPlanner("safety.min_ttc", &PlannerConfig::safety, &SafetyConfig::min_ttc, "[s]"));
     v.push_back(
         bindPlanner("safety.reaction_time", &PlannerConfig::safety, &SafetyConfig::reaction_time, "[s]"));
+    v.push_back(bindPlanner("safety.crossing_time_gap", &PlannerConfig::safety,
+                            &SafetyConfig::crossing_time_gap,
+                            "[s] post-encroachment time to crossing/oncoming vehicles, 0 = off"));
     v.push_back(
         bindPlanner("collision.margin_lon", &PlannerConfig::collision, &CollisionConfig::margin_lon, "[m]"));
     v.push_back(

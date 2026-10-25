@@ -90,12 +90,19 @@ struct CollisionConfig {
 /// candidates stay feasible. Lane changes towards an obstacle get no grace,
 /// while samples moving laterally away from an obstacle (pulling out to
 /// overtake) are held to its time to collision only, not to the gap floor.
+///
+/// Towards crossing and oncoming vehicles (heading more than 45 deg from the
+/// ego's), the envelope is a post-encroachment time: a candidate may not occupy
+/// space such a vehicle occupies within crossing_time_gap before or after, so
+/// turns across traffic keep clear of the vehicles they cross. Like the gap and
+/// TTC rules, it is relaxed when no candidate satisfies it (see LocalPlanner).
 struct SafetyConfig {
   bool enabled = true;
-  double min_gap = 2.0;           ///< [m]
-  double min_time_headway = 0.3;  ///< [s] (the comfortable headway is a cost term)
-  double min_ttc = 1.5;           ///< [s]
-  double reaction_time = 0.5;     ///< [s]
+  double min_gap = 2.0;             ///< [m]
+  double min_time_headway = 0.3;    ///< [s] (the comfortable headway is a cost term)
+  double min_ttc = 1.5;             ///< [s]
+  double reaction_time = 0.5;       ///< [s]
+  double crossing_time_gap = 0.75;  ///< [s] post-encroachment time; 0 = off
 };
 
 struct FissPlusConfig {

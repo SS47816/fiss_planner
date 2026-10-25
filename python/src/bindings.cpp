@@ -344,7 +344,8 @@ NB_MODULE(_core, m) {
       .def_rw("min_gap", &SafetyConfig::min_gap)
       .def_rw("min_time_headway", &SafetyConfig::min_time_headway)
       .def_rw("min_ttc", &SafetyConfig::min_ttc)
-      .def_rw("reaction_time", &SafetyConfig::reaction_time);
+      .def_rw("reaction_time", &SafetyConfig::reaction_time)
+      .def_rw("crossing_time_gap", &SafetyConfig::crossing_time_gap);
   nb::class_<FissPlusConfig>(m, "FissPlusConfig")
       .def(nb::init<>())
       .def_rw("refine", &FissPlusConfig::refine)

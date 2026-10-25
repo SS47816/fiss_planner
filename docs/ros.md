@@ -39,6 +39,7 @@ parameters like any other and can be tuned live:
 ```bash
 ros2 param set /frenet_planner cost.desired_time_headway 2.0
 ros2 param set /frenet_planner safety.min_ttc 2.0
+ros2 param set /frenet_planner safety.crossing_time_gap 1.0   # crossing / oncoming traffic
 ```
 
 `collision.ignore_rear_in_lane` is on in the shipped configuration: followers in the ego's lane

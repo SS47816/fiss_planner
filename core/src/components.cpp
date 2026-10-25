@@ -242,4 +242,57 @@ bool CollisionChecker::isCollisionFree(const Trajectory& traj, const std::vector
   return true;
 }
 
+bool CollisionChecker::keepsTimeGap(const Trajectory& traj, const std::vector<Obstacle>& obstacles,
+                                    double gap, int& num_checks, int* hit_id, double* hit_t,
+                                    double max_t) const {
+  const size_t n = traj.size();
+  if (gap <= 0.0 || obstacles.empty() || n == 0) return true;
+  const double len = vehicle_.length + 2.0 * cfg_.margin_lon;
+  const double wid = vehicle_.width + 2.0 * cfg_.margin_lat;
+  const size_t stride = static_cast<size_t>(std::max(1, cfg_.stride));
+  constexpr double kGapFractions[] = {-1.0, -0.5, 0.5, 1.0};
+  // Bounds of the ego's path, to skip vehicles that never come near it.
+  constexpr double kInf = std::numeric_limits<double>::infinity();
+  double x_lo = kInf, x_hi = -kInf, y_lo = kInf, y_hi = -kInf, t_hi = traj.t[0];
+  for (size_t i = 0; i < n && traj.t[i] <= max_t; ++i) {
+    x_lo = std::min(x_lo, traj.x[i]);
+    x_hi = std::max(x_hi, traj.x[i]);
+    y_lo = std::min(y_lo, traj.y[i]);
+    y_hi = std::max(y_hi, traj.y[i]);
+    t_hi = traj.t[i];
+  }
+  const double r_ego = 0.5 * std::hypot(len, wid);
+  for (const Obstacle& ob : obstacles) {
+    if (ob.is_static || ob.prediction.size() < 2) continue;
+    const double r = r_ego + 0.5 * std::hypot(ob.length, ob.width);
+    bool near = false;
+    for (size_t j = 1; j < ob.prediction.size() && !near; ++j) {
+      const auto& a = ob.prediction[j - 1];
+      const auto& b = ob.prediction[j];
+      if (b.t < traj.t[0] - gap || a.t > t_hi + gap) continue;
+      near = std::max(a.x, b.x) >= x_lo - r && std::min(a.x, b.x) <= x_hi + r &&
+             std::max(a.y, b.y) >= y_lo - r && std::min(a.y, b.y) <= y_hi + r;
+    }
+    if (!near) continue;
+    // Where the vehicle is shortly before and after the ego passes. Its past
+    // before the first predicted state is unknown, so that part is skipped.
+    for (size_t i = 0; i < n && traj.t[i] <= max_t; i += stride) {
+      const Box2d ego{traj.x[i], traj.y[i], traj.yaw[i], len, wid};
+      for (const double f : kGapFractions) {
+        const double t = traj.t[i] + f * gap;
+        if (t < ob.prediction.front().t) continue;
+        const auto box = ob.boxAt(t);
+        if (!box || std::abs(normalizeAngle(box->yaw - traj.yaw[i])) <= kPi / 4.0) continue;
+        ++num_checks;
+        if (overlaps(ego, *box)) {
+          if (hit_id != nullptr) *hit_id = ob.id;
+          if (hit_t != nullptr) *hit_t = traj.t[i];
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
 }  // namespace frenet_planner

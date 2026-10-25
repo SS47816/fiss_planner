@@ -61,9 +61,9 @@ void PlannerConfig::validate() const {
               cost.desired_clearance > 0,
           "desired gap, ttc and clearance must be positive");
   require(cost.follow_time >= 0, "cost.follow_time must be >= 0");
-  require(
-      safety.min_gap >= 0 && safety.min_time_headway >= 0 && safety.min_ttc >= 0 && safety.reaction_time >= 0,
-      "safety thresholds must be >= 0");
+  require(safety.min_gap >= 0 && safety.min_time_headway >= 0 && safety.min_ttc >= 0 &&
+              safety.reaction_time >= 0 && safety.crossing_time_gap >= 0,
+          "safety thresholds must be >= 0");
   require(collision.margin_lon >= 0 && collision.margin_lat >= 0, "margins must be >= 0");
   require(collision.stride >= 1, "collision.stride must be >= 1");
   require(fiss_plus.max_refine_iters >= 0, "fiss_plus.max_refine_iters must be >= 0");
@@ -160,7 +160,8 @@ PlannerConfig parse(const YAML::Node& root, VehicleParams* vehicle) {
          {"min_gap", set(sf.min_gap)},
          {"min_time_headway", set(sf.min_time_headway)},
          {"min_ttc", set(sf.min_ttc)},
-         {"reaction_time", set(sf.reaction_time)}});
+         {"reaction_time", set(sf.reaction_time)},
+         {"crossing_time_gap", set(sf.crossing_time_gap)}});
   auto& f = c.fiss_plus;
   apply(root["fiss_plus"], "fiss_plus",
         {{"refine", set(f.refine)},

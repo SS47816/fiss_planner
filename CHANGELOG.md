@@ -20,10 +20,14 @@ in one code base.
   - per-lane car following (the speed that closes the gap to the desired headway);
   - proximity cost: headway, time to collision and lateral clearance;
   - a hard safety envelope ("virtual bumper": minimum gap, headway and TTC) with a reaction-time
-    grace for cut-ins.
+    grace for cut-ins;
+  - a post-encroachment time to crossing and oncoming vehicles, so turns across traffic keep clear
+    of the vehicles they cross.
 - Map-aware lane-following prediction, and predictions for obstacles that arrive with only their
   current state.
-- Fallback ladder: previous plan, a re-plan over a shorter collision horizon, then emergency braking.
+- Fallback ladder: previous plan, a re-plan without the safety envelope, a re-plan over a shorter
+  collision horizon, then emergency braking; plans after an emergency stop resume from the measured
+  state.
 - Explainability: per-reason rejection counts, the obstacle that blocked the cheapest candidate, and
   gap / headway / TTC to the vehicle ahead in every cycle's statistics.
 

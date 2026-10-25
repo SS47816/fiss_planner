@@ -118,6 +118,13 @@ class CollisionChecker {
                        int* hit_id = nullptr, double* hit_t = nullptr,
                        double max_t = std::numeric_limits<double>::infinity(),
                        const std::vector<char>* skip = nullptr) const;
+  /// Post-encroachment time to crossing and oncoming vehicles (heading more
+  /// than 45 deg from the ego's): false if the ego occupies space such a
+  /// vehicle occupies within `gap` [s] before or after. Uses the collision
+  /// margins; samples with t > max_t are not checked. `gap` <= 0 = always true.
+  bool keepsTimeGap(const Trajectory& traj, const std::vector<Obstacle>& obstacles, double gap,
+                    int& num_checks, int* hit_id = nullptr, double* hit_t = nullptr,
+                    double max_t = std::numeric_limits<double>::infinity()) const;
 
  private:
   CollisionConfig cfg_;
