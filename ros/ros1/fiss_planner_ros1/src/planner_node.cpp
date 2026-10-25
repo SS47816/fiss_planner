@@ -221,7 +221,7 @@ class PlannerNode {
       ROS_WARN("No route to the goal");
       return;
     }
-    planner_->setMap(road_map_, route);
+    planner_->setMap(road_map_, route, fp::Vec2{gx, gy});
   }
 
   std::vector<fp::Obstacle> obstacles(const ros::Time& now) const {

@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Planning
+- Route urgency counts lane changes along every lane band. They fall due where a route lane leaves
+  the route (the changes the route makes there), where a lane off the route ends or can no longer
+  reach it, at a dead end, and at an optional goal point in the destination lane
+  (`LocalPlanner::setMap(map, route, goal)`, `set_map(..., goal=(x, y))`), also beyond the
+  reference line. The cost ramps over `max(urgency_distance, urgency_time · v)` per change (new
+  `urgency_time`, 10 s) and grows steeply towards the deadline; a band takes its most urgent
+  deadline, and lanes off the route cost `w_route_urgency` on top.
+- The car-following speed deficit of a lane fades with the urgency of the ego lane
+  (`LaneBand::urgency`), so a faster lane the route requires leaving does not hold back the change.
+- At forks the lane chain follows the branch furthest along the route, so routes traced from
+  waypoints that touch the straight-on lane before a turn are followed through the turn.
+- Map reference lines are smoothed within 0.1 m of the lane centerlines (`smoothPolyline`,
+  `route.smoothing_length` / `route.smoothing_tolerance`): lanes digitized with vertex noise give
+  smooth curvature, curvature speed limits and accelerations.
+
+### Integrations
+- The ROS 1/2 nodes pass the goal pose to the planner; the CARLA runner passes the route's end.
+- CommonRoad benchmark: the planner gets the goal region as its destination, and the target speed
+  aims for the point of the region the ego reaches in the middle of the time window.
+
 ## 1.0.0 — 2026-10-25
 
 The first release of FISS Planner: FISS (RA-L 2022), FISS+ (IROS 2023) and the FOP / FOP+ baselines

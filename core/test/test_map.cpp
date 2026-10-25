@@ -49,6 +49,38 @@ RoadMap twoLaneRoad() {
   return map;
 }
 
+/// Straight dead-end road along +x of `n` parallel lanes (3.5 m apart, the
+/// rightmost at y = 0), each split into `segments` lanes of equal length with
+/// ids 100 j + k + 1 (lane j, segment k); lane changes are allowed everywhere.
+RoadMap parallelRoad(int n, double length, int segments = 1) {
+  RoadMap map;
+  const double w = 3.5, seg = length / segments;
+  for (int j = 0; j < n; ++j) {
+    for (int k = 0; k < segments; ++k) {
+      MapLane l;
+      l.id = 100 * j + k + 1;
+      const double yc = j * w;
+      for (double x = k * seg; x <= (k + 1) * seg + 1e-9; x += 5.0) {
+        l.centerline.push_back({x, yc});
+        l.left.push_back({x, yc + w / 2});
+        l.right.push_back({x, yc - w / 2});
+      }
+      if (k + 1 < segments) l.successors = {l.id + 1};
+      if (j + 1 < n) {
+        l.left_neighbor = l.id + 100;
+        l.can_change_left = true;
+      }
+      if (j > 0) {
+        l.right_neighbor = l.id - 100;
+        l.can_change_right = true;
+      }
+      map.addLane(std::move(l));
+    }
+  }
+  map.finalize();
+  return map;
+}
+
 EgoState at(double x, double y, double v = 10.0) { return {x, y, 0.0, v, 0.0, 0.0}; }
 
 const LaneBand* band(const Corridor& c, int offset) {
@@ -113,6 +145,113 @@ TEST(RouteCorridor, RouteUrgencyRampsUpBeforeTheRouteLeavesTheLane) {
   EXPECT_NEAR(band(far->corridor, 1)->extra_cost, 0.0, 1e-12);
   EXPECT_GT(band(far->corridor, 0)->extra_cost, 0.0);
   EXPECT_GT(band(near->corridor, 0)->extra_cost, band(far->corridor, 0)->extra_cost);
+}
+
+// Route 1 -> 101 -> 201 on a dead-end road: two lane changes are needed from
+// the right lane, one from the middle lane. With U = max(80 m, 10 s * 10 m/s)
+// = 100 m, the right lane becomes urgent 2 U before the end, the middle one U.
+TEST(RouteCorridor, RouteUrgencyCountsTheLaneChangesStillNeeded) {
+  const auto map = parallelRoad(3, 300.0);
+  const std::vector<int> route = {1, 101, 201};
+  RouteCorridorConfig cfg;
+  cfg.max_adjacent_lanes = 2;
+  const auto early = buildRouteCorridor(map, route, at(50.0, 0.0), cfg);
+  const auto mid = buildRouteCorridor(map, route, at(150.0, 0.0), cfg);
+  const auto late = buildRouteCorridor(map, route, at(200.0, 0.0), cfg);
+  ASSERT_TRUE(early && mid && late);
+  EXPECT_NEAR(band(early->corridor, 0)->extra_cost, 0.0, 1e-9);  // 250 m left: no hurry
+  EXPECT_NEAR(band(mid->corridor, 0)->urgency, 0.25, 1e-2);
+  EXPECT_NEAR(band(mid->corridor, 1)->extra_cost, 0.0, 1e-9);
+  EXPECT_NEAR(band(late->corridor, 0)->urgency, 0.5, 1e-2);
+  EXPECT_NEAR(band(late->corridor, 0)->extra_cost, 2 * cfg.w_route_urgency,
+              0.5);  // w * n at U / 2 per change
+  EXPECT_GT(band(late->corridor, 0)->extra_cost, band(mid->corridor, 0)->extra_cost);
+  EXPECT_NEAR(band(late->corridor, 2)->extra_cost, 0.0, 1e-9);  // the destination lane
+  // The cost grows steeply towards the deadline.
+  const auto last = buildRouteCorridor(map, route, at(280.0, 0.0), cfg);
+  ASSERT_TRUE(last);
+  EXPECT_GT(band(last->corridor, 0)->extra_cost, 5 * band(late->corridor, 0)->extra_cost);
+}
+
+// A long route changes lanes in the first and in the last stretch: only the
+// first change is due at the end of the first stretch, so it is not rushed
+// as if both were due there.
+TEST(RouteCorridor, OnlyTheLaneChangesOfTheCurrentStretchAreDueThere) {
+  const auto map = parallelRoad(3, 400.0, 4);
+  const std::vector<int> route = {1, 101, 102, 103, 203, 204};
+  RouteCorridorConfig cfg;
+  cfg.max_adjacent_lanes = 2;
+  const auto rc = buildRouteCorridor(map, route, at(10.0, 0.0), cfg);
+  ASSERT_TRUE(rc);
+  EXPECT_NEAR(band(rc->corridor, 0)->urgency, 0.1, 1e-2);     // 1 change in 90 m of U = 100 m
+  EXPECT_NEAR(band(rc->corridor, 1)->extra_cost, 0.0, 1e-9);  // its own change is 290 m away
+  EXPECT_NEAR(band(rc->corridor, 2)->urgency, 0.0, 1e-9);     // off the route for now
+  EXPECT_NEAR(band(rc->corridor, 2)->extra_cost, cfg.w_route_urgency, 1e-9);
+}
+
+// The destination lane merges away beyond the route's end: no urgency there.
+TEST(RouteCorridor, NoUrgencyPastTheRoutesEnd) {
+  const auto map = parallelRoad(2, 300.0);
+  const auto rc = buildRouteCorridor(map, {1, 101}, at(250.0, 0.0), RouteCorridorConfig{});
+  ASSERT_TRUE(rc);
+  EXPECT_NEAR(band(rc->corridor, 1)->extra_cost, 0.0, 1e-9);
+  EXPECT_GT(band(rc->corridor, 0)->extra_cost, 0.0);
+}
+
+// A goal in the destination lane is where its lane change must be done, not
+// the end of the road; a goal behind the ego is ignored.
+TEST(RouteCorridor, GoalSetsTheDeadline) {
+  const auto map = parallelRoad(2, 300.0);
+  const std::vector<int> route = {1, 101};
+  const RouteCorridorConfig cfg;
+  const auto no_goal = buildRouteCorridor(map, route, at(50.0, 0.0), cfg);
+  const auto goal = buildRouteCorridor(map, route, at(50.0, 0.0), cfg, -1, Vec2{120.0, 3.5});
+  const auto passed = buildRouteCorridor(map, route, at(50.0, 0.0), cfg, -1, Vec2{20.0, 3.5});
+  ASSERT_TRUE(no_goal && goal && passed);
+  EXPECT_NEAR(band(no_goal->corridor, 0)->extra_cost, 0.0, 1e-9);
+  EXPECT_NEAR(band(goal->corridor, 0)->urgency, 0.3, 1e-2);  // 70 m left of U = 100 m
+  EXPECT_NEAR(band(goal->corridor, 1)->extra_cost, 0.0, 1e-9);
+  EXPECT_NEAR(band(passed->corridor, 0)->extra_cost, 0.0, 1e-9);
+}
+
+// Lanes off the route cost another w even when no lane change is due.
+TEST(RouteCorridor, LanesOffTheRouteCostExtra) {
+  const auto map = parallelRoad(2, 300.0);
+  const RouteCorridorConfig cfg;
+  const auto rc = buildRouteCorridor(map, {1}, at(50.0, 0.0), cfg);
+  ASSERT_TRUE(rc);
+  EXPECT_NEAR(band(rc->corridor, 0)->extra_cost, 0.0, 1e-9);
+  EXPECT_NEAR(band(rc->corridor, 1)->urgency, 0.0, 1e-9);
+  EXPECT_NEAR(band(rc->corridor, 1)->extra_cost, cfg.w_route_urgency, 1e-9);
+  // Without a route no lane is preferred.
+  EXPECT_NEAR(buildRouteCorridor(map, {}, at(50.0, 0.0), cfg)->corridor.lanes()[1].extra_cost, 0.0, 1e-9);
+}
+
+// Routes traced from waypoints can touch the straight-on lane of a fork just
+// before turning off from its predecessor: the chain follows the turn.
+TEST(RouteCorridor, FollowsTheBranchFurthestAlongTheRoute) {
+  RoadMap map;
+  const auto add = [&map](int id, Vec2 a, Vec2 b, std::vector<int> successors) {
+    MapLane l;
+    l.id = id;
+    const double len = std::hypot(b.x - a.x, b.y - a.y), nx = -(b.y - a.y) / len, ny = (b.x - a.x) / len;
+    for (int k = 0; k <= 10; ++k) {
+      const double u = k / 10.0, x = a.x + u * (b.x - a.x), y = a.y + u * (b.y - a.y);
+      l.centerline.push_back({x, y});
+      l.left.push_back({x + 1.75 * nx, y + 1.75 * ny});
+      l.right.push_back({x - 1.75 * nx, y - 1.75 * ny});
+    }
+    l.successors = std::move(successors);
+    map.addLane(std::move(l));
+  };
+  add(1, {0.0, 0.0}, {50.0, 0.0}, {2, 3});  // fork: 2 straight on, 3 to the right
+  add(2, {50.0, 0.0}, {100.0, 0.0}, {});
+  add(3, {50.0, 0.0}, {80.0, -30.0}, {4});
+  add(4, {80.0, -30.0}, {80.0, -100.0}, {});
+  map.finalize();
+  const auto rc = buildRouteCorridor(map, {1, 2, 3, 4}, at(10.0, 0.0), RouteCorridorConfig{});
+  ASSERT_TRUE(rc);
+  EXPECT_EQ(rc->ego_chain, (std::vector<int>{1, 3, 4}));
 }
 
 TEST(RouteCorridor, ActiveStopLinesBecomeObstacles) {
@@ -219,6 +358,22 @@ TEST(LocalPlanner, MapModeFollowsRouteLaneChange) {
   loop.planner.setMap(map, {1, 11, 12, 13});
   for (int i = 0; i < 100; ++i) loop.step({});
   EXPECT_NEAR(loop.ego.y, 3.5, 0.5);  // ended up in the route's lane
+}
+
+// The route's lane has a slower vehicle ahead and the ego's own lane is free:
+// the change is still made before the goal, behind or ahead of the vehicle.
+TEST(LocalPlanner, MapModeChangesIntoASlowerRouteLaneBeforeTheGoal) {
+  auto map = std::make_shared<RoadMap>(parallelRoad(2, 400.0));
+  LocalPlannerConfig cfg;
+  cfg.desired_speed = 12.0;
+  Loop loop(cfg, at(0.0, 0.0, 12.0));
+  loop.planner.setMap(map, {1, 101}, Vec2{150.0, 3.5});
+  const std::vector<Obstacle> world = {predictConstantVelocity(1, 40.0, 3.5, 0.0, 6.0, 4.5, 2.0, 30.0, 0.1)};
+  while (loop.ego.x < 150.0 && loop.t < 30.0) {
+    loop.step(world);
+    ASSERT_FALSE(overlapsAny(loop.ego, world, loop.t)) << "collision at t=" << loop.t;
+  }
+  EXPECT_NEAR(loop.ego.y, 3.5, 0.5);
 }
 
 TEST(LocalPlanner, CurvatureLimitsTargetSpeed) {

@@ -353,7 +353,7 @@ def run(
         if configure is not None:
             configure(cfg)
         lp = fp.LocalPlanner(cfg, vehicle)
-        lp.set_map(road, route)
+        lp.set_map(road, route, tuple(route_xy[-1]))  # the route's lane changes are due by its end
         ctrl = fp.make_controller(controller, vehicle)
         actuation = Actuation(dt)
         if hooks is not None:

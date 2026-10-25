@@ -7,6 +7,16 @@ points; it extends straight past both ends). It converts full kinematic states e
 Cartesian `(x, y, yaw, v, a, kappa)` and time-domain Frenet `(s, ṡ, s̈, d, ḋ, d̈)`; heading and
 curvature of planned trajectories come from the analytic velocity and acceleration vectors.
 
+Map centerlines are often noisy: digitized or recorded lanes carry vertices a few centimetres off
+the line, sometimes nearly on top of each other. An interpolating spline turns that into curvature
+spikes, which cap the speed (through the curvature limit) and jolt the Cartesian acceleration of
+planned trajectories. With a map, the lane chain is therefore first smoothed (`smoothPolyline`):
+resampled every metre, fitted with a second-difference penalty that removes wiggles shorter than
+`route.smoothing_length` (20 m), and reweighted until no point moves more than
+`route.smoothing_tolerance` (0.1 m), so real curves keep their shape. On the NGSIM US-101 lanes this
+lowers the 95th-percentile curvature from 0.017 to 0.002 1/m. Paths given with `setReferencePath` are
+used as they are.
+
 ## Corridor and lanes
 
 A `Corridor` is a set of lane bands `[right(s), left(s)]` expressed in the reference frame. With a
@@ -15,12 +25,29 @@ using their real boundaries, so curved and merging lanes keep their geometry. Ea
 
 - `change_allowed`: whether the ego may enter it (line markings or the routing graph; a route
   through the neighbour implies the change is legal);
-- `extra_cost`: route urgency, which grows as a lane approaches the point where it leaves the
-  route (or ends);
+- `extra_cost` and `urgency`: the route's claim on the lane (below);
 - `speed_limit`.
 
 The union of allowed lanes is the road boundary used by the off-road check. Active stop lines
 (red lights) become virtual static obstacles.
+
+**Route urgency.** The route is a list of lane ids in driving order that ends in the destination
+lane; `setMap` optionally takes a goal point in that lane. Along each band the planner looks for
+the points where the band cannot go on as it is, also beyond the reference line:
+
+- where a route lane leaves the route: the route's lane changes from there are due, until it
+  continues lengthwise;
+- where a band off the route ends or can no longer reach the route over permitted changes: the
+  changes back to it are due;
+- at the end of a dead-end road, and at the goal: the changes into the lane the route continues in,
+  or into the destination lane.
+
+For `n` changes due in a distance `D`, with `U = max(urgency_distance, urgency_time · v)` (80 m,
+10 s), the urgency is `u = clamp(1 − D / (n·U), 0, 1)` and the cost `w_route_urgency · n · u / (1 − u)`
+(w = 10, capped at 10 w n): nothing while the changes fit comfortably, `w · n` with half a ramp per
+change left, then quickly more. The more changes are needed, the earlier they start, and changes
+further along the route wait for their own deadlines. A band takes its most urgent deadline. Lanes
+off the route cost another `w`, so leaving the route to pass slower traffic has to be worth it.
 
 ## Sampling and cost
 
@@ -41,7 +68,9 @@ line (within 45°) or standing still; crossing and oncoming traffic is left to t
 `v_lead + (gap − (desired_gap + desired_time_headway · v_lead)) / follow_time`. Candidates ending
 in that lane are scored against it instead of the desired speed, so the speed term no longer pulls
 the ego into the vehicle ahead. The lane's deficit to the desired speed is charged as a lane cost,
-so a free neighbouring lane stays attractive and the ego overtakes when that pays off.
+so a free neighbouring lane stays attractive and the ego overtakes when that pays off. This cost
+fades with the urgency of the ego lane (`1 − u`): a faster lane that the route requires leaving
+does not hold back the change into a slower one.
 
 **Proximity cost** (`CostTerms.proximity`, per-sample means like the comfort terms):
 

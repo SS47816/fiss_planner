@@ -15,6 +15,7 @@ struct LaneBand {
   int lane_id = -1;            ///< id of the lane in the source map (informational)
   bool change_allowed = true;  ///< whether the planner may sample/enter this lane
   double extra_cost = 0.0;     ///< added to trajectories ending in this lane (e.g. route urgency)
+  double urgency = 0.0;        ///< how soon the route requires leaving this lane: 0 = no need, 1 = now
   double speed_limit = std::numeric_limits<double>::infinity();  ///< [m/s]
   std::vector<double> center, left, right;                       ///< lateral offsets per station [m]
 };

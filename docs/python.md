@@ -36,14 +36,16 @@ cfg.safety.min_ttc = 2.0              # hard envelope ("virtual bumper")
 
 ```python
 lp = fp.LocalPlanner(fp.LocalPlannerConfig(), fp.VehicleParams())
-lp.set_map(road_map, route_lane_ids)       # or lp.set_reference_path(xs, ys)
+lp.set_map(road_map, route_lane_ids, goal=(gx, gy))  # or lp.set_reference_path(xs, ys)
 out = lp.step(t, fp.EgoState(x, y, yaw, v), obstacles)
 lp.request_planner_type(fp.PlannerType.FOP)  # takes effect next cycle
 ```
 
 `road_map` is an `fp.RoadMap` of `fp.MapLane`s; adapters build it from CommonRoad
 (`fiss_planner.commonroad.road_map_from_lanelet_network`) and CARLA
-(`fiss_planner.carla.adapter.road_map_from_carla`).
+(`fiss_planner.carla.adapter.road_map_from_carla`). The route lists lane ids in driving order and
+ends in the destination lane; the optional goal, a point in that lane, is where the route's lane
+changes must be done (see [route urgency](concepts.md#corridor-and-lanes)).
 
 ## Prediction
 

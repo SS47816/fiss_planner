@@ -172,4 +172,101 @@ EgoState ReferenceLine::toCartesian(const FrenetState& fs) const {
   return out;
 }
 
+namespace {
+
+/// Solve (diag(w) + lambda D'D) p = w .* q for both coordinates, where D takes
+/// second differences: a symmetric positive definite pentadiagonal system,
+/// factored by a banded Cholesky decomposition.
+void whittakerSolve(const std::vector<double>& w, double lambda, const std::vector<double>& qx,
+                    const std::vector<double>& qy, std::vector<double>& px, std::vector<double>& py) {
+  const size_t n = w.size();
+  std::vector<double> a0(w), a1(n, 0.0), a2(n, 0.0);  // A(i,i), A(i,i-1), A(i,i-2)
+  for (size_t i = 0; i + 2 < n; ++i) {                // rows [1 -2 1] of D at i, i+1, i+2
+    a0[i] += lambda;
+    a0[i + 1] += 4.0 * lambda;
+    a0[i + 2] += lambda;
+    a1[i + 1] -= 2.0 * lambda;
+    a1[i + 2] -= 2.0 * lambda;
+    a2[i + 2] += lambda;
+  }
+  std::vector<double> l0(n), l1(n, 0.0), l2(n, 0.0);  // L(i,i), L(i,i-1), L(i,i-2)
+  for (size_t i = 0; i < n; ++i) {
+    if (i >= 2) l2[i] = a2[i] / l0[i - 2];
+    if (i >= 1) l1[i] = (a1[i] - (i >= 2 ? l2[i] * l1[i - 1] : 0.0)) / l0[i - 1];
+    l0[i] = std::sqrt(a0[i] - l1[i] * l1[i] - l2[i] * l2[i]);
+  }
+  const auto solve = [&](const std::vector<double>& q, std::vector<double>& p) {
+    p.resize(n);
+    for (size_t i = 0; i < n; ++i) {  // L z = w .* q
+      double v = w[i] * q[i];
+      if (i >= 1) v -= l1[i] * p[i - 1];
+      if (i >= 2) v -= l2[i] * p[i - 2];
+      p[i] = v / l0[i];
+    }
+    for (size_t i = n; i-- > 0;) {  // L' p = z
+      double v = p[i];
+      if (i + 1 < n) v -= l1[i + 1] * p[i + 1];
+      if (i + 2 < n) v -= l2[i + 2] * p[i + 2];
+      p[i] = v / l0[i];
+    }
+  };
+  solve(qx, px);
+  solve(qy, py);
+}
+
+}  // namespace
+
+void smoothPolyline(std::vector<double>& x, std::vector<double>& y, double length, double tolerance,
+                    double ds) {
+  if (x.size() != y.size()) throw std::invalid_argument("smoothPolyline: x/y size mismatch");
+  if (!(ds > 0.0)) throw std::invalid_argument("smoothPolyline: ds must be > 0");
+  // Piecewise-linear resampling: unlike a spline it cannot overshoot between
+  // vertices that are close together.
+  std::vector<double> cum = {0.0};
+  std::vector<double> vx, vy;
+  for (size_t i = 0; i < x.size(); ++i) {
+    if (!vx.empty()) {
+      const double d = std::hypot(x[i] - vx.back(), y[i] - vy.back());
+      if (d < 1e-6) continue;
+      cum.push_back(cum.back() + d);
+    }
+    vx.push_back(x[i]);
+    vy.push_back(y[i]);
+  }
+  if (vx.size() < 2) return;
+  const size_t n = std::max<size_t>(2, static_cast<size_t>(std::ceil(cum.back() / ds)) + 1);
+  const double h = cum.back() / static_cast<double>(n - 1);
+  std::vector<double> qx(n), qy(n);
+  size_t seg = 0;
+  for (size_t i = 0; i < n; ++i) {
+    const double s = std::min(cum.back(), h * static_cast<double>(i));
+    while (seg + 2 < cum.size() && cum[seg + 1] < s) ++seg;
+    const double u = (s - cum[seg]) / (cum[seg + 1] - cum[seg]);
+    qx[i] = vx[seg] + u * (vx[seg + 1] - vx[seg]);
+    qy[i] = vy[seg] + u * (vy[seg + 1] - vy[seg]);
+  }
+  x = qx;
+  y = qy;
+  if (n < 5 || !(length > 0.0)) return;
+
+  // Second-difference penalty with a cutoff wavelength of `length`: the
+  // smoother passes wavelengths w with lambda (2 pi h / w)^4 << 1.
+  const double lambda = std::pow(length / (2.0 * kPi * h), 4);
+  std::vector<double> w(n, 1.0);
+  constexpr int kMaxIterations = 12;
+  for (int it = 0; it < kMaxIterations; ++it) {
+    whittakerSolve(w, lambda, qx, qy, x, y);
+    if (!(tolerance > 0.0)) return;
+    bool within = true;
+    for (size_t i = 0; i < n; ++i) {
+      const double e = std::hypot(x[i] - qx[i], y[i] - qy[i]);
+      if (e > tolerance) {
+        w[i] *= (e / tolerance) * (e / tolerance);
+        within = false;
+      }
+    }
+    if (within) return;
+  }
+}
+
 }  // namespace fiss_planner

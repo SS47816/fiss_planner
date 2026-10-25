@@ -102,6 +102,8 @@ PlanResult Planner::plan(const PlanningInput& input) {
   }
 
   Context ctx{input, grid, t0, result.stats, frenet, rear_in_lane, lane_speeds};
+  if (const LaneBand* ego = input.corridor->egoLane())
+    ctx.deficit_weight = 1.0 - std::clamp(ego->urgency, 0.0, 1.0);
   Trajectory best;
   result.success = search(ctx, best, config_.keep_candidates ? &result.candidates : nullptr);
   if (result.success) {
@@ -155,7 +157,7 @@ double Planner::estimate(const Context& ctx, int i, int j, int k) const {
 double Planner::laneTerms(const Context& ctx, LateralSample& lat) const {
   const double target = ctx.targetSpeed(lat.lane);
   const double deficit = ctx.input.target_speed - target;
-  lat.lane_cost += config_.cost.w_speed * deficit * deficit;
+  lat.lane_cost += ctx.deficit_weight * config_.cost.w_speed * deficit * deficit;
   return target;
 }
 

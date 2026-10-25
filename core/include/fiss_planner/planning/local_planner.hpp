@@ -79,7 +79,11 @@ class LocalPlanner {
  public:
   LocalPlanner(const LocalPlannerConfig& config, const VehicleParams& vehicle);
 
-  void setMap(std::shared_ptr<const RoadMap> map, std::vector<int> route = {});
+  /// Plan on a lane map along `route` (lane ids in driving order). `goal`, a
+  /// point in the last route lane, is where the route's lane changes must be
+  /// done; without it they are due where the lanes end (see buildRouteCorridor).
+  void setMap(std::shared_ptr<const RoadMap> map, std::vector<int> route = {},
+              std::optional<Vec2> goal = std::nullopt);
   void setReferencePath(const std::vector<double>& x, const std::vector<double>& y);
   void requestConfig(const LocalPlannerConfig& config);
   void requestPlannerType(PlannerType type);
@@ -106,6 +110,7 @@ class LocalPlanner {
 
   std::shared_ptr<RoadMap> map_;  ///< private copy (stop line states are mutable)
   std::vector<int> route_;
+  std::optional<Vec2> goal_;
   std::shared_ptr<const ReferenceLine> path_ref_;
   Corridor path_corridor_;
 

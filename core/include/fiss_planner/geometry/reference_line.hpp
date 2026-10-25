@@ -60,4 +60,15 @@ class ReferenceLine {
   double table_ds_ = 0.5;
 };
 
+/// Resample a polyline every `ds` along its length and smooth it in place.
+/// Map centerlines often carry vertex noise (digitized or recorded lanes)
+/// that an interpolating spline turns into curvature spikes. The smoother
+/// penalizes second differences (Whittaker smoothing, removing wiggles shorter
+/// than about `length`). Points that move more than `tolerance` get more
+/// weight and the fit is repeated (up to 12 times), so real curves keep their
+/// shape. `length` <= 0 only resamples; `tolerance` <= 0 leaves the deviation
+/// unbounded. Polylines shorter than five samples are only resampled.
+void smoothPolyline(std::vector<double>& x, std::vector<double>& y, double length, double tolerance,
+                    double ds = 1.0);
+
 }  // namespace fiss_planner

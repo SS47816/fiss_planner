@@ -61,7 +61,8 @@ ros2 bag record -s mcap -o run /odom /perception/obstacles /tf \
 
 Set `map.lanelet2_path` (plus `map.origin_lat/lon`) to load a Lanelet2 map. Lane-change
 legality, speed limits and traffic-light stop lines come from the map and its routing graph. A
-goal on `~/goal` computes the route. Without a map, publish `~/reference_path` and set
+goal on `~/goal` computes the route, and its position is where the route's lane changes must be
+done. Without a map, publish `~/reference_path` and set
 `path.lane_width` / `path.num_left_lanes` / `path.num_right_lanes`.
 
 ## Frames

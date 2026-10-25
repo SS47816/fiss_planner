@@ -79,6 +79,7 @@ class Planner {
     const FrenetObstacles& obstacles;       ///< obstacles near the corridor, in the Frenet frame
     const std::vector<char>& rear_in_lane;  ///< obstacles lane-keeping candidates may ignore
     const std::vector<std::pair<int, double>>& lane_speeds;  ///< (lane offset, target speed)
+    double deficit_weight = 1.0;  ///< scale of the lane speed deficit cost (1 - ego lane urgency)
 
     /// Target speed of candidates ending in the given lane (car following).
     double targetSpeed(int lane) const {
@@ -92,6 +93,8 @@ class Planner {
   /// Lane information of a sample with the lane's car-following speed deficit
   /// (relative to the desired speed) added to its lane cost, so that slower
   /// lanes stay less attractive than free ones; returns the lane's target speed.
+  /// The deficit cost fades as the route requires leaving the ego lane: a
+  /// faster lane that has to be left anyway must not hold back the change.
   double laneTerms(const Context& ctx, LateralSample& lat) const;
 
   /// Search the grid; on success write the chosen trajectory to `best`.

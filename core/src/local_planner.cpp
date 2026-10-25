@@ -90,9 +90,11 @@ void append(Trajectory& head, const Trajectory& tail, double offset) {
 LocalPlanner::LocalPlanner(const LocalPlannerConfig& config, const VehicleParams& vehicle)
     : config_(config), vehicle_(vehicle), planner_(makePlanner(config.planner, vehicle)) {}
 
-void LocalPlanner::setMap(std::shared_ptr<const RoadMap> map, std::vector<int> route) {
+void LocalPlanner::setMap(std::shared_ptr<const RoadMap> map, std::vector<int> route,
+                          std::optional<Vec2> goal) {
   map_ = map ? std::make_shared<RoadMap>(*map) : nullptr;
   route_ = std::move(route);
+  goal_ = goal;
   path_ref_.reset();
   reset();
 }
@@ -109,6 +111,7 @@ void LocalPlanner::setReferencePath(const std::vector<double>& x, const std::vec
   path_ref_ = std::move(ref);
   map_.reset();
   route_.clear();
+  goal_.reset();
   reset();
 }
 
@@ -247,7 +250,7 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
   // --- Reference and corridor -------------------------------------------------
   double lane_limit = std::numeric_limits<double>::infinity();
   if (map_) {
-    auto rc = buildRouteCorridor(*map_, route_, start, config_.route, previous_ego_lane_);
+    auto rc = buildRouteCorridor(*map_, route_, start, config_.route, previous_ego_lane_, goal_);
     if (!rc) {
       previous_.reset();
       return out;  // off the map

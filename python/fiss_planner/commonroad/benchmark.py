@@ -95,18 +95,26 @@ def _goal_time_end(problem) -> int | None:
 
 
 class GoalSpeedPolicy:
-    """Target speed that reaches the goal region within its time window.
+    """Target speed and goal point that bring the ego into the goal region within its time window.
 
-    The goal center is projected onto the current reference line; the target
-    is the average speed needed to cover the remaining distance by the middle
-    of the goal time window, clipped to the goal velocity interval (or to
-    [0, v_max] without one). Without a position or time goal the policy keeps
-    the initial speed (or `default`)."""
+    The goal region is projected onto the current reference line. The ego aims
+    for the point of the region it would pass at the middle of the time window
+    when keeping its cruise speed, kept one second of cruising (at least 2 m,
+    at most a quarter of the region) inside the region's ends, so that some
+    lag or lead still ends inside. The target is the speed that covers the
+    distance to that point by then, given that the planner reaches a new target
+    speed within its mean horizon, clipped to the goal velocity interval (or to
+    [0, v_max] without one). Regions beyond the reference line are aimed at by
+    their center. Without a position or time goal the policy keeps the cruise
+    speed: the initial speed (or `default` from standstill)."""
 
-    def __init__(self, problem, initial_speed: float, v_max: float, default: float = 13.5):
+    def __init__(
+        self, problem, initial_speed: float, v_max: float, horizon: float = 4.0, default: float = 13.5
+    ):
         st = problem.goal.state_list[0]
         self.center = None
         self.geometry = None
+        self._outline = None
         if st.has_value("position"):
             shape = st.position
             if hasattr(shape, "shapes"):  # ShapeGroup
@@ -118,26 +126,57 @@ class GoalSpeedPolicy:
             c = geom.centroid
             self.center = (c.x, c.y)
             self.geometry = geom
+            ring = geom.exterior if hasattr(geom, "exterior") else geom.convex_hull.exterior
+            self._outline = [ring.interpolate(f, normalized=True) for f in np.linspace(0.0, 1.0, 64)]
         self.t_mid = None
         if st.has_value("time_step"):
             ts = st.time_step
             self.t_mid = 0.5 * (float(getattr(ts, "start", ts)) + float(getattr(ts, "end", ts)))
         if st.has_value("velocity"):
-            self.v_lo = float(getattr(st.velocity, "start", st.velocity))
+            self.v_lo = max(0.0, float(getattr(st.velocity, "start", st.velocity)))
             self.v_hi = float(getattr(st.velocity, "end", st.velocity))
         else:
             self.v_lo, self.v_hi = 0.0, v_max
+        self.horizon = horizon
         self.cruise = min(max(initial_speed, default if initial_speed < 0.5 else initial_speed), v_max)
         self.cruise = float(np.clip(self.cruise, self.v_lo, self.v_hi))
 
-    def __call__(self, time_step: int, dt: float, reference, ego_s: float) -> float:
+    def _aim(self, time_step: int, dt: float, reference, ego_s: float) -> tuple[float, float, float] | None:
+        """(s, d) of the aim point on `reference` and the time left to reach it, or None."""
         if self.center is None or self.t_mid is None or reference is None or reference.empty():
-            return self.cruise
-        goal_s = reference.project(self.center[0], self.center[1]).s  # global: the goal may be far ahead
+            return None
         remaining_t = (self.t_mid - time_step) * dt
+        sd = [reference.project(q.x, q.y) for q in self._outline]  # global: the region may be far ahead
+        s_lo, s_hi = min(p.s for p in sd), max(p.s for p in sd)
+        if s_hi > reference.length:  # (partly) beyond the reference: aim at the center
+            c = reference.project(self.center[0], self.center[1])
+            return c.s, c.d, remaining_t
+        margin = min(max(2.0, self.cruise * 1.0), 0.25 * (s_hi - s_lo))
+        s = float(np.clip(ego_s + self.cruise * max(0.0, remaining_t), s_lo + margin, s_hi - margin))
+        near = [p.d for p in sd if abs(p.s - s) < 3.0] or [p.d for p in sd]
+        return s, 0.5 * (min(near) + max(near)), remaining_t
+
+    def point(self, reference, ego_s: float, time_step: int, dt: float) -> tuple[float, float] | None:
+        """The aim point (x, y), where the route's lane changes must be done; the
+        region's center without a reference or time goal."""
+        aim = self._aim(time_step, dt, reference, ego_s)
+        if aim is None:
+            return self.center
+        r = reference.at(aim[0])
+        return r.x - math.sin(r.yaw) * aim[1], r.y + math.cos(r.yaw) * aim[1]
+
+    def __call__(self, time_step: int, dt: float, reference, ego_s: float, ego_v: float) -> float:
+        aim = self._aim(time_step, dt, reference, ego_s)
+        if aim is None:
+            return self.cruise
+        dist, remaining_t = aim[0] - ego_s, aim[2]
         if remaining_t <= 0.5:
             return self.v_hi
-        return float(np.clip((goal_s - ego_s) / remaining_t, self.v_lo, self.v_hi))
+        # Speed reached within the horizon (linearly from ego_v), then held.
+        th = min(self.horizon, remaining_t)
+        v = (dist - 0.5 * ego_v * th) / (remaining_t - 0.5 * th)
+        # A positive floor: the planner reads a non-positive speed as "use the default".
+        return float(np.clip(v, max(self.v_lo, 1e-3), self.v_hi))
 
 
 def min_post_encroachment_time(track: list, dt: float, window: float = 3.0) -> float:
@@ -204,10 +243,15 @@ def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -
     row["route_lanelets"] = len(route)
 
     lp = _make_local_planner(opts, vehicle)
-    lp.set_map(road, route)
-    horizon = lp.config.planner.sampling.max_t + 0.5
+    sampling = lp.config.planner.sampling
+    goal_speed = GoalSpeedPolicy(
+        problem,
+        float(problem.initial_state.velocity),
+        vehicle.max_speed,
+        0.5 * (sampling.min_t + sampling.max_t),
+    )
+    horizon = sampling.max_t + 0.5
 
-    goal_speed = GoalSpeedPolicy(problem, float(problem.initial_state.velocity), vehicle.max_speed)
     reference, ego_s = None, 0.0
     t_end = _goal_time_end(problem)
     final_obstacle_step = max(
@@ -225,15 +269,16 @@ def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -
     )
 
     ego = adapter.ego_state_from_commonroad(problem.initial_state)
-    if abs(float(getattr(problem.initial_state, "yaw_rate", 0.0) or 0.0)) < 1e-9:
+    k0 = int(problem.initial_state.time_step)
+    rc = fp.build_route_corridor(road, route, ego)
+    if rc is not None and abs(float(getattr(problem.initial_state, "yaw_rate", 0.0) or 0.0)) < 1e-9:
         # Initial states usually carry yaw_rate = 0 even on curves; assume the
         # ego follows its lane's curvature instead of driving straight off it.
-        rc = fp.build_route_corridor(road, route, ego)
-        if rc is not None:
-            ref = rc.reference.at(rc.ego_s)
-            d = rc.reference.project(ego.x, ego.y, rc.ego_s).d
-            ego.kappa = ref.kappa / max(1e-3, 1.0 - ref.kappa * d)
-    k0 = int(problem.initial_state.time_step)
+        ref = rc.reference.at(rc.ego_s)
+        d = rc.reference.project(ego.x, ego.y, rc.ego_s).d
+        ego.kappa = ref.kappa / max(1e-3, 1.0 - ref.kappa * d)
+    goal_point = goal_speed.point(rc.reference, rc.ego_s, k0, dt) if rc is not None else goal_speed.center
+    lp.set_map(road, route, goal_point)
     obstacles_all = scenario.obstacles
     states = [ego]
     plan_ms, cycle_ms, generated, validated, checks = [], [], [], [], []
@@ -260,7 +305,7 @@ def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -
                 reference, ego_s = rc0.reference, rc0.ego_s
         elif not reference.empty():
             ego_s = reference.project(ego.x, ego.y, ego_s).s
-        desired = goal_speed(k, dt, reference, ego_s)
+        desired = goal_speed(k, dt, reference, ego_s, ego.v)
         t0 = time.perf_counter()
         out = lp.step(k * dt, ego, obstacles, desired)
         if out.success:

@@ -44,7 +44,8 @@ struct SamplingConfig {
 /// scored against the speed that closes the gap to the desired one within
 /// `follow_time`, instead of the desired speed, so the speed term does not pull
 /// the ego into the vehicle ahead. The lane's deficit to the desired speed is
-/// charged as a lane cost (w_speed * deficit^2), so free lanes stay attractive.
+/// charged as a lane cost (w_speed * deficit^2), so free lanes stay attractive;
+/// it fades as the route requires leaving the ego lane (LaneBand::urgency).
 struct CostConfig {
   double w_time = 1.0;         ///< (max_t - T): prefer longer horizons
   double w_speed = 1.0;        ///< (s_d(T) - v_target)^2

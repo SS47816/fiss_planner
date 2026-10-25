@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <stdexcept>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "fiss_planner/common/math.hpp"
@@ -86,19 +88,111 @@ void fillSmallGaps(std::vector<double>& v, size_t max_gap) {
   }
 }
 
-int pick(const std::vector<int>& candidates, const std::unordered_set<int>& route) {
+/// The candidate furthest along the route (routes from waypoints can touch a
+/// lane just before turning off from its predecessor), else the first one.
+int pick(const std::vector<int>& candidates, const std::unordered_map<int, size_t>& route_index) {
+  int best = candidates.empty() ? -1 : candidates.front();
+  size_t best_index = 0;
+  bool on_route = false;
   for (int c : candidates) {
-    if (route.count(c)) return c;
+    const auto it = route_index.find(c);
+    if (it != route_index.end() && (!on_route || it->second > best_index)) {
+      best = c;
+      best_index = it->second;
+      on_route = true;
+    }
   }
-  return candidates.empty() ? -1 : candidates.front();
+  return best;
 }
+
+/// Lane changes the route still needs. A route lane needs the lane changes
+/// the route makes right after it, until it continues lengthwise (along this
+/// stretch of side-by-side lanes); any other lane first moves sideways, over
+/// permitted changes, to the route lane that needs the fewest in total.
+class RouteProgress {
+ public:
+  RouteProgress(const RoadMap& map, const std::vector<int>& route) : map_(map) {
+    int changes = 0;
+    for (size_t k = route.size(); k-- > 0;) {
+      const MapLane* lane = map.lane(route[k]);
+      if (!lane) continue;
+      if (k + 1 < route.size() &&
+          (lane->left_neighbor == route[k + 1] || lane->right_neighbor == route[k + 1])) {
+        ++changes;
+        route_changes_.insert(key(route[k], route[k + 1]));
+      } else {
+        changes = 0;  // the route continues lengthwise (or ends) here
+      }
+      const auto it = changes_.find(route[k]);
+      changes_[route[k]] = it == changes_.end() ? changes : std::min(it->second, changes);
+    }
+  }
+
+  bool empty() const { return changes_.empty(); }
+  bool onRoute(int lane) const { return changes_.count(lane) > 0; }
+
+  /// Lane changes needed from `lane` before the route leaves its stretch of
+  /// road; -1 if no route lane can be reached sideways.
+  int changesNeeded(int lane) const {
+    const auto cached = cache_.find(lane);
+    if (cached != cache_.end()) return cached->second;
+    int best = -1;
+    walk(lane, [&](int id, int steps) {
+      const auto it = changes_.find(id);
+      if (it != changes_.end() && (best < 0 || steps + it->second < best)) best = steps + it->second;
+    });
+    cache_[lane] = best;
+    return best;
+  }
+
+  /// Lane changes from `lane` sideways to `target`; -1 if not reachable.
+  int stepsTo(int lane, int target) const {
+    int best = -1;
+    walk(lane, [&](int id, int steps) {
+      if (id == target && (best < 0 || steps < best)) best = steps;
+    });
+    return best;
+  }
+
+ private:
+  static constexpr int kMaxSteps = 8;
+  static int64_t key(int from, int to) {
+    return (static_cast<int64_t>(from) << 32) ^ static_cast<uint32_t>(to);
+  }
+
+  /// Visit `lane` and the lanes reachable from it sideways over permitted
+  /// changes (or the route's own) with the number of changes.
+  template <typename F>
+  void walk(int lane, F&& visit) const {
+    visit(lane, 0);
+    for (const bool left : {true, false}) {
+      int cur = lane;
+      for (int steps = 1; steps <= kMaxSteps; ++steps) {
+        const MapLane* l = map_.lane(cur);
+        const int next = l ? (left ? l->left_neighbor : l->right_neighbor) : -1;
+        if (next < 0) break;
+        const bool permitted = left ? l->can_change_left : l->can_change_right;
+        if (!permitted && !route_changes_.count(key(cur, next))) break;
+        cur = next;
+        visit(cur, steps);
+      }
+    }
+  }
+
+  const RoadMap& map_;
+  std::unordered_map<int, int> changes_;       ///< route lane -> lane changes of the route right after it
+  std::unordered_set<int64_t> route_changes_;  ///< (from, to) lane changes of the route
+  mutable std::unordered_map<int, int> cache_;
+};
 
 }  // namespace
 
 std::optional<RouteCorridor> buildRouteCorridor(const RoadMap& map, const std::vector<int>& route,
                                                 const EgoState& ego, const RouteCorridorConfig& cfg,
-                                                int previous_ego_lane) {
+                                                int previous_ego_lane, const std::optional<Vec2>& goal) {
   const std::unordered_set<int> route_set(route.begin(), route.end());
+  std::unordered_map<int, size_t> route_index;  // last position of each lane in the route
+  for (size_t k = 0; k < route.size(); ++k) route_index[route[k]] = k;
   std::unordered_set<int> preferred = route_set;
   if (previous_ego_lane >= 0) preferred.insert(previous_ego_lane);
   const int ego_lane = map.locate(ego.x, ego.y, ego.yaw, &preferred);
@@ -111,7 +205,7 @@ std::optional<RouteCorridor> buildRouteCorridor(const RoadMap& map, const std::v
   std::unordered_set<int> visited = {ego_lane};
   double behind = pos0;
   while (behind < cfg.lookbehind) {
-    const int p = pick(map.lane(chain.front())->predecessors, route_set);
+    const int p = pick(map.lane(chain.front())->predecessors, route_index);
     if (p < 0 || visited.count(p)) break;
     chain.insert(chain.begin(), p);
     visited.insert(p);
@@ -120,7 +214,7 @@ std::optional<RouteCorridor> buildRouteCorridor(const RoadMap& map, const std::v
   const size_t i0 = static_cast<size_t>(std::find(chain.begin(), chain.end(), ego_lane) - chain.begin());
   double ahead = l0->length() - pos0;
   while (ahead < cfg.lookahead) {
-    const int s = pick(map.lane(chain.back())->successors, route_set);
+    const int s = pick(map.lane(chain.back())->successors, route_index);
     if (s < 0 || visited.count(s)) break;
     chain.push_back(s);
     visited.insert(s);
@@ -136,6 +230,7 @@ std::optional<RouteCorridor> buildRouteCorridor(const RoadMap& map, const std::v
       ys.push_back(p.y);
     }
   }
+  if (cfg.smoothing_length > 0.0) smoothPolyline(xs, ys, cfg.smoothing_length, cfg.smoothing_tolerance);
   RouteCorridor out;
   try {
     out.reference = ReferenceLine(xs, ys);
@@ -232,7 +327,141 @@ std::optional<RouteCorridor> buildRouteCorridor(const RoadMap& map, const std::v
     }
   }
 
-  for (const auto& b : bands) {
+  // --- Route urgency ----------------------------------------------------------
+  const RouteProgress progress(map, route);
+  const double inf = std::numeric_limits<double>::infinity();
+  const double ramp = std::max(cfg.urgency_distance, cfg.urgency_time * std::max(0.0, ego.v));
+  // Lane changes can be due beyond the reference: for urgency only, follow
+  // the chain further (along the route where it goes on).
+  std::vector<int> ext = chain;
+  std::vector<double> ext_s0 = lane_s0, ext_s1 = lane_s1;
+  if (!progress.empty()) {
+    constexpr double kUrgencyHorizon = 4.0;  // in ramp lengths: beyond this no urgency arises (n <= 4)
+    while (ext_s1.back() < out.ego_s + kUrgencyHorizon * ramp) {
+      const int next = pick(map.lane(ext.back())->successors, route_index);
+      if (next < 0 || visited.count(next)) break;
+      visited.insert(next);
+      ext.push_back(next);
+      ext_s0.push_back(ext_s1.back());
+      ext_s1.push_back(ext_s1.back() + map.lane(next)->length());
+    }
+  }
+  // Lane of a band level with chain index i (also beyond the reference).
+  const auto band_lane = [&](const Band& b, size_t i) {
+    if (i < chain.size()) return b.lanes[i];
+    int id = ext[i];
+    for (int k = 0; k < std::abs(b.offset) && id >= 0; ++k) {
+      const MapLane* l = map.lane(id);
+      id = b.offset > 0 ? l->left_neighbor : l->right_neighbor;
+    }
+    return id;
+  };
+  // Chain index level with the goal, and the distance to it.
+  size_t goal_index = ext.size();
+  double goal_dist = inf;
+  if (goal && !progress.empty()) {
+    constexpr double kGoalLateralRange = 20.0;  // [m] the goal must be beside the ego's lane chain
+    const auto pg = out.reference.project(goal->x, goal->y);
+    if (pg.s <= out.reference.length()) {
+      if (pg.s > out.ego_s && std::abs(pg.d) < kGoalLateralRange) {
+        for (size_t i = i0; i < chain.size() && goal_index == ext.size(); ++i) {
+          if (pg.s <= lane_s1[i] + 1e-6) goal_index = i;
+        }
+        goal_dist = pg.s - out.ego_s;
+      }
+    } else {
+      // Beyond the reference: where the chain runs beside the destination lane.
+      const int dest = route.back();
+      const auto beside = [&](int id) {
+        for (const bool left : {true, false}) {
+          for (int cur = id, k = 0; cur >= 0 && k <= 8; ++k) {
+            if (cur == dest) return true;
+            const MapLane* l = map.lane(cur);
+            cur = left ? l->left_neighbor : l->right_neighbor;
+          }
+        }
+        return false;
+      };
+      for (size_t i = chain.size(); i < ext.size() && goal_index == ext.size(); ++i) {
+        if (!beside(ext[i])) continue;
+        goal_index = i;
+        goal_dist = ext_s0[i] + projectOnPolyline(map.lane(dest)->centerline, goal->x, goal->y).s - out.ego_s;
+      }
+    }
+  }
+  // Lane changes due along each band: (changes, distance) wherever the band
+  // can no longer go on as it is. The most urgent of them sets its cost.
+  struct Urgency {
+    bool off_route = false;  ///< the band's lane beside the ego is not a route lane
+    bool reachable = true;   ///< the route can be reached from it
+    double urgency = 0.0;
+    double cost = 0.0;
+  };
+  const auto due = [&](Urgency& u, int changes, double dist) {
+    if (changes <= 0 || !(ramp > 0.0)) return;
+    // Zero while the changes fit comfortably, w * n with half the ramp
+    // distance per change left, then steeply growing (capped).
+    constexpr double kMaxFactor = 10.0;
+    const double n = changes;
+    const double urg = std::clamp(1.0 - std::max(0.0, dist) / (n * ramp), 0.0, 1.0);
+    const double factor = urg < 1.0 ? std::min(urg / (1.0 - urg), kMaxFactor) : kMaxFactor;
+    u.urgency = std::max(u.urgency, urg);
+    u.cost = std::max(u.cost, cfg.w_route_urgency * n * factor);
+  };
+  std::vector<Urgency> urgency(bands.size());
+  int most_changes = 0;
+  for (size_t j = 0; j < bands.size(); ++j) {
+    const Band& b = bands[j];
+    size_t first = i0;
+    while (first < chain.size() && b.lanes[first] < 0) ++first;
+    if (first == chain.size()) continue;
+    Urgency& u = urgency[j];
+    if (progress.empty()) {
+      // Without a route, a band only has to be left where it ends.
+      bool ended = false;
+      for (size_t i = first; i < chain.size() && !ended; ++i) {
+        if (b.lanes[i] < 0) {
+          due(u, 1, lane_s0[i] - out.ego_s);
+          ended = true;
+        }
+      }
+      const MapLane* last = map.lane(b.lanes.back());
+      if (!ended && last && last->successors.empty()) due(u, 1, lane_s1.back() - out.ego_s);
+      continue;
+    }
+    int changes = progress.changesNeeded(b.lanes[first]);
+    u.off_route = !progress.onRoute(b.lanes[first]);
+    u.reachable = changes >= 0;
+    if (!u.reachable) continue;
+    most_changes = std::max(most_changes, changes);
+    bool on_route = !u.off_route;
+    bool ended = false;
+    for (size_t i = first; i < ext.size() && !ended; ++i) {
+      const int lane = band_lane(b, i);
+      if (i > first) {
+        const int next = lane < 0 ? -1 : progress.changesNeeded(lane);
+        if (next < 0) {
+          // The band ends or loses the route: off the route it has to be left,
+          // on it only the route's own changes remain (none past its end).
+          due(u, on_route ? changes : std::max(1, changes), ext_s0[i] - out.ego_s);
+          ended = true;
+          continue;
+        }
+        // A route lane is left where the route leaves it; off the route,
+        // the changes can still be made further on.
+        const bool now_on = progress.onRoute(lane);
+        if (on_route && !now_on) due(u, changes, ext_s0[i] - out.ego_s);
+        on_route = now_on;
+        changes = next;
+      }
+      if (i == goal_index) due(u, progress.stepsTo(lane, route.back()), goal_dist);
+    }
+    const MapLane* last = map.lane(band_lane(b, ext.size() - 1));
+    if (!ended && last && last->successors.empty()) due(u, changes, ext_s1.back() - out.ego_s);  // dead end
+  }
+
+  for (size_t j = 0; j < bands.size(); ++j) {
+    const Band& b = bands[j];
     LaneBand lane;
     lane.offset = b.offset;
     lane.change_allowed = b.allowed;
@@ -249,18 +478,13 @@ std::optional<RouteCorridor> buildRouteCorridor(const RoadMap& map, const std::v
         break;
       }
     }
-    // Route urgency: distance until the band leaves the route (or ends).
-    double leave = std::numeric_limits<double>::infinity();
-    for (size_t i = i0; i < chain.size(); ++i) {
-      const bool gone = b.lanes[i] < 0 || (!route_set.empty() && !route_set.count(b.lanes[i]));
-      if (gone) {
-        leave = std::max(0.0, lane_s0[i] - out.ego_s);
-        break;
-      }
+    Urgency u = urgency[j];
+    if (!u.reachable) {  // cannot reach the route: worse than any band that can
+      u.urgency = 1.0;
+      due(u, most_changes + 1, 0.0);
     }
-    if (std::isfinite(leave) && cfg.urgency_distance > 0.0) {
-      lane.extra_cost = cfg.w_route_urgency * std::max(0.0, 1.0 - leave / cfg.urgency_distance);
-    }
+    lane.urgency = u.urgency;
+    lane.extra_cost = u.cost + (u.off_route ? cfg.w_route_urgency : 0.0);
     corridor.addLane(std::move(lane));
   }
   out.corridor = std::move(corridor);

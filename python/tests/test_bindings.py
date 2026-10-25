@@ -103,6 +103,25 @@ def test_route_corridor_bindings():
     assert math.isinf(rc.speed_limit)
 
 
+def test_route_goal_and_smoothing_bindings():
+    m = two_lane_map()
+    ego = fp.EgoState(70.0, 0.0, 0.0, 10.0)
+    cfg = fp.RouteCorridorConfig()
+    assert (cfg.smoothing_length, cfg.smoothing_tolerance, cfg.urgency_time) == (20.0, 0.1, 10.0)
+    # Route 1 -> 2 -> 3 -> 13: the change into lane 13 is due at the goal, not at the road's end.
+    far = fp.build_route_corridor(m, [1, 2, 3, 13], ego, cfg)
+    near = fp.build_route_corridor(m, [1, 2, 3, 13], ego, cfg, -1, (130.0, 3.5))
+    ego_lane = {lane.offset: lane for lane in near.corridor.lanes}[0]
+    assert ego_lane.urgency > {lane.offset: lane for lane in far.corridor.lanes}[0].urgency
+    assert ego_lane.extra_cost > 0.0
+    lp = fp.LocalPlanner(fp.LocalPlannerConfig())
+    lp.set_map(m, [1, 2, 3, 13], goal=(130.0, 3.5))
+    assert lp.step(0.0, ego).success
+    x, y = fp.smooth_polyline([0.0, 10.0, 20.0], [0.0, 0.05, 0.0], 20.0, 0.1)
+    assert len(x) == len(y) >= 21  # resampled every metre
+    assert max(abs(v) for v in y) <= 0.05 + 1e-9
+
+
 def test_controllers_and_bicycle():
     v = fp.VehicleParams()
     ref = straight()

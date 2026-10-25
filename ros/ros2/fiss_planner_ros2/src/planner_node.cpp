@@ -431,7 +431,7 @@ void PlannerNode::onGoal(const geometry_msgs::msg::PoseStamped::ConstSharedPtr& 
     RCLCPP_WARN(get_logger(), "No route to the goal");
     return;
   }
-  planner_->setMap(road_map_, route);
+  planner_->setMap(road_map_, route, fp::Vec2{gx, gy});
   RCLCPP_INFO(get_logger(), "Route with %zu lanelets", route.size());
 }
 

@@ -106,6 +106,30 @@ TEST_P(AllPlanners, SolidLineForcesFollowingInsteadOfOvertaking) {
   EXPECT_LT(res.trajectory.s_d.back(), sc.target_speed - 1.0);  // slows down behind the lead
 }
 
+// The left lane is slower; the ego lane has to be left for the route (same
+// lane cost in both runs). Only once that is urgent does the speed preference
+// for the ego lane fade and the change into the slower lane win.
+TEST_P(AllPlanners, RouteUrgencyOverridesTheSpeedPreferenceOfTheEgoLane) {
+  auto sc = freeRoad();
+  sc.obstacles = {box(1, 30.0, 3.5, 3.0)};
+  LaneBand* ego = nullptr;
+  for (auto& lane : sc.corridor.lanes()) {
+    if (lane.offset == 0) ego = &lane;
+  }
+  ASSERT_NE(ego, nullptr);
+  ego->extra_cost = 30.0;
+  auto planner = makePlanner(configFor(GetParam()), VehicleParams{});
+  ego->urgency = 0.0;
+  const auto relaxed = planner->plan(sc.input());
+  ASSERT_TRUE(relaxed.success);
+  EXPECT_EQ(relaxed.trajectory.lane, 0);
+  ego->urgency = 0.8;
+  const auto urgent = planner->plan(sc.input());
+  ASSERT_TRUE(urgent.success);
+  EXPECT_EQ(urgent.trajectory.lane, 1);
+  EXPECT_FALSE(collides(urgent.trajectory, sc.obstacles, planner->vehicle()));
+}
+
 TEST_P(AllPlanners, CutInVehicleIsAvoided) {
   auto sc = freeRoad();
   // A vehicle in the left lane merging into ours just ahead of us.

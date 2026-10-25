@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <random>
 
@@ -113,4 +114,76 @@ TEST(ReferenceLine, FrenetMotionMatchesCartesianFiniteDifferences) {
     EXPECT_NEAR(p1.kappa, (vx * ay - vy * ax) / (v * v * v), 1e-3);
     EXPECT_NEAR(p1.a, (vx * ax + vy * ay) / v, 1e-2);
   }
+}
+
+namespace {
+
+double maxAbsCurvature(const ReferenceLine& ref, double margin) {
+  double k = 0.0;
+  for (double s = margin; s <= ref.length() - margin; s += 0.5) k = std::max(k, std::abs(ref.at(s).kappa));
+  return k;
+}
+
+}  // namespace
+
+// Digitized lanes: a straight lane whose vertices jitter by a few centimetres
+// and sometimes nearly coincide. Interpolated, the jitter becomes curvature
+// spikes; smoothed, the line is straight again and stays within tolerance.
+TEST(SmoothPolyline, RemovesVertexNoiseWithinTolerance) {
+  std::mt19937 rng(7);
+  std::uniform_real_distribution<double> jitter(-0.05, 0.05);
+  std::vector<double> x, y;
+  for (double s = 0.0; s <= 200.0; s += 2.5) {
+    x.push_back(s);
+    y.push_back(jitter(rng));
+    if (static_cast<int>(s) % 20 == 0) {  // near-duplicate vertex
+      x.push_back(s + 0.01);
+      y.push_back(jitter(rng));
+    }
+  }
+  const ReferenceLine raw(x, y);
+  std::vector<double> sx = x, sy = y;
+  smoothPolyline(sx, sy, 20.0, 0.1);
+  const ReferenceLine smooth(sx, sy);
+  EXPECT_GT(maxAbsCurvature(raw, 10.0), 0.02);
+  EXPECT_LT(maxAbsCurvature(smooth, 10.0), 0.003);
+  for (size_t i = 0; i < sx.size(); ++i) EXPECT_LT(std::abs(sy[i]), 0.1 + 1e-6);
+  EXPECT_NEAR(sx.back(), x.back(), 0.01);
+}
+
+// Real curves keep their shape: a 15 m radius quarter turn between straights
+// moves by about the tolerance at most and keeps its curvature.
+TEST(SmoothPolyline, KeepsRealCurvesWithinTolerance) {
+  const double R = 15.0;
+  std::vector<double> x, y;
+  for (double s = -30.0; s < 0.0; s += 3.0) {
+    x.push_back(s);
+    y.push_back(0.0);
+  }
+  for (double a = 0.0; a < 0.5 * kPi; a += 0.1) {
+    x.push_back(R * std::sin(a));
+    y.push_back(R * (1.0 - std::cos(a)));
+  }
+  for (double s = 0.0; s <= 30.0; s += 3.0) {
+    x.push_back(R);
+    y.push_back(R + s);
+  }
+  std::vector<double> sx = x, sy = y;
+  smoothPolyline(sx, sy, 20.0, 0.1);
+  const ReferenceLine original(x, y);
+  for (size_t i = 0; i < sx.size(); ++i) EXPECT_LT(std::abs(original.project(sx[i], sy[i]).d), 0.105);
+  const ReferenceLine smooth(sx, sy);
+  const double s_mid = smooth.project(R * std::sin(0.25 * kPi), R * (1.0 - std::cos(0.25 * kPi))).s;
+  EXPECT_NEAR(smooth.at(s_mid).kappa, 1.0 / R, 0.15 / R);
+}
+
+TEST(SmoothPolyline, ShortOrDisabledOnlyResamples) {
+  std::vector<double> x = {0.0, 3.0}, y = {0.0, 0.0};
+  smoothPolyline(x, y, 20.0, 0.1);
+  ASSERT_EQ(x.size(), 4u);  // resampled every metre
+  EXPECT_NEAR(x[1], 1.0, 1e-9);
+  std::vector<double> zx = {0.0, 10.0, 20.0}, zy = {0.0, 1.0, 0.0};
+  smoothPolyline(zx, zy, 0.0, 0.1);  // no smoothing: the corner is kept
+  EXPECT_GT(zx.size(), 20u);
+  EXPECT_GT(*std::max_element(zy.begin(), zy.end()), 0.9);
 }

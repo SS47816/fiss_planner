@@ -64,6 +64,11 @@ std::vector<Vec2> pointsFromNumpy(const InPoints& a) {
   return out;
 }
 
+std::optional<Vec2> toVec2(const std::optional<std::pair<double, double>>& p) {
+  if (!p) return std::nullopt;
+  return Vec2{p->first, p->second};
+}
+
 const char* rejectionName(Rejection r) {
   switch (r) {
     case Rejection::kOk:
@@ -197,6 +202,14 @@ NB_MODULE(_core, m) {
             return nb::ndarray<nb::numpy, double, nb::shape<-1, 5>>(data, {pts.size(), 5}, owner);
           },
           "ds"_a = 1.0, "Sample the line as an (N, 5) array of [s, x, y, yaw, kappa].");
+  m.def(
+      "smooth_polyline",
+      [](std::vector<double> x, std::vector<double> y, double length, double tolerance, double ds) {
+        smoothPolyline(x, y, length, tolerance, ds);
+        return std::make_pair(x, y);
+      },
+      "x"_a, "y"_a, "length"_a, "tolerance"_a, "ds"_a = 1.0,
+      "Resample a polyline every `ds` and smooth it within `tolerance`; returns (x, y).");
 
   nb::class_<Box2d>(m, "Box2d")
       .def(nb::init<>())
@@ -267,6 +280,7 @@ NB_MODULE(_core, m) {
       .def_rw("lane_id", &LaneBand::lane_id)
       .def_rw("change_allowed", &LaneBand::change_allowed)
       .def_rw("extra_cost", &LaneBand::extra_cost)
+      .def_rw("urgency", &LaneBand::urgency)
       .def_rw("speed_limit", &LaneBand::speed_limit)
       .def_rw("center", &LaneBand::center)
       .def_rw("left", &LaneBand::left)
@@ -585,9 +599,12 @@ NB_MODULE(_core, m) {
       .def_rw("lookahead", &RouteCorridorConfig::lookahead)
       .def_rw("lookbehind", &RouteCorridorConfig::lookbehind)
       .def_rw("station_ds", &RouteCorridorConfig::station_ds)
+      .def_rw("smoothing_length", &RouteCorridorConfig::smoothing_length)
+      .def_rw("smoothing_tolerance", &RouteCorridorConfig::smoothing_tolerance)
       .def_rw("max_adjacent_lanes", &RouteCorridorConfig::max_adjacent_lanes)
       .def_rw("w_route_urgency", &RouteCorridorConfig::w_route_urgency)
-      .def_rw("urgency_distance", &RouteCorridorConfig::urgency_distance);
+      .def_rw("urgency_distance", &RouteCorridorConfig::urgency_distance)
+      .def_rw("urgency_time", &RouteCorridorConfig::urgency_time);
 
   nb::class_<RouteCorridor>(m, "RouteCorridor")
       .def_ro("reference", &RouteCorridor::reference)
@@ -597,8 +614,15 @@ NB_MODULE(_core, m) {
       .def_ro("ego_s", &RouteCorridor::ego_s)
       .def_ro("speed_limit", &RouteCorridor::speed_limit)
       .def_ro("stop_lines", &RouteCorridor::stop_lines);
-  m.def("build_route_corridor", &buildRouteCorridor, "map"_a, "route"_a, "ego"_a,
-        "config"_a = RouteCorridorConfig{}, "previous_ego_lane"_a = -1);
+  m.def(
+      "build_route_corridor",
+      [](const RoadMap& map, const std::vector<int>& route, const EgoState& ego,
+         const RouteCorridorConfig& cfg, int previous_ego_lane,
+         std::optional<std::pair<double, double>> goal) {
+        return buildRouteCorridor(map, route, ego, cfg, previous_ego_lane, toVec2(goal));
+      },
+      "map"_a, "route"_a, "ego"_a, "config"_a = RouteCorridorConfig{}, "previous_ego_lane"_a = -1,
+      "goal"_a = nb::none());
 
   // --- pipeline ------------------------------------------------------------
   nb::class_<StitchingConfig>(m, "StitchingConfig")
@@ -715,10 +739,13 @@ NB_MODULE(_core, m) {
            "vehicle"_a = VehicleParams{})
       .def(
           "set_map",
-          [](LocalPlanner& lp, const RoadMap& map, std::vector<int> route) {
-            lp.setMap(std::make_shared<RoadMap>(map), std::move(route));
+          [](LocalPlanner& lp, const RoadMap& map, std::vector<int> route,
+             std::optional<std::pair<double, double>> goal) {
+            lp.setMap(std::make_shared<RoadMap>(map), std::move(route), toVec2(goal));
           },
-          "map"_a, "route"_a = std::vector<int>{})
+          "map"_a, "route"_a = std::vector<int>{}, "goal"_a = nb::none(),
+          "Plan along `route` (lane ids in driving order); `goal` (x, y) in the last route lane is where "
+          "its lane changes must be done.")
       .def("set_reference_path", &LocalPlanner::setReferencePath, "x"_a, "y"_a)
       .def("request_config", &LocalPlanner::requestConfig, "config"_a)
       .def("request_planner_type", &LocalPlanner::requestPlannerType, "type"_a)
