@@ -1,6 +1,6 @@
 [workspace]
 name = "fiss_planner"
-version = "1.0.0"
+version = "1.1.0"
 description = "Sampling-based Frenet trajectory planners (FOP, FISS, FISS+) with ROS 1/2 wrappers and benchmarks"
 authors = ["Shuo Sun <ss1057532022@gmail.com>"]
 channels = ["conda-forge"]

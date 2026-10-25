@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "fiss-planner"
-version = "1.0.0"
+version = "1.1.0"
 description = "FISS and FISS+: Fast Iterative Search and Sampling trajectory planners for autonomous driving, with FOP baselines"
 readme = "README.md"
 requires-python = ">=3.9"

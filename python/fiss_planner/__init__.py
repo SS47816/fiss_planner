@@ -14,7 +14,7 @@ package re-exports it and adds dataset/simulator adapters and benchmarks::
 from ._core import *  # noqa: F401,F403
 from ._core import PlannerConfig, PlannerType, planner_type_from_string
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 
 def make_config(planner: "str | PlannerType" = "fiss_plus", **sampling) -> PlannerConfig:

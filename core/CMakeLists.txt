@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(fiss_planner VERSION 1.0.0 LANGUAGES CXX)
+project(fiss_planner VERSION 1.1.0 LANGUAGES CXX)
 
 option(FISS_PLANNER_BUILD_TESTS "Build unit tests" OFF)
 option(FISS_PLANNER_BUILD_BENCHMARKS "Build micro-benchmarks" OFF)

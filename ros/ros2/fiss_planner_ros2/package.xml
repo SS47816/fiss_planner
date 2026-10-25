@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>fiss_planner_ros2</name>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
   <description>ROS 2 local planner (FOP, FOP+, FISS, FISS+) and MPC/Stanley controller nodes.</description>
   <maintainer email="ss1057532022@gmail.com">Shuo Sun</maintainer>
   <license>Apache-2.0</license>
