@@ -35,7 +35,7 @@
   <a href="https://colab.research.google.com/github/SS47816/fiss_planner/blob/main/examples/quickstart.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab"/></a>
 </p>
 
-> **News — v1.0.0 (October 2026).** FISS, FISS+ and the FOP baselines are now one project, here: a C++17 core with `pip install fiss-planner`, ROS 2 / ROS 1 nodes and CARLA / CommonRoad / Lanelet2 support. It continues the former `frenet_planner` (`frenet_optimal_planner`) and `fiss_plus_planner` repositories. [Release notes](https://github.com/SS47816/fiss_planner/releases/tag/v1.0.0) · [Discussions](https://github.com/SS47816/fiss_planner/discussions)
+> **News — v1.0.0 (October 2026).** FISS, FISS+ and the FOP baselines are now one project, here: a C++17 core with `pip install fiss-planner`, ROS 2 / ROS 1 nodes and CARLA / CommonRoad / Lanelet2 support. It continues the former `frenet_planner` (`frenet_optimal_planner`) and `fiss_plus_planner` repositories. [Announcement](https://github.com/SS47816/fiss_planner/discussions/7) · [Release notes](https://github.com/SS47816/fiss_planner/releases/tag/v1.0.0)
 
 ## Why FISS Planner
 
