@@ -45,7 +45,7 @@
   - plans real lane changes using each neighbouring lane's own geometry;
   - only changes lanes where that's legal;
   - caps speed by the speed limit and road curvature;
-  - adds a growing cost as the end of the route's lane approaches;
+  - counts the lane changes the route still needs and makes them in time for the goal, earlier when more are needed;
   - stops at red lights.
 - **Keeps its distance.**
   - Follows slower traffic at a set time headway, and overtakes when a neighbouring lane is free.
@@ -134,19 +134,20 @@ The code as published with the papers is kept at tag [`paper-ral2022`](https://g
 
 | Planner | Success | Collision | Plan time (mean) | Trajectories per cycle |
 |---|---:|---:|---:|---:|
-| `fop` | 70.7 % | 2.1 % | 8.7 ms | 205 |
-| `fop_plus` | 70.7 % | 2.1 % | 1.1 ms | 205 generated · 12 validated |
-| `fiss` | 69.3 % | **1.4 %** | **0.6 ms** | **18** |
-| `fiss_plus` | 69.6 % | **1.4 %** | 0.8 ms | 43 |
+| `fop` | 75.7 % | 2.1 % | 8.6 ms | 207 |
+| `fop_plus` | 75.7 % | 2.1 % | 1.1 ms | 207 generated · 12 validated |
+| `fiss` | 75.0 % | **1.8 %** | **0.5 ms** | **17** |
+| `fiss_plus` | 74.6 % | 2.5 % | 0.8 ms | 42 |
 
-Keeping distance cuts the time spent below 1 s of headway to under a third and nearly halves the runs
-that come within 0.5 m of another road user, at the same collision rate. With predictions from the
-current state only, map-aware lane-following prediction succeeds in 65.0 % against 62.5 % for constant
-velocity, with a fifth fewer collisions.
+Keeping distance cuts the time spent below 1 s of headway to about a quarter and halves the runs that
+come within 0.5 m of another road user. In the replayed logs it costs success, because recorded
+traffic does not open the gaps it asks for. With predictions from the current state only, map-aware
+lane-following prediction succeeds in 69.3 % against 67.5 % for constant velocity, with fewer
+collisions.
 
 **CARLA 0.9.16, closed loop.**
-- **Runs:** 40 runs, all collision-free: lead vehicle, parked car, scripted cut-in and dense traffic, with every planner and both controllers.
-- **Dense traffic, ten seeds:** no collisions, 0.06 s per run below 1 s of headway, and no stops for passing traffic. 97.2 % of cycles are planned: 99.5 % in the nine runs without a traffic jam.
+- **Runs:** 40 runs without a collision registered by CARLA: lead vehicle, parked car, scripted cut-in and dense traffic, with every planner and both controllers. The scripted cut-in is the tightest: in four of its eight runs the boxes touch as the car merges alongside.
+- **Dense traffic, ten seeds:** no collisions, 0.24 s per run below 1 s of headway, and no stops for passing traffic. 97.2 % of cycles are planned: 99.8 % in the eight runs without a jam.
 - **Planning time:** 0.1–0.7 ms (FISS/FISS+).
 - **Tracking:** MPC lateral error 1–2 cm RMS.
 
