@@ -37,6 +37,7 @@ class FissAgent(AutonomousAgent):
     map_radius = 80.0  # [m] lanes this close to the route are mapped
     obstacle_range = 80.0  # [m]
     plan_every = 2  # ticks (20 Hz control, 10 Hz planning)
+    mpc_min_speed = 1.5  # [m/s] below this the Stanley/PID controller tracks the plan
 
     def setup(self, path_to_conf_file):
         self.track = Track.SENSORS
@@ -75,6 +76,9 @@ class FissAgent(AutonomousAgent):
         goal = adapter.to_planner(self._route[-1].location.x, self._route[-1].location.y)
         self._lp.set_map(self._road, route, goal[:2])
         self._ctrl = fp.make_controller("mpc", vehicle)
+        # The kinematic MPC degenerates near standstill (steering has no effect there):
+        # pulling away and creeping use Stanley steering and PID speed control.
+        self._slow_ctrl = fp.make_controller("stanley_pid", vehicle)
         self._actuation = Actuation(0.05)
         self._world = world
 
@@ -104,9 +108,13 @@ class FissAgent(AutonomousAgent):
         self._tick += 1
         if self._traj is None:
             return carla.VehicleControl(brake=1.0)
-        cmd = self._ctrl.compute(ego_s, self._traj, t - self._traj_t0)
+        ctrl = self._ctrl if ego_s.v >= self.mpc_min_speed else self._slow_ctrl
+        cmd = ctrl.compute(ego_s, self._traj, t - self._traj_t0)
         v_ref = self._traj.sample(t - self._traj_t0 + 0.3).v
-        return self._actuation.control(cmd, v_ref, ego_s.v, self._vehicle.max_steer)
+        v_ahead = max(self._traj.sample(t - self._traj_t0 + h).v for h in (0.3, 0.6, 1.0))
+        control = self._actuation.control(cmd, v_ref, ego_s.v, self._vehicle.max_steer, v_ahead)
+        self._last = (cmd.accel, cmd.steer, v_ref, control.throttle, control.brake, control.steer)
+        return control
 
     def _trace(self, t, ego_s, out, obs) -> None:
         """Append this cycle to $FISS_B2D_TRACE/<town>_<start>.jsonl (debugging)."""
@@ -120,7 +128,17 @@ class FissAgent(AutonomousAgent):
             route = [adapter.to_planner(tf.location.x, tf.location.y)[:2] for tf in self._route]
             lanes = {i: self._road.lane(i).centerline.tolist() for i in self._road.lane_ids()}
             with open(self._trace_path, "w") as f:
-                f.write(json.dumps({"route": route, "lanes": lanes}) + "\n")
+                v = self._vehicle
+                vehicle = {
+                    k: getattr(v, k)
+                    for k in ("length", "width", "wheelbase", "rear_axle_to_center", "max_steer")
+                }
+                stops = [
+                    [sl.id, sl.lane_id, sl.s, self._road.lane(sl.lane_id).length()]
+                    for sl in self._road.stop_lines
+                ]
+                header = {"route": route, "lanes": lanes, "vehicle": vehicle, "stop_lines": stops}
+                f.write(json.dumps(header) + "\n")
         tr = out.trajectory
         row = {
             "t": t,
@@ -135,6 +153,7 @@ class FissAgent(AutonomousAgent):
             "lead": [out.stats.lead.id, out.stats.lead.gap],
             "blocking": out.stats.blocking_id,
             "red": [sid for sid, tl in self._lights.items() if tl.get_state() in _STOP_STATES],
+            "control": list(getattr(self, "_last", ())),
             "types": {
                 o.id: getattr(self._world.get_actor(o.id), "type_id", "?")
                 for o in obs

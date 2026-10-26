@@ -172,8 +172,14 @@ def vehicle_params(vehicle) -> fp.VehicleParams:
         front = 0.5 * (proj[0] + proj[1])
         rear = 0.5 * (proj[2] + proj[3])
         center = vehicle.bounding_box.location.x
-        v.wheelbase = max(1.5, front - rear)
-        v.rear_axle_to_center = center - rear
+        # Right after spawning, wheel positions can be stale: keep only a
+        # consistent measurement, else axles symmetric about the center.
+        wheelbase, rear_to_center = front - rear, center - rear
+        if 1.5 <= wheelbase <= v.length and 0.0 <= rear_to_center <= 0.5 * v.length:
+            v.wheelbase, v.rear_axle_to_center = wheelbase, rear_to_center
+        else:
+            v.wheelbase = 0.58 * v.length
+            v.rear_axle_to_center = 0.5 * v.wheelbase
         v.max_steer = math.radians(max(w.max_steer_angle for w in wheels[:2]))
     return v
 

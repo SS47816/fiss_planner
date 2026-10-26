@@ -225,10 +225,12 @@ class Actuation:
         self.dt, self.k_ff, self.kp, self.ki = dt, k_ff, kp, ki
         self.integral = 0.0
 
-    def apply(self, ego, cmd, v_ref: float, v: float, max_steer: float) -> None:
-        ego.apply_control(self.control(cmd, v_ref, v, max_steer))
+    def apply(self, ego, cmd, v_ref: float, v: float, max_steer: float, v_ahead: float | None = None) -> None:
+        ego.apply_control(self.control(cmd, v_ref, v, max_steer, v_ahead))
 
-    def control(self, cmd, v_ref: float, v: float, max_steer: float):
+    def control(self, cmd, v_ref: float, v: float, max_steer: float, v_ahead: float | None = None):
+        """`v_ahead`: highest planned speed over the next second (default v_ref);
+        the brakes hold the vehicle only while the plan stays (almost) stopped."""
         import carla
 
         err = v_ref - v
@@ -236,7 +238,7 @@ class Actuation:
         u = self.k_ff * cmd.accel + self.kp * err + self.ki * self.integral
         ctrl = carla.VehicleControl()
         ctrl.steer = float(np.clip(-cmd.steer / max_steer, -1.0, 1.0))  # CARLA steer is clockwise-positive
-        if v_ref < 0.1 and v < 0.5:
+        if (v_ref if v_ahead is None else v_ahead) < 0.1 and v < 0.5:
             ctrl.brake, self.integral = 0.5, 0.0
         elif u >= 0.0:
             ctrl.throttle = float(np.clip(u, 0.0, 0.8))
@@ -440,7 +442,10 @@ def run(
                 ex, ey = ego_s.x - ref.x, ego_s.y - ref.y
                 lat_err.append(-ex * math.sin(ref.yaw) + ey * math.cos(ref.yaw))
                 lon_err.append(ex * math.cos(ref.yaw) + ey * math.sin(ref.yaw))
-                actuation.apply(ego, cmd, traj.sample(t - traj_t0 + 0.3).v, ego_s.v, vehicle.max_steer)
+                v_ahead = max(traj.sample(t - traj_t0 + h).v for h in (0.3, 0.6, 1.0))
+                actuation.apply(
+                    ego, cmd, traj.sample(t - traj_t0 + 0.3).v, ego_s.v, vehicle.max_steer, v_ahead
+                )
             world.tick()
             if hooks is not None:
                 hooks.on_tick(t, ego_s, out, world, obs)
