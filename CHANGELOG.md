@@ -50,6 +50,11 @@ profile per benchmark.
   the profile only when given. `--config` is an alias of `--profile`.
 
 ### Integrations
+- nuPlan: `fiss_planner.nuplan.FissPlanner`, a nuPlan planner on the map around the ego along the
+  mission's roadblocks (corrected to start at the ego and bridged where they are not connected),
+  with red lights as stop lines and tracked objects as obstacles; profile `nuplan`, pixi environment
+  `nuplan`, development split `mini_dev14` and scripts in `benchmarks/nuplan/`.
+- The CARLA environment uses CARLA 0.9.15 (as Bench2Drive) with Python 3.10.
 - The ROS 1/2 nodes pass the goal pose to the planner; the CARLA runner passes the route's end.
 - CommonRoad benchmark: the planner gets the goal region as its destination, and the target speed
   aims for the point of the region the ego reaches in the middle of the time window.

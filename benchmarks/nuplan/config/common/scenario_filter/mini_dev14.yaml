@@ -1,0 +1,81 @@
+# Development split for tuning: the Val14 scenario types and filter settings on the 44
+# nuPlan-mini logs from the train split (the mini logs from the val and test splits are left out,
+# so the split shares no log with Val14 or Test14).
+_target_: nuplan.planning.scenario_builder.scenario_filter.ScenarioFilter
+_convert_: 'all'
+
+scenario_types:
+  - starting_left_turn
+  - starting_right_turn
+  - starting_straight_traffic_light_intersection_traversal
+  - stopping_with_lead
+  - high_lateral_acceleration
+  - high_magnitude_speed
+  - low_magnitude_speed
+  - traversing_pickup_dropoff
+  - waiting_for_pedestrian_to_cross
+  - behind_long_vehicle
+  - stationary_in_traffic
+  - near_multiple_vehicles
+  - changing_lane
+  - following_lane_with_lead
+
+scenario_tokens: null
+log_names:
+  - '2021.05.12.22.00.38_veh-35_01008_01518'
+  - '2021.05.12.22.28.35_veh-35_00620_01164'
+  - '2021.05.12.23.36.44_veh-35_00152_00504'
+  - '2021.05.12.23.36.44_veh-35_01133_01535'
+  - '2021.05.12.23.36.44_veh-35_02035_02387'
+  - '2021.06.09.11.54.15_veh-12_04366_04810'
+  - '2021.06.09.12.39.51_veh-26_01943_02303'
+  - '2021.06.09.12.39.51_veh-26_05620_06003'
+  - '2021.06.09.14.03.17_veh-12_02584_02970'
+  - '2021.06.09.14.58.55_veh-35_01095_01484'
+  - '2021.06.09.14.58.55_veh-35_01894_02311'
+  - '2021.06.09.17.23.18_veh-38_00773_01140'
+  - '2021.06.09.17.23.18_veh-38_02526_03027'
+  - '2021.06.09.17.37.09_veh-12_00404_00864'
+  - '2021.06.14.16.32.09_veh-35_05038_05402'
+  - '2021.06.14.16.48.02_veh-12_04057_04438'
+  - '2021.06.14.16.48.02_veh-12_04978_05337'
+  - '2021.06.14.17.26.26_veh-38_04544_04920'
+  - '2021.06.14.18.33.41_veh-35_03901_04264'
+  - '2021.06.14.18.42.45_veh-12_03445_03902'
+  - '2021.06.14.19.22.11_veh-38_01480_01860'
+  - '2021.06.23.15.56.12_veh-16_00839_01285'
+  - '2021.06.23.16.54.19_veh-35_00808_01256'
+  - '2021.06.23.17.31.36_veh-16_00016_00377'
+  - '2021.06.23.20.43.31_veh-16_03607_04007'
+  - '2021.07.09.17.06.37_veh-35_00258_00748'
+  - '2021.07.09.20.59.12_veh-38_01208_01692'
+  - '2021.07.16.00.51.05_veh-17_01352_01901'
+  - '2021.07.16.18.06.21_veh-38_03231_03712'
+  - '2021.07.16.18.06.21_veh-38_04471_04922'
+  - '2021.07.16.18.06.21_veh-38_04933_05307'
+  - '2021.07.16.18.19.22_veh-35_00440_00858'
+  - '2021.07.16.20.45.29_veh-35_00600_01084'
+  - '2021.07.16.20.45.29_veh-35_01095_01486'
+  - '2021.08.17.16.57.11_veh-08_01200_01636'
+  - '2021.08.17.17.17.01_veh-45_02314_02798'
+  - '2021.08.17.18.54.02_veh-45_00665_01065'
+  - '2021.10.01.19.16.42_veh-28_02011_02410'
+  - '2021.10.01.19.16.42_veh-28_03307_03808'
+  - '2021.10.06.17.43.07_veh-28_00508_00877'
+  - '2021.10.11.02.57.41_veh-50_00352_00535'
+  - '2021.10.11.02.57.41_veh-50_01522_02088'
+  - '2021.10.11.07.12.18_veh-50_00211_00304'
+  - '2021.10.11.08.31.07_veh-50_01750_01948'
+map_names: null
+
+num_scenarios_per_type: 10
+limit_total_scenarios: null
+timestamp_threshold_s: 15
+ego_displacement_minimum_m: null
+ego_start_speed_threshold: null
+ego_stop_speed_threshold: null
+speed_noise_tolerance: null
+
+expand_scenarios: false
+remove_invalid_goals: true
+shuffle: false

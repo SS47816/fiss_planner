@@ -1,0 +1,8 @@
+fiss_planner:
+  _target_: fiss_planner.nuplan.planner.FissPlanner
+  _convert_: 'all'
+  profile: nuplan            # fiss_planner.profiles name or YAML file
+  planner: null              # overrides the profile's planner type (fop, fop_plus, fiss, fiss_plus)
+  prediction: lane_following # or constant_velocity
+  map_radius: 200.0          # lanes within this distance of the start are loaded, besides the route's [m]
+  obstacle_range: 100.0      # objects farther from the ego are ignored [m]

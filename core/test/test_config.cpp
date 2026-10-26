@@ -154,7 +154,7 @@ TEST(LocalConfig, ShippedPresetsAndProfilesLoad) {
     EXPECT_NO_THROW(loadLocalPlannerConfig(std::string(FISS_PLANNER_CONFIG_DIR) + "/" + name + ".yaml"))
         << name;
   }
-  for (const char* name : {"commonroad", "carla_scenarios"}) {
+  for (const char* name : {"commonroad", "carla_scenarios", "nuplan"}) {
     const std::string path = std::string(FISS_PLANNER_PROFILE_DIR) + "/" + name + ".yaml";
     LocalPlannerConfig cfg;
     EXPECT_NO_THROW(cfg = loadLocalPlannerConfig(path)) << name;

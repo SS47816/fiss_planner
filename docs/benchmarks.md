@@ -15,6 +15,7 @@ split is run once per release.
 |---|---|---|---|---|
 | CommonRoad | `commonroad` | `benchmarks/commonroad/dev_set.txt` (100 hand-crafted) | `check_set.txt` (103 hand-crafted) | `bench_set.txt` (280) |
 | CARLA scenarios | `carla_scenarios` | – | – | lead vehicle, parked car, cut-in; traffic seeds 0–9 |
+| nuPlan | `nuplan` | `mini_dev14` (Val14 filter on 44 mini logs of the train split) | – | Val14, Test14-hard |
 
 The CommonRoad splits are disjoint, and the benchmark reads them directly
 (`--scenarios benchmarks/commonroad/dev_set.txt`). Tuning uses Optuna (TPE) over a search space

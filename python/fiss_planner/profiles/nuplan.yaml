@@ -1,0 +1,96 @@
+# nuPlan closed loop (fiss_planner.nuplan.FissPlanner): CLS-NR / CLS-R, 10 Hz, LQR tracking.
+# Log replay (NR) or IDM agents (R) behind the ego do not count as the ego's fault, as in nuPlan's
+# at-fault collision metric, so followers in the ego's lane are left to keep their distance.
+desired_speed: 15.0  # [m/s] where a lane has no speed limit
+use_speed_limit: true
+use_curvature_speed_limit: true
+emergency_decel: 0.0
+degraded_horizon: 2.5
+envelope_retry_weight: 1000.0
+recovery_decel: 2.0
+planner:
+  type: fiss_plus
+  num_threads: 1
+  keep_candidates: false
+sampling:
+  num_width: 5
+  num_speed: 5
+  num_t: 5
+  min_t: 3.0
+  max_t: 5.0
+  dt: 0.1
+  min_speed: 0.0
+  lane_margin: 0.15
+  follow_lead: true
+cost:
+  w_time: 1.0
+  w_speed: 1.0
+  w_accel: 0.1
+  w_jerk: 0.1
+  w_lateral: 2.0
+  w_lane_change: 5.0
+  w_heuristic: 1.0
+  w_headway: 10.0
+  desired_gap: 3.0
+  desired_time_headway: 1.5
+  w_ttc: 5.0
+  desired_ttc: 4.0
+  w_clearance: 5.0
+  desired_clearance: 1.0
+  follow_time: 3.0
+constraints:
+  check_curvature: true
+  check_lat_accel: true
+  check_road_bounds: true
+  curvature_check_min_speed: 1.0
+collision:
+  margin_lon: 0.5
+  margin_lat: 0.3
+  stride: 1
+  ignore_rear_in_lane: true  # followers keep their distance
+safety:
+  enabled: true
+  min_gap: 2.0
+  min_time_headway: 0.3
+  min_ttc: 1.5
+  reaction_time: 0.5
+  crossing_time_gap: 0.75
+fiss_plus:
+  refine: true
+  max_refine_iters: 3
+  decay: 0.5
+  time_budget: 0.0
+route:
+  lookahead: 150.0
+  lookbehind: 20.0
+  station_ds: 1.0
+  smoothing_length: 20.0
+  smoothing_tolerance: 0.1
+  max_adjacent_lanes: 1
+  w_route_urgency: 10.0
+  urgency_distance: 80.0
+  urgency_time: 10.0
+stitching:
+  enabled: true
+  latency: 0.0
+  max_position_error: 1.0
+  max_heading_error: 0.3
+path:
+  lane_width: 3.5
+  num_left_lanes: 1
+  num_right_lanes: 1
+  allow_left: true
+  allow_right: true
+smoother:
+  enabled: false
+  margin_lat: 0.3
+  margin_lon: 1.0
+  w_lat_ref: 0.5
+  w_lat_target: 1.0
+  w_lat_accel: 1.0
+  w_lat_jerk: 2.0
+  w_lon_ref: 0.05
+  w_lon_speed_ref: 1.0
+  w_lon_speed: 0.1
+  w_lon_accel: 1.0
+  w_lon_jerk: 2.0
