@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0 — 2026-10-26
+## Unreleased
 
 Lane changes planned along the route, following and stopping behind the vehicle ahead, a safety
 envelope that also guides the fallbacks, and smooth reference lines on noisy maps.
