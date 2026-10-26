@@ -10,6 +10,10 @@ cycles.
 | `ros2 param set /fiss_planner planner.type fiss` | `rosrun dynamic_reconfigure dynparam set /fiss_planner planner_type fiss` |
 | components `PlannerNode`, `ControllerNode` | nodes `planner_node`, `controller_node` |
 
+The `config_file` parameter takes a YAML file in the core format (see
+[Python](python.md#configuration-files-and-profiles)): a preset from `configs/` or a profile from
+`python/fiss_planner/profiles/`. ROS parameters override its values.
+
 ## Inputs and outputs
 
 | Topic | Type | |

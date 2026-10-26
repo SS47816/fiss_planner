@@ -53,7 +53,24 @@ struct LocalPlannerConfig {
   double recovery_decel = 2.0;
   bool use_speed_limit = true;            ///< cap at the ego lane's speed limit
   bool use_curvature_speed_limit = true;  ///< cap at sqrt(max_lat_accel / kappa) ahead
+
+  /// Throws std::invalid_argument describing the first invalid field.
+  void validate() const;
 };
+
+/// Load a LocalPlannerConfig from YAML. The keys follow the struct: the
+/// PlannerConfig sections (planner, sampling, cost, ... as in
+/// loadPlannerConfig), the sections route, stitching, path and smoother, and
+/// top-level keys for the scalars (desired_speed, degraded_horizon, ...).
+/// Missing keys keep their value in `base`, a `vehicle` section overrides the
+/// fields of `*vehicle` (if given) and unknown keys are rejected.
+LocalPlannerConfig loadLocalPlannerConfig(const std::string& yaml_path, VehicleParams* vehicle = nullptr,
+                                          const LocalPlannerConfig& base = {});
+LocalPlannerConfig parseLocalPlannerConfig(const std::string& yaml_text, VehicleParams* vehicle = nullptr,
+                                           const LocalPlannerConfig& base = {});
+/// Every field of `config` (and of `vehicle`, if given) in the format above;
+/// parseLocalPlannerConfig reads it back exactly.
+std::string toYaml(const LocalPlannerConfig& config, const VehicleParams* vehicle = nullptr);
 
 struct LocalPlanOutput {
   bool success = false;    ///< a new trajectory was planned this cycle

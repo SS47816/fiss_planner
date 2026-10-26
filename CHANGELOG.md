@@ -3,7 +3,8 @@
 ## Unreleased
 
 Lane changes planned along the route, following and stopping behind the vehicle ahead, a safety
-envelope that also guides the fallbacks, and smooth reference lines on noisy maps.
+envelope that also guides the fallbacks, smooth reference lines on noisy maps, and a tuned planner
+profile per benchmark.
 
 ### Planning
 - Route urgency counts lane changes along every lane band. They fall due where a route lane leaves
@@ -31,6 +32,22 @@ envelope that also guides the fallbacks, and smooth reference lines on noisy map
 - Standing still never breaches the envelope's gap floor. Below 1 m/s, plans start with at most the
   deceleration `3 v / max_t`, candidates may not crab (more than 45° off the lane), and samples
   slower than 0.05 m/s keep their heading.
+
+### Configuration
+- The whole `LocalPlannerConfig` loads from YAML (`loadLocalPlannerConfig` /
+  `load_local_planner_config`, `parseLocalPlannerConfig`). Keys are named after the fields, as the
+  ROS 2 parameters are, and settings missing from the file come from a base configuration.
+  `toYaml` / `to_yaml` writes every setting so that it reads back exactly, and
+  `LocalPlannerConfig::validate` checks the values.
+- Planner profiles, one per benchmark (`fiss_planner.profiles`: `commonroad`, `carla_scenarios`),
+  pin every setting. The CommonRoad benchmark and the CARLA runner take `--profile` and record the
+  profile and a hash of the resolved settings with every result. The ROS 1/2 `config_file`
+  accepts profiles.
+- Benchmark splits are listing files (`benchmarks/commonroad/dev_set.txt`, `check_set.txt`,
+  `bench_set.txt`), read by `--scenarios`. `benchmarks/tune.py` tunes a profile with Optuna on a
+  development split, scores it on a check split, and refuses test splits.
+- CommonRoad benchmark: `--samples`, `--adjacent-lanes` and `--smoother` / `--no-smoother` override
+  the profile only when given. `--config` is an alias of `--profile`.
 
 ### Integrations
 - The ROS 1/2 nodes pass the goal pose to the planner; the CARLA runner passes the route's end.

@@ -53,6 +53,7 @@ pillow = "*"
 tqdm = "*"
 tabulate = "*"
 pyyaml = "*"
+optuna = ">=4.0"
 
 [feature.bench.pypi-dependencies]
 commonroad-io = "==2024.3"

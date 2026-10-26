@@ -716,7 +716,37 @@ NB_MODULE(_core, m) {
       .def_rw("envelope_retry_weight", &LocalPlannerConfig::envelope_retry_weight)
       .def_rw("recovery_decel", &LocalPlannerConfig::recovery_decel)
       .def_rw("use_speed_limit", &LocalPlannerConfig::use_speed_limit)
-      .def_rw("use_curvature_speed_limit", &LocalPlannerConfig::use_curvature_speed_limit);
+      .def_rw("use_curvature_speed_limit", &LocalPlannerConfig::use_curvature_speed_limit)
+      .def("validate", &LocalPlannerConfig::validate);
+  m.def(
+      "load_local_planner_config",
+      [](const std::string& path, std::optional<VehicleParams> vehicle,
+         std::optional<LocalPlannerConfig> base) {
+        VehicleParams v = vehicle.value_or(VehicleParams{});
+        auto c = loadLocalPlannerConfig(path, &v, base.value_or(LocalPlannerConfig{}));
+        return std::make_pair(c, v);
+      },
+      "path"_a, "vehicle"_a = nb::none(), "base"_a = nb::none(),
+      "Load (LocalPlannerConfig, VehicleParams) from a YAML file. Keys missing from the file keep "
+      "their values in `base` and `vehicle` (default: the defaults).");
+  m.def(
+      "parse_local_planner_config",
+      [](const std::string& text, std::optional<VehicleParams> vehicle,
+         std::optional<LocalPlannerConfig> base) {
+        VehicleParams v = vehicle.value_or(VehicleParams{});
+        auto c = parseLocalPlannerConfig(text, &v, base.value_or(LocalPlannerConfig{}));
+        return std::make_pair(c, v);
+      },
+      "yaml"_a, "vehicle"_a = nb::none(), "base"_a = nb::none(),
+      "Parse (LocalPlannerConfig, VehicleParams) from a YAML string (see load_local_planner_config).");
+  m.def(
+      "to_yaml",
+      [](const LocalPlannerConfig& c, std::optional<VehicleParams> vehicle) {
+        return vehicle ? toYaml(c, &*vehicle) : toYaml(c);
+      },
+      "config"_a, "vehicle"_a = nb::none(),
+      "Every field of a LocalPlannerConfig (and of `vehicle`, if given) as YAML that "
+      "parse_local_planner_config reads back exactly.");
 
   nb::class_<LocalPlanOutput>(m, "LocalPlanOutput")
       .def_ro("success", &LocalPlanOutput::success)

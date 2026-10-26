@@ -251,10 +251,10 @@ PlannerNode::~PlannerNode() = default;
 
 void PlannerNode::declareParameters() {
   // Base configuration: core defaults, optionally overridden by a YAML file in
-  // the core format; ROS parameters then override individual fields.
+  // the core format (e.g. a profile); ROS parameters then override individual fields.
   LocalPlannerConfig base;
   const std::string config_file = declare_parameter("config_file", std::string(""));
-  if (!config_file.empty()) base.planner = fp::loadPlannerConfig(config_file, &vehicle_);
+  if (!config_file.empty()) base = fp::loadLocalPlannerConfig(config_file, &vehicle_);
 
   map_frame_ = declare_parameter("map_frame", std::string("map"));
   odom_to_center_ = declare_parameter("odom_to_center_offset", 0.0);
@@ -296,7 +296,7 @@ void PlannerNode::declareParameters() {
 LocalPlannerConfig PlannerNode::configFromParameters() const {
   LocalPlannerConfig cfg;
   const std::string config_file = get_parameter("config_file").as_string();
-  if (!config_file.empty()) cfg.planner = fp::loadPlannerConfig(config_file);
+  if (!config_file.empty()) cfg = fp::loadLocalPlannerConfig(config_file);
   for (const auto& b : bindings()) b.set(cfg, get_parameter(b.name));
   cfg.planner.keep_candidates = publish_candidates_;
   return cfg;

@@ -9,8 +9,12 @@ the executed trajectory is checked with the CommonRoad drivability checker
 
 Example::
 
-    python -m fiss_planner.commonroad.benchmark --scenarios data/cache/scenarios/NGSIM \\
-        --planners fop fop_plus fiss fiss_plus --jobs 20 --out results/ngsim.csv
+    python -m fiss_planner.commonroad.benchmark --scenarios benchmarks/commonroad/bench_set.txt \\
+        --planners fop fop_plus fiss fiss_plus --jobs 20 --out results/bench.csv
+
+The planner settings come from a profile (``--profile``, default ``commonroad``;
+see ``fiss_planner.profiles``) and every result row records the profile and a
+hash of the resolved settings.
 """
 
 from __future__ import annotations
@@ -34,47 +38,59 @@ PLANNERS = ["fop", "fop_plus", "fiss", "fiss_plus"]
 @dataclasses.dataclass
 class Options:
     planner: str = "fiss_plus"
-    samples: tuple[int, int, int] = (5, 5, 5)
-    adjacent_lanes: int = 1
+    profile: str | None = "commonroad"  # name or YAML path (fiss_planner.profiles); None: core defaults
+    samples: tuple[int, int, int] | None = None  # None: keep the profile's (likewise below)
+    adjacent_lanes: int | None = None
     prediction: str = "ground_truth"
-    config: str | None = None
     min_t: float | None = None
     max_t: float | None = None
     max_steps: int = 600
     vehicle: str = "VW_VANAGON"
     keep_candidates: bool = False
     num_threads: int = 1
-    smoother: bool = False
-    safety_envelope: bool | None = None  # None: keep the (config's) default
+    smoother: bool | None = None
+    safety_envelope: bool | None = None
     proximity_cost: bool | None = None
 
 
-def _make_local_planner(opts: Options, vehicle):
+def make_config(opts: Options, vehicle=None):
+    """(LocalPlannerConfig, VehicleParams): the profile with the options applied.
+    `vehicle` keeps the fields the profile does not set."""
     import fiss_planner as fp
 
-    cfg = fp.LocalPlannerConfig()
-    if opts.config:
-        planner_cfg, _ = fp.load_planner_config(opts.config)
-        cfg.planner = planner_cfg
+    cfg, vehicle = fp.profiles.load(opts.profile, vehicle)
     cfg.planner.type = fp.planner_type_from_string(opts.planner)
-    w, v, t = opts.samples
-    cfg.planner.sampling.num_width = w
-    cfg.planner.sampling.num_speed = v
-    cfg.planner.sampling.num_t = t
+    if opts.samples is not None:
+        w, v, t = opts.samples
+        cfg.planner.sampling.num_width = w
+        cfg.planner.sampling.num_speed = v
+        cfg.planner.sampling.num_t = t
     if opts.min_t is not None:
         cfg.planner.sampling.min_t = opts.min_t
     if opts.max_t is not None:
         cfg.planner.sampling.max_t = opts.max_t
     cfg.planner.keep_candidates = opts.keep_candidates
     cfg.planner.num_threads = opts.num_threads
-    cfg.route.max_adjacent_lanes = opts.adjacent_lanes
-    cfg.smoother.enabled = opts.smoother
+    if opts.adjacent_lanes is not None:
+        cfg.route.max_adjacent_lanes = opts.adjacent_lanes
+    if opts.smoother is not None:
+        cfg.smoother.enabled = opts.smoother
     if opts.safety_envelope is not None:
         cfg.planner.safety.enabled = opts.safety_envelope
     if opts.proximity_cost is False:
         cost = cfg.planner.cost
         cost.w_headway = cost.w_ttc = cost.w_clearance = cost.follow_time = 0.0
-    return fp.LocalPlanner(cfg, vehicle)
+    return cfg, vehicle
+
+
+def _label(opts: Options, cfg=None) -> str:
+    """Planner name, with '+qp' when the QP smoother refines its plans."""
+    if cfg is None:
+        try:
+            cfg, _ = make_config(opts)
+        except Exception:  # noqa: BLE001 - only for labelling rows of failed runs
+            return opts.planner + ("+qp" if opts.smoother else "")
+    return opts.planner + ("+qp" if cfg.smoother.enabled else "")
 
 
 def _goal_speed(problem) -> float | None:
@@ -219,13 +235,19 @@ def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -
 
     from . import adapter
 
-    label = opts.planner + ("+qp" if opts.smoother else "")
-    row: dict = {"scenario": Path(path).stem, "planner": label, "status": "", "error": ""}
+    params = VehicleParameterMapping[opts.vehicle].value
+    cfg, vehicle = make_config(opts, adapter.vehicle_params_from_commonroad(params))
+    row: dict = {
+        "scenario": Path(path).stem,
+        "planner": _label(opts, cfg),
+        "profile": fp.profiles.name(opts.profile),
+        "config_hash": fp.profiles.config_hash(cfg, vehicle),
+        "status": "",
+        "error": "",
+    }
     scenario, problems = CommonRoadFileReader(path).open()
     problem = list(problems.planning_problem_dict.values())[0]
     dt = float(scenario.dt)
-    params = VehicleParameterMapping[opts.vehicle].value
-    vehicle = adapter.vehicle_params_from_commonroad(params)
 
     country = getattr(scenario.scenario_id, "country_id", None)
     try:
@@ -242,8 +264,8 @@ def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -
         route = []
     row["route_lanelets"] = len(route)
 
-    lp = _make_local_planner(opts, vehicle)
-    sampling = lp.config.planner.sampling
+    lp = fp.LocalPlanner(cfg, vehicle)
+    sampling = cfg.planner.sampling
     goal_speed = GoalSpeedPolicy(
         problem,
         float(problem.initial_state.velocity),
@@ -270,7 +292,7 @@ def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -
 
     ego = adapter.ego_state_from_commonroad(problem.initial_state)
     k0 = int(problem.initial_state.time_step)
-    rc = fp.build_route_corridor(road, route, ego)
+    rc = fp.build_route_corridor(road, route, ego, cfg.route)
     if rc is not None and abs(float(getattr(problem.initial_state, "yaw_rate", 0.0) or 0.0)) < 1e-9:
         # Initial states usually carry yaw_rate = 0 even on curves; assume the
         # ego follows its lane's curvature instead of driving straight off it.
@@ -300,7 +322,7 @@ def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -
                 lp.set_stop_line_active(sl_id, active)
         obstacles = adapter.obstacles_at(obstacles_all, k, dt, horizon, opts.prediction, road)
         if reference is None:
-            rc0 = fp.build_route_corridor(road, route, ego)
+            rc0 = fp.build_route_corridor(road, route, ego, cfg.route)
             if rc0 is not None:
                 reference, ego_s = rc0.reference, rc0.ego_s
         elif not reference.empty():
@@ -433,14 +455,18 @@ def run_scenario(path: str, opts: Options, record: bool = False, on_step=None) -
     return row, record_data
 
 
-def _worker(task: tuple[str, Options]) -> dict:
+def run_task(task: tuple[str, Options]) -> dict:
+    """Run one (scenario path, options) task; a failing run gives a row with status 'error'."""
+    import fiss_planner as fp
+
     path, opts = task
     try:
         row, _ = run_scenario(path, opts)
     except Exception as e:  # noqa: BLE001 - one broken scenario must not stop the benchmark
         row = {
             "scenario": Path(path).stem,
-            "planner": opts.planner + ("+qp" if opts.smoother else ""),
+            "planner": _label(opts),
+            "profile": fp.profiles.name(opts.profile),
             "status": "error",
             "error": f"{type(e).__name__}: {e}",
             "trace": traceback.format_exc(limit=3),
@@ -484,12 +510,24 @@ def summarize(rows: list[dict]):
 
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--scenarios", nargs="+", required=True, help="CommonRoad .xml files or directories")
-    ap.add_argument("--planners", nargs="+", default=PLANNERS)
-    ap.add_argument("--samples", nargs=3, type=int, default=[5, 5, 5], metavar=("W", "V", "T"))
     ap.add_argument(
-        "--adjacent-lanes", type=int, default=1, help="lanes sampled on each side (0 = ego lane only)"
+        "--scenarios",
+        nargs="+",
+        required=True,
+        help="CommonRoad .xml files, directories, or .txt listings of files under --scenario-root "
+        "(e.g. benchmarks/commonroad/dev_set.txt)",
     )
+    ap.add_argument("--scenario-root", default="data/cache/scenarios", help="base of paths in .txt listings")
+    ap.add_argument("--planners", nargs="+", default=PLANNERS)
+    ap.add_argument(
+        "--profile",
+        "--config",
+        default="commonroad",
+        help="planner profile: a shipped name (fiss_planner.profiles) or a YAML file; "
+        "the options below override it",
+    )
+    ap.add_argument("--samples", nargs=3, type=int, metavar=("W", "V", "T"))
+    ap.add_argument("--adjacent-lanes", type=int, help="lanes sampled on each side (0 = ego lane only)")
     ap.add_argument(
         "--prediction",
         choices=["ground_truth", "constant_velocity", "lane_following"],
@@ -497,8 +535,9 @@ def main(argv: list[str] | None = None) -> None:
     )
     ap.add_argument("--no-safety-envelope", action="store_true", help="disable the hard gap/TTC envelope")
     ap.add_argument("--no-proximity-cost", action="store_true", help="disable gap costs and car following")
-    ap.add_argument("--config", help="planner YAML config (sampling counts and planner type are overridden)")
-    ap.add_argument("--smoother", action="store_true", help="refine trajectories with the QP smoother")
+    ap.add_argument(
+        "--smoother", action=argparse.BooleanOptionalAction, help="refine trajectories with the QP smoother"
+    )
     ap.add_argument("--min-t", type=float)
     ap.add_argument("--max-t", type=float)
     ap.add_argument(
@@ -512,7 +551,12 @@ def main(argv: list[str] | None = None) -> None:
     files: list[str] = []
     for item in args.scenarios:
         p = Path(item)
-        files += sorted(str(f) for f in p.rglob("*.xml")) if p.is_dir() else [str(p)]
+        if p.is_dir():
+            files += sorted(str(f) for f in p.rglob("*.xml"))
+        elif p.suffix == ".txt":
+            files += [str(Path(args.scenario_root) / rel) for rel in p.read_text().split()]
+        else:
+            files.append(str(p))
     if args.limit:
         rng = np.random.default_rng(args.seed)
         files = sorted(rng.permutation(files)[: args.limit].tolist())
@@ -521,10 +565,10 @@ def main(argv: list[str] | None = None) -> None:
             f,
             Options(
                 planner=pl,
-                samples=tuple(args.samples),
+                profile=args.profile,
+                samples=tuple(args.samples) if args.samples else None,
                 adjacent_lanes=args.adjacent_lanes,
                 prediction=args.prediction,
-                config=args.config,
                 min_t=args.min_t,
                 max_t=args.max_t,
                 smoother=args.smoother,
@@ -543,7 +587,7 @@ def main(argv: list[str] | None = None) -> None:
     rows: list[dict] = []
     t0 = time.time()
     with mp.get_context("spawn").Pool(args.jobs) as pool:
-        for i, row in enumerate(pool.imap_unordered(_worker, tasks, chunksize=1), 1):
+        for i, row in enumerate(pool.imap_unordered(run_task, tasks, chunksize=1), 1):
             rows.append(row)
             if i % 25 == 0 or i == len(tasks):
                 print(f"  {i}/{len(tasks)} done ({time.time() - t0:.0f} s)", file=sys.stderr)

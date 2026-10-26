@@ -40,7 +40,7 @@ class PlannerNode {
     pnh_.param("publish_candidates", publish_candidates_, false);
     std::string config_file;
     pnh_.param<std::string>("config_file", config_file, "");
-    if (!config_file.empty()) base_.planner = fp::loadPlannerConfig(config_file, &vehicle_);
+    if (!config_file.empty()) base_ = fp::loadLocalPlannerConfig(config_file, &vehicle_);
     pnh_.param("vehicle/length", vehicle_.length, vehicle_.length);
     pnh_.param("vehicle/width", vehicle_.width, vehicle_.width);
     pnh_.param("vehicle/wheelbase", vehicle_.wheelbase, vehicle_.wheelbase);

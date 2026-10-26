@@ -11,6 +11,7 @@ package re-exports it and adds dataset/simulator adapters and benchmarks::
     result = planner.plan(fp.FrenetState(s=0.0, s_d=10.0), ref, corridor, obstacles, target_speed=13.0)
 """
 
+from . import profiles  # noqa: F401
 from ._core import *  # noqa: F401,F403
 from ._core import PlannerConfig, PlannerType, planner_type_from_string
 

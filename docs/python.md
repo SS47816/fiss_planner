@@ -47,6 +47,28 @@ lp.request_planner_type(fp.PlannerType.FOP)  # takes effect next cycle
 ends in the destination lane; the optional goal, a point in that lane, is where the route's lane
 changes must be done (see [route urgency](concepts.md#corridor-and-lanes)).
 
+## Configuration files and profiles
+
+Every `LocalPlannerConfig` setting has a YAML key named after its field, the same as the ROS 2
+parameter: the scalars (`desired_speed`, `degraded_horizon`, ...) at the top level, then the
+sections `planner`, `sampling`, `cost`, `constraints`, `collision`, `safety`, `fiss_plus`, `route`,
+`stitching`, `path`, `smoother` and `vehicle`. Missing keys keep their defaults and unknown keys
+raise an error.
+
+```python
+cfg, vehicle = fp.load_local_planner_config("my_config.yaml", vehicle)  # fields not in the file keep their value
+print(fp.to_yaml(cfg))                                                   # every setting; reads back exactly
+```
+
+A *profile* is such a file with every setting pinned, tuned for one benchmark or simulator. The
+shipped profiles are `commonroad` and `carla_scenarios` (see [Benchmarks](benchmarks.md#profiles-splits-and-tuning)):
+
+```python
+cfg, vehicle = fp.profiles.load("carla_scenarios", vehicle)
+cfg, vehicle = fp.profiles.override(cfg, vehicle, {"cost.w_lane_change": 3.0, "desired_speed": 12.0})
+fp.profiles.config_hash(cfg, vehicle)  # fingerprint the benchmarks record with every result
+```
+
 ## Prediction
 
 ```python

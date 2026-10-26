@@ -282,22 +282,25 @@ def run(
     scenario: str,
     planner: str = "fiss_plus",
     controller: str = "mpc",
-    smoother: bool = False,
+    smoother: bool | None = None,
     town: str = "Town04",
     duration: float = 40.0,
     seed: int = 0,
     gif_dir: str | None = None,
     host: str = "localhost",
     port: int = 2000,
-    desired_speed: float = 15.0,
+    desired_speed: float | None = None,
     hooks=None,
     prediction: str = "lane_following",
     configure=None,
+    profile: str | None = "carla_scenarios",
 ) -> Result:
     """Run one scenario. `hooks` (optional, one or a list) get ``on_start(world, ego, vehicle, road)``
     once and ``on_tick(t, ego_state, plan_output, world, obstacles)`` after every simulator tick
     (`obstacles`: those of the last planning cycle); a hook with
-    ``render = True`` keeps CARLA's rendering on (for cameras). `configure` (optional) may edit the
+    ``render = True`` keeps CARLA's rendering on (for cameras). The planner settings come from
+    `profile` (a name in fiss_planner.profiles or a YAML file); `planner`, and `smoother` and
+    `desired_speed` unless None, override it, and `configure` (optional) may edit the
     LocalPlannerConfig before the run."""
     import carla
     from shapely.geometry import Polygon
@@ -320,7 +323,7 @@ def run(
     carla_map = world.get_map()
 
     actors, sensors = [], []
-    result = Result(scenario, planner, controller, smoother)
+    result = Result(scenario, planner, controller, bool(smoother))
     try:
         ego, actors, route_wps = _setup(world, carla_map, scenario, tm, seed)
         if ego is None:
@@ -332,7 +335,7 @@ def run(
         route_xy = np.asarray(
             [adapter.to_planner(w.transform.location.x, w.transform.location.y)[:2] for w in route_wps]
         )
-        vehicle = adapter.vehicle_params(ego)
+        cfg, vehicle = fp.profiles.load(profile, adapter.vehicle_params(ego))
 
         events = {"collisions": 0, "invasions": 0}
         bp = world.get_blueprint_library()
@@ -342,16 +345,17 @@ def run(
         inv.listen(lambda e: events.__setitem__("invasions", events["invasions"] + 1))
         sensors = [col, inv]
 
-        cfg = fp.LocalPlannerConfig()
         cfg.planner.type = fp.planner_type_from_string(planner)
         cfg.planner.keep_candidates = gif_dir is not None or hooks is not None
-        cfg.smoother.enabled = smoother
-        cfg.stitching.latency = 0.05
-        cfg.desired_speed = desired_speed
-        # CARLA traffic reacts to the ego, so followers in its lane keep their distance.
-        cfg.planner.collision.ignore_rear_in_lane = True
+        if smoother is not None:
+            cfg.smoother.enabled = smoother
+        if desired_speed is not None:
+            cfg.desired_speed = desired_speed
         if configure is not None:
             configure(cfg)
+        result.smoother = cfg.smoother.enabled
+        result.extra["profile"] = fp.profiles.name(profile)
+        result.extra["config_hash"] = fp.profiles.config_hash(cfg, vehicle)
         lp = fp.LocalPlanner(cfg, vehicle)
         lp.set_map(road, route, tuple(route_xy[-1]))  # the route's lane changes are due by its end
         ctrl = fp.make_controller(controller, vehicle)
@@ -478,7 +482,7 @@ def run(
         if gif_dir is not None and frames:
             from .render import render_gif
 
-            path = Path(gif_dir) / f"{scenario}_{planner}{'_qp' if smoother else ''}_{controller}.gif"
+            path = Path(gif_dir) / f"{scenario}_{planner}{'_qp' if result.smoother else ''}_{controller}.gif"
             render_gif(frames, road, vehicle, path)
             result.extra["gif"] = str(path)
     finally:
@@ -548,7 +552,14 @@ def main(argv=None) -> None:
     ap.add_argument("--scenario", nargs="+", default=SCENARIOS, choices=SCENARIOS)
     ap.add_argument("--planner", nargs="+", default=["fiss_plus"])
     ap.add_argument("--controller", nargs="+", default=["mpc"], choices=["mpc", "stanley_pid"])
-    ap.add_argument("--smoother", action="store_true")
+    ap.add_argument(
+        "--profile",
+        default="carla_scenarios",
+        help="planner profile: a shipped name (fiss_planner.profiles) or a YAML file",
+    )
+    ap.add_argument(
+        "--smoother", action=argparse.BooleanOptionalAction, help="QP smoother (default: the profile's)"
+    )
     ap.add_argument("--town", default="Town04")
     ap.add_argument("--traffic-town", default="Town04")
     ap.add_argument("--duration", type=float, default=40.0)
@@ -598,6 +609,7 @@ def main(argv=None) -> None:
             port=args.port,
             hooks=hooks,
             prediction=args.prediction,
+            profile=args.profile,
         )
         r.extra["seed"] = seed
         d = r.__dict__

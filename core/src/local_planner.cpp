@@ -88,7 +88,9 @@ void append(Trajectory& head, const Trajectory& tail, double offset) {
 }  // namespace
 
 LocalPlanner::LocalPlanner(const LocalPlannerConfig& config, const VehicleParams& vehicle)
-    : config_(config), vehicle_(vehicle), planner_(makePlanner(config.planner, vehicle)) {}
+    : config_(config), vehicle_(vehicle), planner_(makePlanner(config.planner, vehicle)) {
+  config_.validate();
+}
 
 void LocalPlanner::setMap(std::shared_ptr<const RoadMap> map, std::vector<int> route,
                           std::optional<Vec2> goal) {
@@ -116,7 +118,7 @@ void LocalPlanner::setReferencePath(const std::vector<double>& x, const std::vec
 }
 
 void LocalPlanner::requestConfig(const LocalPlannerConfig& config) {
-  config.planner.validate();
+  config.validate();
   std::lock_guard<std::mutex> lock(pending_mutex_);
   pending_config_ = config;
 }

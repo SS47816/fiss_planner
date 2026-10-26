@@ -132,7 +132,8 @@ struct PlannerConfig {
 };
 
 /// Load a planner (and optionally vehicle) configuration from YAML. Missing
-/// keys keep their defaults; unknown keys are rejected.
+/// keys keep their defaults; unknown keys are rejected. For the full
+/// LocalPlanner configuration see loadLocalPlannerConfig.
 PlannerConfig loadPlannerConfig(const std::string& yaml_path, VehicleParams* vehicle = nullptr);
 PlannerConfig parsePlannerConfig(const std::string& yaml_text, VehicleParams* vehicle = nullptr);
 

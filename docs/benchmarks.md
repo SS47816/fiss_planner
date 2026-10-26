@@ -4,6 +4,30 @@ All numbers were measured on one machine: an Intel Core i9-12900K (24 threads) w
 for CARLA, running Ubuntu 24.04. Each planning cycle runs on a single core.
 Raw per-run results are in [`benchmarks/results/`](https://github.com/SS47816/fiss_planner/tree/main/benchmarks/results).
 
+## Profiles, splits and tuning
+
+Each benchmark runs with its own planner profile (`python/fiss_planner/profiles/`, chosen with
+`--profile`), and every result records the profile and a hash of the resolved settings. A profile is
+tuned only on its benchmark's development split and checked on a second held-out split. The test
+split is run once per release.
+
+| Benchmark | Profile | Tuning split | Check split | Test split |
+|---|---|---|---|---|
+| CommonRoad | `commonroad` | `benchmarks/commonroad/dev_set.txt` (100 hand-crafted) | `check_set.txt` (103 hand-crafted) | `bench_set.txt` (280) |
+| CARLA scenarios | `carla_scenarios` | – | – | lead vehicle, parked car, cut-in; traffic seeds 0–9 |
+
+The CommonRoad splits are disjoint, and the benchmark reads them directly
+(`--scenarios benchmarks/commonroad/dev_set.txt`). Tuning uses Optuna (TPE) over a search space
+declared per benchmark in `benchmarks/tuning/`, and the first trial is the current profile:
+
+```bash
+python benchmarks/tune.py benchmarks/tuning/commonroad.yaml --trials 60 --jobs 16 --out results/tune/commonroad
+```
+
+The tuner writes three things: the best settings as a complete profile with their provenance, a
+table of all trials, and the scores of the current and the best profile on the check split. It
+refuses test splits.
+
 ## CommonRoad, closed loop
 
 **Scenarios.** The set is 280 public scenarios from
@@ -30,7 +54,8 @@ that are not part of the benchmark; they were not tuned on these 280. The time g
 traffic (0.75 s) was chosen on the development set as well. The route urgency (a 10 s ramp per lane
 change), the reference smoothing (20 m, 0.1 m) and the goal point were set a priori and checked on the
 development set and on 103 further hand-crafted scenarios outside the benchmark (zipper merges, highway
-and urban scenes, T-junctions).
+and urban scenes, T-junctions). The two sets are listed in `benchmarks/commonroad/dev_set.txt` and
+`check_set.txt`.
 
 ### Main results
 

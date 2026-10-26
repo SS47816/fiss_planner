@@ -277,7 +277,8 @@ def main(argv=None) -> None:
     ap.add_argument("--controller", default="mpc")
     ap.add_argument("--town", default="Town04")
     ap.add_argument("--duration", type=float, default=30.0)
-    ap.add_argument("--smoother", action="store_true")
+    ap.add_argument("--profile", default="carla_scenarios", help="planner profile (name or YAML file)")
+    ap.add_argument("--smoother", action=argparse.BooleanOptionalAction)
     ap.add_argument("--mp4")
     ap.add_argument("--gif")
     ap.add_argument("--gif-start", type=float, default=0.0, help="seconds skipped at the start of the GIF")
@@ -300,6 +301,7 @@ def main(argv=None) -> None:
         args.duration,
         port=args.port,
         hooks=hooks,
+        profile=args.profile,
     )
     if args.mp4:
         rec.save(args.mp4, None)

@@ -2,7 +2,9 @@
 
 Source: https://gitlab.lrz.de/tum-cps/commonroad-scenarios (commit 2416dc2, 2020a format).
 The 280-scenario benchmark set is listed in bench_set.txt (all NGSIM recordings
-plus 150 hand-crafted scenarios drawn with seed 0).
+plus 150 hand-crafted scenarios drawn with seed 0); the development and check
+splits used for tuning are in dev_set.txt and check_set.txt. The benchmark reads
+the listings directly (--scenarios benchmarks/commonroad/dev_set.txt).
 
     python benchmarks/commonroad/fetch_scenarios.py --out data/cache/scenarios
     python benchmarks/commonroad/fetch_scenarios.py --out data/cache/scenarios \
