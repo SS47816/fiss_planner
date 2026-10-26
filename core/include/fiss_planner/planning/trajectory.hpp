@@ -19,7 +19,8 @@ struct CostTerms {
   double lateral = 0.0;
   double lane_change = 0.0;
   double proximity = 0.0;  ///< headway, time-to-collision and lateral clearance to obstacles
-  double total() const { return time + speed + accel + jerk + lateral + lane_change + proximity; }
+  double road_edge = 0.0;  ///< footprint beyond the road edges
+  double total() const { return time + speed + accel + jerk + lateral + lane_change + proximity + road_edge; }
 };
 
 /// Why a candidate was rejected (or kOk).

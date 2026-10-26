@@ -31,6 +31,10 @@ struct SamplingConfig {
   /// Also try following/stopping candidates behind the vehicle (or stop line)
   /// ahead, ending at a gap and its speed after 1 s, 2 s, ... (Werling et al.).
   bool follow_lead = true;
+  /// Below this start speed [m/s] the lateral motion is planned over the
+  /// distance travelled, d(s), instead of time (Werling et al.), so the
+  /// vehicle moves sideways only as it moves forward. 0 = always d(t).
+  double low_speed = 0.0;
 };
 
 /// Weights of the trajectory cost. Speed, lateral and time terms are evaluated
@@ -66,6 +70,9 @@ struct CostConfig {
   double w_clearance = 5.0;           ///< lateral gap to obstacles alongside
   double desired_clearance = 1.0;     ///< [m]
   double follow_time = 3.0;           ///< [s]; 0 = always score against the desired speed
+  /// Mean squared distance [m^2] the footprint extends beyond the road edges
+  /// along the trajectory (e.g. while recovering from a wide turn). 0 = off.
+  double w_road_edge = 0.0;
 };
 
 struct ConstraintConfig {

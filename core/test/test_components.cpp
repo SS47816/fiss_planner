@@ -190,3 +190,26 @@ TEST(CollisionChecker, DetectsLeadVehicleAndRespectsTiming) {
   EXPECT_TRUE(checker.isCollisionFree(traj, adjacent, checks));
   EXPECT_GT(checks, 0);
 }
+
+TEST(Generate, LowSpeedLateralFollowsTheDistanceDriven) {
+  // From rest, a lateral shift planned over time moves sideways while the car
+  // has barely moved; over the distance driven it keeps the heading in check.
+  Trajectory by_time, by_distance, stay;
+  const FrenetState rest{0.0, 0.0, 0.0, -0.3, 0.0, 0.0};
+  const EndState end{0.0, 3.0, 4.0};
+  generateFrenet(rest, end, 0.1, by_time);
+  generateFrenet(rest, end, 0.1, by_distance, 2.0);
+  double worst_time = 0.0, worst_distance = 0.0;
+  for (size_t i = 1; i < by_time.size(); ++i) {
+    worst_time = std::max(worst_time, std::abs(by_time.d_d[i]) / std::max(by_time.s_d[i], 1e-3));
+    worst_distance =
+        std::max(worst_distance, std::abs(by_distance.d_d[i]) / std::max(by_distance.s_d[i], 1e-3));
+  }
+  EXPECT_GT(worst_time, 0.2);
+  EXPECT_LT(worst_distance, 0.5 * worst_time);
+  EXPECT_NEAR(by_distance.d.back(), 0.0, 1e-6);
+  EXPECT_NEAR(by_distance.d_d.back(), 0.0, 1e-6);
+  // Standing still keeps the offset.
+  generateFrenet(rest, EndState{0.0, 0.0, 3.0}, 0.1, stay, 2.0);
+  for (size_t i = 0; i < stay.size(); ++i) EXPECT_DOUBLE_EQ(stay.d[i], -0.3);
+}

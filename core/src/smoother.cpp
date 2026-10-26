@@ -200,7 +200,7 @@ bool smoothTrajectory(Trajectory& traj, const PlanningInput& input, const Planne
   LateralSample lat_info{out.end.d, out.lane, lane ? input.corridor->center(*lane, out.s.back()) : out.end.d,
                          lane ? lane->extra_cost : 0.0};
   out.cost = CostEvaluator(planner.cost, planner.sampling, vehicle, planner.collision.margin_lat)
-                 .evaluate(out, lat_info, input.target_speed, &frenet);
+                 .evaluate(out, lat_info, input.target_speed, &frenet, input.corridor);
   traj = std::move(out);
   return true;
 }

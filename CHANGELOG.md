@@ -29,6 +29,12 @@ profile per benchmark.
 - The fallback retries keep the safety envelope as a cost (`envelope_retry_weight`,
   `GapEvaluator::breach`): when no candidate keeps it, the plan that breaches it least wins, so a
   close cut-in is met with firm braking.
+- Low-speed lateral planning (`sampling.low_speed`, Werling et al.): below this start speed the
+  lateral motion follows the distance driven, d(s), so the vehicle moves sideways only as it moves
+  forward, and a plan that stands keeps its offset.
+- Road-edge cost (`cost.w_road_edge`): the footprint's distance beyond the road edges along the
+  trajectory, for prompt recovery after a wide turn. The road check holds the footprint's heading
+  below 0.5 m/s, where the Frenet velocity no longer tells the vehicle's orientation.
 - Standing still never breaches the envelope's gap floor. Below 1 m/s, plans start with at most the
   deceleration `3 v / max_t`, candidates may not crab (more than 45° off the lane), and samples
   slower than 0.05 m/s keep their heading.
@@ -55,6 +61,11 @@ profile per benchmark.
   with red lights as stop lines and tracked objects as obstacles; profile `nuplan`, pixi environment
   `nuplan`, development split `mini_dev14` and scripts in `benchmarks/nuplan/`.
 - The CARLA environment uses CARLA 0.9.15 (as Bench2Drive) with Python 3.10.
+- Bench2Drive: `fiss_planner.carla.leaderboard_agent`, a privileged CARLA Leaderboard 2.0 agent
+  (the map around the route, traffic lights as stop lines, actors and static props as obstacles,
+  MPC tracking); profile `bench2drive`, scripts in `benchmarks/bench2drive/`. The CARLA adapter
+  builds lane maps of a region around a route (large towns) and the traffic lights' stop lines.
+- `benchmarks/tune.py` also tunes nuPlan profiles (search space `benchmarks/tuning/nuplan.yaml`).
 - The ROS 1/2 nodes pass the goal pose to the planner; the CARLA runner passes the route's end.
 - CommonRoad benchmark: the planner gets the goal region as its destination, and the target speed
   aims for the point of the region the ego reaches in the middle of the time window.

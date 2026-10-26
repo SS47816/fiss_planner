@@ -215,6 +215,10 @@ features = ["nuplan", "py"]
 # --------------------------------------------------------------------------- #
 [feature.carla.dependencies]
 python = "3.10.*"
+setuptools = "<81"  # pkg_resources, used by the leaderboard
+requests = "*"
+pygame = "*"
+opencv = "*"
 imageio = "*"
 imageio-ffmpeg = "*"
 matplotlib = ">=3.8"
@@ -224,6 +228,16 @@ shapely = ">=2.0"
 
 [feature.carla.pypi-dependencies]
 carla = "==0.9.15"
+# Bench2Drive leaderboard and scenario runner
+py-trees = "==0.8.3"
+dictor = "*"
+xmlschema = "*"
+ephem = "*"
+simple-watchdog-timer = "*"
+pexpect = "*"
+transforms3d = "*"
+tabulate = "*"
+six = "*"
 foxglove-sdk = "==0.29.0"
 mcap = "==1.5.0"
 

@@ -22,6 +22,7 @@ sampling:
   min_speed: 0.0
   lane_margin: 0.15
   follow_lead: true
+  low_speed: 4.0  # [m/s] lateral motion over the distance driven below this speed
 cost:
   w_time: 1.0
   w_speed: 1.0
@@ -38,6 +39,7 @@ cost:
   w_clearance: 5.0
   desired_clearance: 1.0
   follow_time: 3.0
+  w_road_edge: 0.0
 constraints:
   check_curvature: true
   check_lat_accel: true
@@ -73,7 +75,7 @@ route:
 stitching:
   enabled: true
   latency: 0.0
-  max_position_error: 1.0
+  max_position_error: 0.5  # replan from the measured state beyond this tracking error [m]
   max_heading_error: 0.3
 path:
   lane_width: 3.5

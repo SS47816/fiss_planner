@@ -99,8 +99,10 @@ class FissPlanner(AbstractPlanner):
             self._setup(ego)
         t0 = time.perf_counter()
         t_now = ego.time_point.time_s
-        for sl_id, active in adapter.stop_line_states(self._road, current_input.traffic_light_data).items():
+        lights = adapter.stop_line_states(self._road, current_input.traffic_light_data)
+        for sl_id, active in lights.items():
             self._lp.set_stop_line_active(sl_id, active)
+        self._red = [i for i, on in lights.items() if on]
         state = adapter.ego_state(ego)
         horizon = self._cfg.planner.sampling.max_t + 0.5
         obstacles = adapter.obstacles(
@@ -144,6 +146,7 @@ class FissPlanner(AbstractPlanner):
                 f.write(
                     json.dumps(
                         {
+                            "map": self._init.map_api.map_name,
                             "route": self.route,
                             "lanes": lanes,
                             "goal": [self._init.mission_goal.x, self._init.mission_goal.y],
@@ -157,6 +160,12 @@ class FissPlanner(AbstractPlanner):
             "x": state.x,
             "y": state.y,
             "yaw": state.yaw,
+            "a": state.a,
+            "kappa": state.kappa,
+            "stitched": out.stitched,
+            "red": self._red,
+            "virtual": [[o.id, *(lambda b: [b.cx, b.cy])(o.box_at(0.0))] for o in out.virtual_obstacles],
+            "start": [out.start.s, out.start.s_d, out.start.s_dd, out.start.d, out.start.d_d, out.start.d_dd],
             "v": state.v,
             "mode": "E" if out.emergency else "F" if out.fallback else "D" if out.degraded else "P",
             "ego_lane": out.ego_lane,
@@ -167,6 +176,12 @@ class FissPlanner(AbstractPlanner):
             ],
             "rej": {k: v for k, v in out.stats.rejections.items() if v},
             "lead": [out.stats.lead.id, out.stats.lead.gap],
+            "obs_full": [
+                [o.id, o.length, o.width, o.is_static, [[p.t, p.x, p.y, p.yaw, p.v] for p in o.prediction]]
+                for o in obstacles
+            ]
+            if os.environ.get("FISS_NUPLAN_TRACE_OBS")
+            else None,
             "blocking": out.stats.blocking_id,
             "traj": [list(map(float, tr.x))[::5], list(map(float, tr.y))[::5], list(map(float, tr.v))[::5]],
             "obs": [

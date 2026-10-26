@@ -27,17 +27,45 @@ def _lane_key(wp) -> tuple[int, int, int]:
     return (wp.road_id, wp.section_id, wp.lane_id)
 
 
-def road_map_from_carla(carla_map, spacing: float = 2.0):
+def _region_waypoints(carla_map, spacing: float, points: np.ndarray, radius: float) -> list:
+    """Waypoints of the lanes passing within `radius` of `points` (CARLA x, y),
+    walked from the map topology instead of sampling the whole map."""
+
+    def dist(loc) -> float:
+        return float(np.min(np.hypot(points[:, 0] - loc.x, points[:, 1] - loc.y)))
+
+    out, seen = [], set()
+    for a, b in carla_map.get_topology():
+        reach = radius + a.transform.location.distance(b.transform.location)
+        if min(dist(a.transform.location), dist(b.transform.location)) > reach:
+            continue
+        key = (_lane_key(a), round(a.s, 1))
+        if key in seen:
+            continue
+        seen.add(key)
+        lane = [a] + a.next_until_lane_end(spacing)
+        if any(dist(w.transform.location) <= radius for w in lane):
+            out.extend(lane)
+    return out
+
+
+def road_map_from_carla(carla_map, spacing: float = 2.0, region: tuple | None = None):
     """Build a RoadMap from CARLA waypoints.
 
     Every (road, section, lane) of driving type becomes a lane; neighbours are
     the same-direction driving lanes on either side, and lane changes follow
     the waypoints' ``lane_change`` flags (derived from the road markings).
+    `region` = (points (N, 2) in CARLA x, y; radius [m]) keeps only the lanes
+    passing within the radius of the points (for large towns).
     Returns (road_map, key_to_id) so that route waypoints can be mapped."""
     import carla
 
     groups: dict[tuple, list] = defaultdict(list)
-    for wp in carla_map.generate_waypoints(spacing):
+    if region is None:
+        wps = carla_map.generate_waypoints(spacing)
+    else:
+        wps = _region_waypoints(carla_map, spacing, *region)
+    for wp in wps:
         if wp.lane_type == carla.LaneType.Driving:
             groups[_lane_key(wp)].append(wp)
     key_to_id = {k: i + 1 for i, k in enumerate(sorted(groups))}
@@ -94,6 +122,26 @@ def road_map_from_carla(carla_map, spacing: float = 2.0):
         road.add_lane(lane)
     road.finalize()
     return road, key_to_id
+
+
+def traffic_light_stop_lines(road, key_to_id, lights, first_id: int = 1) -> dict[int, object]:
+    """Add an inactive stop line for every stop waypoint of the traffic lights
+    on a mapped lane; returns {stop line id: traffic light}."""
+    out, sid = {}, first_id
+    for tl in lights:
+        for wp in tl.get_stop_waypoints():
+            lid = key_to_id.get(_lane_key(wp))
+            lane = road.lane(lid) if lid is not None else None
+            if lane is None:
+                continue
+            x, y, _ = to_planner(wp.transform.location.x, wp.transform.location.y)
+            cl = lane.centerline
+            k = int(np.argmin(np.hypot(cl[:, 0] - x, cl[:, 1] - y)))
+            s = float(np.sum(np.hypot(*np.diff(cl[: k + 1], axis=0).T))) if k > 0 else 0.0
+            road.add_stop_line(fp.StopLine(sid, lid, s, False))
+            out[sid] = tl
+            sid += 1
+    return out
 
 
 def route_lane_ids(route_waypoints, key_to_id) -> list[int]:
@@ -157,7 +205,7 @@ def obstacles(
     prediction: str = "lane_following",
     velocities=None,
 ):
-    """Other vehicles and walkers with predictions: vehicles follow their lane on
+    """Other vehicles, walkers and static props (standing) with predictions: vehicles follow their lane on
     ``road_map`` (``prediction="lane_following"``), everything else keeps its
     velocity. `velocities` ({actor id: CARLA velocity vector}) replaces the
     simulator's report for actors moved kinematically (physics off), which CARLA
@@ -165,7 +213,8 @@ def obstacles(
     out = []
     for actor in world.get_actors():
         is_vehicle = actor.type_id.startswith("vehicle.")
-        if actor.id == ego_id or not (is_vehicle or actor.type_id.startswith("walker.")):
+        is_prop = actor.type_id.startswith("static.prop.")
+        if actor.id == ego_id or not (is_vehicle or is_prop or actor.type_id.startswith("walker.")):
             continue
         tf = actor.get_transform()
         if (
@@ -174,8 +223,14 @@ def obstacles(
         ):
             continue
         ext = actor.bounding_box.extent
-        vel = (velocities or {}).get(actor.id) or actor.get_velocity()
         x, y, yaw = to_planner(tf.location.x, tf.location.y, tf.rotation.yaw)
+        if is_prop:  # cones, barriers, warning signs: standing, footprint at least 0.5 m
+            size = (max(2 * ext.x, 0.5) + 0.2, max(2 * ext.y, 0.5) + 0.2)
+            ob = fp.predict_constant_velocity(actor.id, x, y, yaw, 0.0, *size, horizon, dt)
+            ob.is_static = True
+            out.append(ob)
+            continue
+        vel = (velocities or {}).get(actor.id) or actor.get_velocity()
         speed = math.hypot(vel.x, vel.y)
         heading = math.atan2(-vel.y, vel.x) if speed > 0.5 else yaw
         size = (2 * ext.x + 0.2, 2 * ext.y + 0.2)

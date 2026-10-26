@@ -61,7 +61,7 @@ void PlannerConfig::validate() const {
   require(s.num_width >= 1 && s.num_speed >= 1 && s.num_t >= 1, "sample counts must be >= 1");
   require(s.min_t > 0.0 && s.max_t >= s.min_t, "need 0 < min_t <= max_t");
   require(s.dt > 0.0 && s.dt < s.min_t, "need 0 < dt < min_t");
-  require(s.min_speed >= 0.0, "min_speed must be >= 0");
+  require(s.min_speed >= 0.0 && s.low_speed >= 0.0, "min_speed and low_speed must be >= 0");
   require(cost.w_time >= 0 && cost.w_speed >= 0 && cost.w_accel >= 0 && cost.w_jerk >= 0 &&
               cost.w_lateral >= 0 && cost.w_lane_change >= 0 && cost.w_heuristic >= 0,
           "cost weights must be non-negative");
@@ -70,7 +70,8 @@ void PlannerConfig::validate() const {
   require(cost.desired_gap > 0 && cost.desired_time_headway >= 0 && cost.desired_ttc > 0 &&
               cost.desired_clearance > 0,
           "desired gap, ttc and clearance must be positive");
-  require(cost.follow_time >= 0, "cost.follow_time must be >= 0");
+  require(cost.follow_time >= 0 && cost.w_road_edge >= 0,
+          "cost.follow_time and cost.w_road_edge must be >= 0");
   require(safety.min_gap >= 0 && safety.min_time_headway >= 0 && safety.min_ttc >= 0 &&
               safety.reaction_time >= 0 && safety.crossing_time_gap >= 0,
           "safety thresholds must be >= 0");
@@ -186,7 +187,8 @@ std::vector<Section> plannerSections(PlannerConfig& c) {
         {"dt", field(s.dt)},
         {"min_speed", field(s.min_speed)},
         {"lane_margin", field(s.lane_margin)},
-        {"follow_lead", field(s.follow_lead)}}},
+        {"follow_lead", field(s.follow_lead)},
+        {"low_speed", field(s.low_speed)}}},
       {"cost",
        {{"w_time", field(w.w_time)},
         {"w_speed", field(w.w_speed)},
@@ -202,7 +204,8 @@ std::vector<Section> plannerSections(PlannerConfig& c) {
         {"desired_ttc", field(w.desired_ttc)},
         {"w_clearance", field(w.w_clearance)},
         {"desired_clearance", field(w.desired_clearance)},
-        {"follow_time", field(w.follow_time)}}},
+        {"follow_time", field(w.follow_time)},
+        {"w_road_edge", field(w.w_road_edge)}}},
       {"constraints",
        {{"check_curvature", field(k.check_curvature)},
         {"check_lat_accel", field(k.check_lat_accel)},

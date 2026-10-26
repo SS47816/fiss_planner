@@ -222,7 +222,7 @@ Trajectory Planner::generate(Context& ctx, int i, int j, int k) const {
 
 Trajectory Planner::generate(Context& ctx, const EndState& end) const {
   Trajectory traj;
-  generateFrenet(ctx.input.start, end, config_.sampling.dt, traj);
+  generateFrenet(ctx.input.start, end, config_.sampling.dt, traj, config_.sampling.low_speed);
   LateralSample lat = ctx.grid.lateralInfo(end.d);
   const double target = laneTerms(ctx, lat);
   traj.lane = lat.lane;
@@ -233,7 +233,7 @@ Trajectory Planner::generate(Context& ctx, const EndState& end) const {
 
 CostTerms Planner::costOf(const Context& ctx, const Trajectory& traj, const LateralSample& lat,
                           double target) const {
-  CostTerms c = cost_.evaluate(traj, lat, target, &ctx.obstacles);
+  CostTerms c = cost_.evaluate(traj, lat, target, &ctx.obstacles, ctx.input.corridor);
   if (!ctx.input.safety_envelope && ctx.input.envelope_weight > 0.0) {
     c.proximity += ctx.input.envelope_weight * gaps_.breach(traj, ctx.obstacles, ctx.input.collision_horizon);
   }

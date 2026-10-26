@@ -233,10 +233,11 @@ def vehicle_params(params: VehicleParameters, base: fp.VehicleParams | None = No
 
 
 def ego_state(ego: NuEgoState) -> fp.EgoState:
+    params = ego.car_footprint.vehicle_parameters
     c = ego.center
     dyn = ego.dynamic_car_state
     v = float(np.hypot(dyn.center_velocity_2d.x, dyn.center_velocity_2d.y))
-    kappa = math.tan(ego.tire_steering_angle) / ego.car_footprint.vehicle_parameters.wheel_base
+    kappa = math.tan(ego.tire_steering_angle) / params.wheel_base
     return fp.EgoState(c.x, c.y, c.heading, v, dyn.center_acceleration_2d.x, kappa)
 
 

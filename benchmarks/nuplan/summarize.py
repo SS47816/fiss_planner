@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -45,9 +46,13 @@ def summary(run: str | Path) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("runs", nargs="+", help="simulation output directories")
+    ap.add_argument("--json", action="store_true", help="print the summaries as JSON")
     args = ap.parse_args()
-    table = pd.DataFrame([summary(r) for r in args.runs])
-    print(table.to_markdown(index=False, floatfmt=".1f"))
+    rows = [summary(r) for r in args.runs]
+    if args.json:
+        print(json.dumps(rows))
+        return
+    print(pd.DataFrame(rows).to_markdown(index=False, floatfmt=".1f"))
 
 
 if __name__ == "__main__":

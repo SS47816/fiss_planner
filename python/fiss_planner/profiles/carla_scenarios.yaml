@@ -22,6 +22,7 @@ sampling:
   min_speed: 0.0
   lane_margin: 0.15
   follow_lead: true
+  low_speed: 0.0
 cost:
   w_time: 1.0
   w_speed: 1.0
@@ -38,6 +39,7 @@ cost:
   w_clearance: 5.0
   desired_clearance: 1.0
   follow_time: 3.0
+  w_road_edge: 0.0
 constraints:
   check_curvature: true
   check_lat_accel: true

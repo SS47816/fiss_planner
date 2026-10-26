@@ -67,7 +67,11 @@ class EndStateGrid {
 
 /// Fill the Frenet arrays of `traj` from a quintic lateral and a quartic
 /// longitudinal polynomial between `start` and `end` (t = 0, dt, ..., T).
-void generateFrenet(const FrenetState& start, const EndState& end, double dt, Trajectory& traj);
+/// Below a start speed of `low_speed` the lateral quintic is a function of
+/// the distance travelled, d(s - s0), reaching end.d where the longitudinal
+/// motion ends; a plan that (almost) stands keeps its lateral offset.
+void generateFrenet(const FrenetState& start, const EndState& end, double dt, Trajectory& traj,
+                    double low_speed = 0.0);
 
 /// Fill the Cartesian arrays of `traj`. Returns false on non-finite output.
 bool convertToCartesian(const ReferenceLine& ref, Trajectory& traj);
@@ -76,22 +80,35 @@ class CostEvaluator {
  public:
   CostEvaluator(const CostConfig& cost, const SamplingConfig& sampling, const VehicleParams& vehicle = {},
                 double margin_lat = 0.3)
-      : w_(cost), max_t_(sampling.max_t), gaps_(cost, SafetyConfig{}, vehicle, margin_lat) {}
+      : w_(cost),
+        max_t_(sampling.max_t),
+        vehicle_(vehicle),
+        gaps_(cost, SafetyConfig{}, vehicle, margin_lat) {}
 
   /// Cost of the terminal terms only. Since the remaining (comfort) terms are
   /// non-negative this is a lower bound of the full cost.
   double estimate(const EndState& end, const LateralSample& lat, double target_speed) const;
   /// Full cost of a generated trajectory (Frenet arrays only), following
   /// Werling et al.: terminal speed/offset/horizon costs plus mean squared
-  /// acceleration and jerk, plus the proximity terms if obstacles are given.
+  /// acceleration and jerk, plus the proximity terms if obstacles are given
+  /// and the road-edge term if the corridor is.
   CostTerms evaluate(const Trajectory& traj, const LateralSample& lat, double target_speed,
-                     const FrenetObstacles* obstacles = nullptr) const;
+                     const FrenetObstacles* obstacles = nullptr, const Corridor* corridor = nullptr) const;
 
  private:
   CostConfig w_;
   double max_t_;
+  VehicleParams vehicle_;
   GapEvaluator gaps_;
 };
+
+/// Distance [m] the vehicle footprint extends beyond the corridor's road
+/// bounds at each sample of a trajectory (0 inside), from its lateral offset
+/// and its heading relative to the reference line. The heading follows the
+/// Frenet velocity above 0.5 m/s and is held below (from rest: along the
+/// reference), where the velocity no longer tells the vehicle's orientation.
+std::vector<double> roadEdgeExcess(const Trajectory& traj, const Corridor& corridor,
+                                   const VehicleParams& vehicle);
 
 /// Kinematic and corridor constraints on a Cartesian trajectory.
 class ConstraintValidator {

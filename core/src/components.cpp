@@ -86,10 +86,9 @@ LateralSample EndStateGrid::lateralInfo(double d) const {
 // Trajectory generation
 // ----------------------------------------------------------------------------
 
-void generateFrenet(const FrenetState& start, const EndState& end, double dt, Trajectory& traj) {
-  const QuinticPolynomial lat(start.d, start.d_d, start.d_dd, end.d, 0.0, 0.0, end.T);
+void generateFrenet(const FrenetState& start, const EndState& end, double dt, Trajectory& traj,
+                    double low_speed) {
   const QuarticPolynomial lon(start.s, start.s_d, start.s_dd, end.s_d, 0.0, end.T);
-
   traj.end = end;
   traj.t = timeSamples(end.T, dt);
   const size_t n = traj.t.size();
@@ -102,10 +101,36 @@ void generateFrenet(const FrenetState& start, const EndState& end, double dt, Tr
     traj.s_d[i] = lon.dx(t);
     traj.s_dd[i] = lon.ddx(t);
     traj.s_ddd[i] = lon.dddx(t);
-    traj.d[i] = lat.x(t);
-    traj.d_d[i] = lat.dx(t);
-    traj.d_dd[i] = lat.ddx(t);
-    traj.d_ddd[i] = lat.dddx(t);
+  }
+  if (start.s_d < low_speed) {
+    // Lateral offset over the distance travelled: d(u), u = s - s0 (never
+    // decreasing), from the start offset and slope to (end.d, 0, 0) at the
+    // distance covered by the end of the plan.
+    constexpr double kMinDistance = 0.5;  // [m] below this the plan keeps its offset
+    const double length = std::max(0.0, lon.x(end.T) - start.s);
+    const double slope0 = start.s_d > 1e-3 ? start.d_d / start.s_d : 0.0;
+    const bool move = length >= kMinDistance;
+    const QuinticPolynomial lat(start.d, slope0, 0.0, move ? end.d : start.d, 0.0, 0.0,
+                                std::max(length, 1e-3));
+    double u = 0.0;
+    for (size_t i = 0; i < n; ++i) {
+      u = std::clamp(std::max(u, traj.s[i] - start.s), 0.0, std::max(length, 1e-3));
+      const double v = std::max(0.0, traj.s_d[i]), a = traj.s_dd[i], j = traj.s_ddd[i];
+      const double d1 = lat.dx(u), d2 = lat.ddx(u), d3 = lat.dddx(u);
+      traj.d[i] = lat.x(u);
+      traj.d_d[i] = d1 * v;
+      traj.d_dd[i] = d2 * v * v + d1 * a;
+      traj.d_ddd[i] = d3 * v * v * v + 3.0 * d2 * v * a + d1 * j;
+    }
+  } else {
+    const QuinticPolynomial lat(start.d, start.d_d, start.d_dd, end.d, 0.0, 0.0, end.T);
+    for (size_t i = 0; i < n; ++i) {
+      const double t = traj.t[i];
+      traj.d[i] = lat.x(t);
+      traj.d_d[i] = lat.dx(t);
+      traj.d_dd[i] = lat.ddx(t);
+      traj.d_ddd[i] = lat.dddx(t);
+    }
   }
   traj.is_cartesian = false;
 }
@@ -145,7 +170,7 @@ double CostEvaluator::estimate(const EndState& end, const LateralSample& lat, do
 }
 
 CostTerms CostEvaluator::evaluate(const Trajectory& traj, const LateralSample& lat, double target_speed,
-                                  const FrenetObstacles* obstacles) const {
+                                  const FrenetObstacles* obstacles, const Corridor* corridor) const {
   // Terminal terms (time, speed, lateral offset, lane) equal the estimate;
   // comfort terms are mean squared acceleration and jerk.
   const size_t n = traj.size();
@@ -165,7 +190,29 @@ CostTerms CostEvaluator::evaluate(const Trajectory& traj, const LateralSample& l
   c.lateral = w_.w_lateral * dd * dd;
   c.lane_change = w_.w_lane_change * std::abs(lat.lane) + lat.lane_cost;
   if (obstacles != nullptr) c.proximity = gaps_.cost(traj, *obstacles);
+  if (w_.w_road_edge > 0.0 && corridor != nullptr && !corridor->empty() && n > 0) {
+    double excess = 0.0;
+    for (const double e : roadEdgeExcess(traj, *corridor, vehicle_)) excess += e * e;
+    c.road_edge = w_.w_road_edge * excess * inv_n;
+  }
   return c;
+}
+
+std::vector<double> roadEdgeExcess(const Trajectory& traj, const Corridor& corridor,
+                                   const VehicleParams& vehicle) {
+  constexpr double kMinSpeed = 0.5;  // [m/s]
+  std::vector<double> out(traj.size(), 0.0);
+  double rel_yaw = 0.0;
+  for (size_t i = 0; i < traj.size(); ++i) {
+    if (std::hypot(traj.s_d[i], traj.d_d[i]) >= kMinSpeed) {
+      rel_yaw = std::atan2(traj.d_d[i], std::max(std::abs(traj.s_d[i]), 1e-3));
+    }
+    const double half =
+        0.5 * (vehicle.width * std::abs(std::cos(rel_yaw)) + vehicle.length * std::abs(std::sin(rel_yaw)));
+    const auto [lo, hi] = corridor.roadBounds(traj.s[i]);
+    out[i] = std::max({0.0, lo - (traj.d[i] - half), (traj.d[i] + half) - hi});
+  }
+  return out;
 }
 
 // ----------------------------------------------------------------------------
@@ -213,12 +260,9 @@ Rejection ConstraintValidator::check(const Trajectory& traj, const Corridor* cor
     // slack covers the corner swinging out while the vehicle turns back in.
     constexpr double kRecoverySlack = 0.25;  // [m]
     double allowed = 0.0;
+    const auto excess = roadEdgeExcess(traj, *corridor, vehicle_);
     for (size_t i = 0; i < n; ++i) {
-      const double rel_yaw = std::atan2(traj.d_d[i], std::max(std::abs(traj.s_d[i]), 1e-3));
-      const double half = 0.5 * (vehicle_.width * std::abs(std::cos(rel_yaw)) +
-                                 vehicle_.length * std::abs(std::sin(rel_yaw)));
-      const auto [lo, hi] = corridor->roadBounds(traj.s[i]);
-      const double violation = std::max(lo - (traj.d[i] - half), (traj.d[i] + half) - hi);
+      const double violation = excess[i];
       if (i == 0 && violation > 0.0) allowed = violation + kRecoverySlack;
       if (violation > allowed + 1e-6) return Rejection::kOffRoad;
     }

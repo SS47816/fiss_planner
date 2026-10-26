@@ -226,6 +226,9 @@ class Actuation:
         self.integral = 0.0
 
     def apply(self, ego, cmd, v_ref: float, v: float, max_steer: float) -> None:
+        ego.apply_control(self.control(cmd, v_ref, v, max_steer))
+
+    def control(self, cmd, v_ref: float, v: float, max_steer: float):
         import carla
 
         err = v_ref - v
@@ -239,7 +242,7 @@ class Actuation:
             ctrl.throttle = float(np.clip(u, 0.0, 0.8))
         else:
             ctrl.brake = float(np.clip(-u, 0.0, 1.0))
-        ego.apply_control(ctrl)
+        return ctrl
 
 
 def _drive_cutter(cutter, state, ego_s, t, dt, result, speed=9.0, duration=2.5):

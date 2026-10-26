@@ -317,6 +317,7 @@ NB_MODULE(_core, m) {
       .def(nb::init<>())
       .def_rw("num_width", &SamplingConfig::num_width)
       .def_rw("follow_lead", &SamplingConfig::follow_lead)
+      .def_rw("low_speed", &SamplingConfig::low_speed)
       .def_rw("num_speed", &SamplingConfig::num_speed)
       .def_rw("num_t", &SamplingConfig::num_t)
       .def_rw("min_t", &SamplingConfig::min_t)
@@ -340,7 +341,8 @@ NB_MODULE(_core, m) {
       .def_rw("desired_ttc", &CostConfig::desired_ttc)
       .def_rw("w_clearance", &CostConfig::w_clearance)
       .def_rw("desired_clearance", &CostConfig::desired_clearance)
-      .def_rw("follow_time", &CostConfig::follow_time);
+      .def_rw("follow_time", &CostConfig::follow_time)
+      .def_rw("w_road_edge", &CostConfig::w_road_edge);
   nb::class_<ConstraintConfig>(m, "ConstraintConfig")
       .def(nb::init<>())
       .def_rw("check_curvature", &ConstraintConfig::check_curvature)
@@ -416,6 +418,7 @@ NB_MODULE(_core, m) {
       .def_ro("lateral", &CostTerms::lateral)
       .def_ro("lane_change", &CostTerms::lane_change)
       .def_ro("proximity", &CostTerms::proximity)
+      .def_ro("road_edge", &CostTerms::road_edge)
       .def("total", &CostTerms::total);
 
   nb::class_<Trajectory>(m, "Trajectory")

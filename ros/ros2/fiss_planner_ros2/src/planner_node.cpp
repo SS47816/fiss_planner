@@ -104,6 +104,9 @@ const std::vector<Binding>& bindings() {
     v.push_back(bindPlanner("sampling.follow_lead", &PlannerConfig::sampling, &SamplingConfig::follow_lead,
                             "following/stopping candidates behind the vehicle ahead"));
     v.push_back(
+        bindPlanner("sampling.low_speed", &PlannerConfig::sampling, &SamplingConfig::low_speed,
+                    "[m/s] below this start speed lateral motion follows the distance driven; 0 = off"));
+    v.push_back(
         bindPlanner("sampling.min_speed", &PlannerConfig::sampling, &SamplingConfig::min_speed, "[m/s]"));
     v.push_back(bindPlanner("cost.w_time", &PlannerConfig::cost, &CostConfig::w_time, ""));
     v.push_back(bindPlanner("cost.w_speed", &PlannerConfig::cost, &CostConfig::w_speed, ""));
@@ -127,6 +130,8 @@ const std::vector<Binding>& bindings() {
         bindPlanner("cost.desired_clearance", &PlannerConfig::cost, &CostConfig::desired_clearance, "[m]"));
     v.push_back(bindPlanner("cost.follow_time", &PlannerConfig::cost, &CostConfig::follow_time,
                             "[s] car following; 0 = off"));
+    v.push_back(bindPlanner("cost.w_road_edge", &PlannerConfig::cost, &CostConfig::w_road_edge,
+                            "footprint beyond the road edges along the trajectory; 0 = off"));
     v.push_back(bindPlanner("safety.enabled", &PlannerConfig::safety, &SafetyConfig::enabled,
                             "hard gap / TTC envelope"));
     v.push_back(bindPlanner("safety.min_gap", &PlannerConfig::safety, &SafetyConfig::min_gap, "[m]"));
