@@ -39,6 +39,20 @@ profile per benchmark.
   deceleration `3 v / max_t`, candidates may not crab (more than 45° off the lane), and samples
   slower than 0.05 m/s keep their heading.
 
+### Behaviour layer
+- A small behaviour tree in the core (`fiss_planner/behavior/`: Sequence, Fallback, Condition,
+  Action), ticked before trajectory sampling; it asks the planner to stop at a station or lets it
+  pass a stop line. Off by default (`behavior.enabled`); the active behaviours are reported in
+  `LocalPlanOutput::behavior`.
+- Yellow lights (`setStopLineActive(id, true, yellow=true)`) are passed when stopping before the line
+  would take more than `behavior.comfort_decel`.
+- Stop signs (`StopLine::stop_sign`): stop at the line, then go after `behavior.stop_sign_wait`.
+- Junction yielding (`behavior.junction_yield`, map lanes flagged `MapLane::junction`): stop before
+  the entry while moving traffic would be in the ego's path through the junction within
+  `behavior.crossing_gap`; committed once inside or when stopping would be uncomfortable.
+- Adapters flag junction lanes (CARLA junction waypoints, nuPlan lane connectors), report yellow
+  lights, and map CARLA stop signs to stop lines.
+
 ### Configuration
 - The whole `LocalPlannerConfig` loads from YAML (`loadLocalPlannerConfig` /
   `load_local_planner_config`, `parseLocalPlannerConfig`). Keys are named after the fields, as the

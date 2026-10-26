@@ -2,11 +2,15 @@
 // Copyright (c) 2021-2026 Shuo Sun
 #pragma once
 
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
+#include <tuple>
 #include <vector>
 
+#include "fiss_planner/behavior/behavior_planner.hpp"
 #include "fiss_planner/map/road_map.hpp"
 #include "fiss_planner/map/route_corridor.hpp"
 #include "fiss_planner/planning/planner.hpp"
@@ -37,6 +41,7 @@ struct LocalPlannerConfig {
   StitchingConfig stitching;
   PathModeConfig path;
   SmootherConfig smoother;       ///< optional QP refinement of the chosen trajectory
+  BehaviorConfig behavior;       ///< junction yielding, yellow lights, stop signs (map mode)
   double desired_speed = 13.9;   ///< [m/s] used when step() gets no speed
   double emergency_decel = 0.0;  ///< [m/s^2] fail-safe braking; 0 = vehicle max_decel
   /// When no candidate is valid and the previous plan is no longer collision
@@ -87,7 +92,8 @@ struct LocalPlanOutput {
   FrenetState start;
   double target_speed = 0.0;
   int ego_lane = -1;
-  std::vector<Obstacle> virtual_obstacles;  ///< e.g. active stop lines
+  std::vector<Obstacle> virtual_obstacles;  ///< e.g. active stop lines and behaviour stops
+  std::vector<std::string> behavior;        ///< behaviours that applied this cycle (if enabled)
 };
 
 /// One-call planning pipeline used by the ROS nodes and the benchmarks:
@@ -108,7 +114,8 @@ class LocalPlanner {
   void requestConfig(const LocalPlannerConfig& config);
   void requestPlannerType(PlannerType type);
   /// Change a stop line's state (e.g. traffic light) without resetting the planner.
-  void setStopLineActive(int stop_line_id, bool active);
+  /// `yellow`: an active light that may be passed if stopping is uncomfortable.
+  void setStopLineActive(int stop_line_id, bool active, bool yellow = false);
   void reset();
 
   /// Plan at time `t_now` [s]. Obstacle predictions are relative to t_now.
@@ -127,6 +134,7 @@ class LocalPlanner {
   LocalPlannerConfig config_;
   VehicleParams vehicle_;
   std::unique_ptr<Planner> planner_;
+  std::unique_ptr<BehaviorPlanner> behavior_;
 
   std::shared_ptr<RoadMap> map_;  ///< private copy (stop line states are mutable)
   std::vector<int> route_;
@@ -138,10 +146,11 @@ class LocalPlanner {
   bool previous_emergency_ = false;     ///< previous_ is an emergency stop
   double previous_t0_ = 0.0;
   int previous_ego_lane_ = -1;
+  double last_step_t_ = std::numeric_limits<double>::quiet_NaN();
 
   std::mutex pending_mutex_;
   std::optional<LocalPlannerConfig> pending_config_;
-  std::vector<std::pair<int, bool>> pending_stop_lines_;
+  std::vector<std::tuple<int, bool, bool>> pending_stop_lines_;
 };
 
 /// Cartesian state of a trajectory at time t (linear interpolation, clamped).

@@ -68,6 +68,13 @@ class FissAgent(AutonomousAgent):
             < self.map_radius + 50.0
         ]
         self._lights = adapter.traffic_light_stop_lines(self._road, key_to_id, lights)
+        signs = [
+            s
+            for s in world.get_actors().filter("traffic.stop")
+            if np.min(np.hypot(pts[:, 0] - s.get_location().x, pts[:, 1] - s.get_location().y))
+            < self.map_radius + 50.0
+        ]
+        adapter.stop_sign_stop_lines(self._road, key_to_id, carla_map, signs, 1 + len(self._lights))
         route_wps = [carla_map.get_waypoint(tf.location) for tf in self._route]
         route = adapter.route_lane_ids(route_wps, key_to_id)
         cfg, vehicle = fp.profiles.load(self._profile, adapter.vehicle_params(self._ego))
@@ -89,7 +96,10 @@ class FissAgent(AutonomousAgent):
         ego_s = adapter.ego_state(self._ego)
         if self._tick % self.plan_every == 0:
             for sid, tl in self._lights.items():
-                self._lp.set_stop_line_active(sid, tl.get_state() in _STOP_STATES)
+                state = tl.get_state()
+                self._lp.set_stop_line_active(
+                    sid, state in _STOP_STATES, state == carla.TrafficLightState.Yellow
+                )
             obs = adapter.obstacles(
                 self._world,
                 self._ego.id,
@@ -153,6 +163,7 @@ class FissAgent(AutonomousAgent):
             "lead": [out.stats.lead.id, out.stats.lead.gap],
             "blocking": out.stats.blocking_id,
             "red": [sid for sid, tl in self._lights.items() if tl.get_state() in _STOP_STATES],
+            "behavior": list(out.behavior),
             "control": list(getattr(self, "_last", ())),
             "types": {
                 o.id: getattr(self._world.get_actor(o.id), "type_id", "?")

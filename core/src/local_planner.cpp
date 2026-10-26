@@ -88,7 +88,10 @@ void append(Trajectory& head, const Trajectory& tail, double offset) {
 }  // namespace
 
 LocalPlanner::LocalPlanner(const LocalPlannerConfig& config, const VehicleParams& vehicle)
-    : config_(config), vehicle_(vehicle), planner_(makePlanner(config.planner, vehicle)) {
+    : config_(config),
+      vehicle_(vehicle),
+      planner_(makePlanner(config.planner, vehicle)),
+      behavior_(std::make_unique<BehaviorPlanner>(config.behavior, vehicle)) {
   config_.validate();
 }
 
@@ -129,9 +132,9 @@ void LocalPlanner::requestPlannerType(PlannerType type) {
   pending_config_->planner.type = type;
 }
 
-void LocalPlanner::setStopLineActive(int stop_line_id, bool active) {
+void LocalPlanner::setStopLineActive(int stop_line_id, bool active, bool yellow) {
   std::lock_guard<std::mutex> lock(pending_mutex_);
-  pending_stop_lines_.emplace_back(stop_line_id, active);
+  pending_stop_lines_.emplace_back(stop_line_id, active, yellow);
 }
 
 void LocalPlanner::reset() {
@@ -139,18 +142,19 @@ void LocalPlanner::reset() {
   previous_emergency_ = false;
   previous_ego_lane_ = -1;
   planner_->reset();
+  behavior_->reset();
 }
 
 void LocalPlanner::applyPendingConfig() {
   std::optional<LocalPlannerConfig> next;
-  std::vector<std::pair<int, bool>> stop_lines;
+  std::vector<std::tuple<int, bool, bool>> stop_lines;
   {
     std::lock_guard<std::mutex> lock(pending_mutex_);
     next.swap(pending_config_);
     stop_lines.swap(pending_stop_lines_);
   }
   if (map_) {
-    for (const auto& [id, active] : stop_lines) map_->setStopLineActive(id, active);
+    for (const auto& [id, active, yellow] : stop_lines) map_->setStopLineActive(id, active, yellow);
   }
   if (!next) return;
   const bool type_changed = next->planner.type != config_.planner.type;
@@ -160,6 +164,7 @@ void LocalPlanner::applyPendingConfig() {
                             next->path.allow_left != config_.path.allow_left ||
                             next->path.allow_right != config_.path.allow_right;
   config_ = *next;
+  behavior_ = std::make_unique<BehaviorPlanner>(config_.behavior, vehicle_);
   if (type_changed) {
     planner_ = makePlanner(config_.planner, vehicle_);
   } else {
@@ -225,6 +230,8 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
                                    double desired_speed) {
   applyPendingConfig();
   LocalPlanOutput out;
+  const double previous_step_t = last_step_t_;
+  last_step_t_ = t_now;
   const auto& st = config_.stitching;
   const double latency = st.enabled ? std::max(0.0, st.latency) : 0.0;
 
@@ -251,6 +258,8 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
 
   // --- Reference and corridor -------------------------------------------------
   double lane_limit = std::numeric_limits<double>::infinity();
+  std::vector<RouteCorridor::StopLineAhead> stop_line_info;
+  std::vector<std::pair<double, double>> junctions;
   if (map_) {
     auto rc = buildRouteCorridor(*map_, route_, start, config_.route, previous_ego_lane_, goal_);
     if (!rc) {
@@ -261,6 +270,8 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
     out.corridor = std::move(rc->corridor);
     out.ego_lane = rc->ego_lane;
     out.virtual_obstacles = std::move(rc->stop_lines);
+    stop_line_info = std::move(rc->stop_line_info);
+    junctions = std::move(rc->junctions);
     lane_limit = rc->speed_limit;
     previous_ego_lane_ = rc->ego_lane;
   } else if (path_ref_) {
@@ -281,6 +292,40 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
   }
   const double desired = desired_speed > 0.0 ? desired_speed : config_.desired_speed;
   out.target_speed = targetSpeed(ref, out.start.s, start.v, desired, lane_limit);
+
+  // --- Behaviours ------------------------------------------------------------------
+  if (config_.behavior.enabled && map_) {
+    BehaviorInput bi;
+    bi.reference = &ref;
+    bi.start = out.start;
+    bi.stop_lines = &stop_line_info;
+    bi.junctions = &junctions;
+    bi.obstacles = &obstacles;
+    if (std::isfinite(previous_step_t)) bi.dt = std::clamp(t_now - previous_step_t, 0.0, 1.0);
+    const BehaviorDirective directive = behavior_->plan(bi);
+    out.behavior = directive.active;
+    for (const int id : directive.released_stop_lines) {
+      auto& v = out.virtual_obstacles;
+      v.erase(std::remove_if(v.begin(), v.end(), [id](const Obstacle& o) { return o.id == -1000 - id; }),
+              v.end());
+    }
+    const LaneBand* ego_band = nullptr;
+    for (const auto& lane : out.corridor.lanes()) {
+      if (lane.offset == 0) ego_band = &lane;
+    }
+    for (size_t k = 0; k < directive.stops.size(); ++k) {
+      const RefPoint p = ref.at(directive.stops[k]);
+      Obstacle ob;
+      ob.id = -2000 - static_cast<int>(k);
+      ob.length = 1.0;
+      ob.width = ego_band
+                     ? std::max(1.0, out.corridor.left(*ego_band, p.s) - out.corridor.right(*ego_band, p.s))
+                     : 3.5;
+      ob.is_static = true;
+      ob.prediction.push_back({0.0, p.x, p.y, p.yaw, 0.0});
+      out.virtual_obstacles.push_back(std::move(ob));
+    }
+  }
 
   // --- Obstacles relative to the start time -----------------------------------
   std::vector<Obstacle> all = obstacles;

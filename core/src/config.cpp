@@ -104,6 +104,10 @@ void LocalPlannerConfig::validate() const {
                    q.w_lon_ref >= 0 && q.w_lon_speed_ref >= 0 && q.w_lon_speed >= 0 && q.w_lon_accel >= 0 &&
                    q.w_lon_jerk >= 0,
                "smoother weights must be non-negative");
+  const auto& b = behavior;
+  requireLocal(b.yield_lookahead >= 0 && b.crossing_gap >= 0 && b.go_accel > 0 && b.turn_speed > 0 &&
+                   b.stop_margin >= 0 && b.comfort_decel > 0 && b.stop_sign_wait >= 0,
+               "behavior settings must be positive (gaps, margins and waits >= 0)");
   requireLocal(desired_speed >= 0 && emergency_decel >= 0 && degraded_horizon >= 0 &&
                    envelope_retry_weight >= 0 && recovery_decel >= 0,
                "desired_speed, emergency_decel, degraded_horizon, envelope_retry_weight and "
@@ -267,6 +271,17 @@ std::vector<Section> localSections(LocalPlannerConfig& c) {
                   {"num_right_lanes", field(p.num_right_lanes)},
                   {"allow_left", field(p.allow_left)},
                   {"allow_right", field(p.allow_right)}}});
+  auto& b = c.behavior;
+  out.push_back({"behavior",
+                 {{"enabled", field(b.enabled)},
+                  {"junction_yield", field(b.junction_yield)},
+                  {"yield_lookahead", field(b.yield_lookahead)},
+                  {"crossing_gap", field(b.crossing_gap)},
+                  {"go_accel", field(b.go_accel)},
+                  {"turn_speed", field(b.turn_speed)},
+                  {"stop_margin", field(b.stop_margin)},
+                  {"comfort_decel", field(b.comfort_decel)},
+                  {"stop_sign_wait", field(b.stop_sign_wait)}}});
   out.push_back({"smoother",
                  {{"enabled", field(q.enabled)},
                   {"margin_lat", field(q.margin_lat)},

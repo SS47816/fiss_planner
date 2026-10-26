@@ -68,10 +68,11 @@ void RoadMap::addLane(MapLane lane) {
   lanes_[id] = std::move(lane);
 }
 
-bool RoadMap::setStopLineActive(int id, bool active) {
+bool RoadMap::setStopLineActive(int id, bool active, bool yellow) {
   for (auto& sl : stop_lines_) {
     if (sl.id == id) {
       sl.active = active;
+      sl.yellow = active && yellow;
       return true;
     }
   }

@@ -34,6 +34,16 @@ struct RouteCorridor {
   double ego_s = 0.0;                ///< ego arc length on the reference
   double speed_limit = 0.0;          ///< of the ego lane [m/s] (inf if unknown)
   std::vector<Obstacle> stop_lines;  ///< active stop lines as static virtual obstacles
+  /// Per entry of stop_lines: the map's stop line and its station on the reference.
+  struct StopLineAhead {
+    int id = -1;
+    double s = 0.0;
+    bool yellow = false;
+    bool stop_sign = false;
+  };
+  std::vector<StopLineAhead> stop_line_info;
+  /// Stretches [s_in, s_out] of the reference through junction lanes, in order.
+  std::vector<std::pair<double, double>> junctions;
 };
 
 /// Build the reference line and corridor around the ego from a lane map and

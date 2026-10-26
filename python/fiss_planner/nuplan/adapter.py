@@ -75,17 +75,27 @@ def road_map_from_nuplan(lanes: dict) -> fp.RoadMap:
                 lane.can_change_right = True
         limit = obj.speed_limit_mps
         lane.speed_limit = float(limit) if limit else math.inf
+        connector = obj.__class__.__name__.endswith("LaneConnector")
+        lane.junction = connector
         road.add_lane(lane)
-        if obj.__class__.__name__.endswith("LaneConnector"):
+        if connector:
             road.add_stop_line(fp.StopLine(lid, lid, 0.0, False))
     road.finalize()
     return road
 
 
-def stop_line_states(road: fp.RoadMap, traffic_lights) -> dict[int, bool]:
-    """Active state of every lane connector's stop line: on while its light is red."""
-    red = {int(t.lane_connector_id) for t in traffic_lights or () if t.status == TrafficLightStatusType.RED}
-    return {sl.id: sl.id in red for sl in road.stop_lines}
+def stop_line_states(road: fp.RoadMap, traffic_lights) -> dict[int, tuple[bool, bool]]:
+    """(active, yellow) of every lane connector's stop line: active while its
+    light is red or yellow."""
+    states = {int(t.lane_connector_id): t.status for t in traffic_lights or ()}
+    out = {}
+    for sl in road.stop_lines:
+        st = states.get(sl.id)
+        out[sl.id] = (
+            st in (TrafficLightStatusType.RED, TrafficLightStatusType.YELLOW),
+            st == TrafficLightStatusType.YELLOW,
+        )
+    return out
 
 
 def _lane_costs(lanes, road: fp.RoadMap, x: float, y: float, yaw: float, candidates=None) -> dict[int, float]:

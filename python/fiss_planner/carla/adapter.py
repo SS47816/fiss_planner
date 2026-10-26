@@ -92,6 +92,7 @@ def road_map_from_carla(carla_map, spacing: float = 2.0, region: tuple | None = 
         lane.centerline = np.asarray(center)
         lane.left = np.asarray(left)
         lane.right = np.asarray(right)
+        lane.junction = any(w.is_junction for w in wps)
 
         mid = wps[len(wps) // 2]
         # CARLA "left" is the driver's left in its frame, which remains the
@@ -142,6 +143,39 @@ def traffic_light_stop_lines(road, key_to_id, lights, first_id: int = 1) -> dict
             out[sid] = tl
             sid += 1
     return out
+
+
+def stop_sign_stop_lines(road, key_to_id, carla_map, signs, first_id: int) -> list[int]:
+    """Add a stop-sign stop line where each sign's trigger area meets the
+    driving lanes it covers (same direction as the lane under its center);
+    returns the new stop line ids."""
+    import carla
+
+    ids, sid = [], first_id
+    for sign in signs:
+        center = sign.get_transform().transform(sign.trigger_volume.location)
+        wp = carla_map.get_waypoint(center, lane_type=carla.LaneType.Driving)
+        lanes, seen = [], set()
+        for step in ("get_left_lane", "get_right_lane"):
+            w = wp
+            while w is not None and w.lane_type == carla.LaneType.Driving and w.lane_id * wp.lane_id > 0:
+                if _lane_key(w) not in seen:
+                    seen.add(_lane_key(w))
+                    lanes.append(w)
+                w = getattr(w, step)()
+        for w in lanes:
+            lid = key_to_id.get(_lane_key(w))
+            lane = road.lane(lid) if lid is not None else None
+            if lane is None:
+                continue
+            x, y, _ = to_planner(w.transform.location.x, w.transform.location.y)
+            cl = lane.centerline
+            k = int(np.argmin(np.hypot(cl[:, 0] - x, cl[:, 1] - y)))
+            s = float(np.sum(np.hypot(*np.diff(cl[: k + 1], axis=0).T))) if k > 0 else 0.0
+            road.add_stop_line(fp.StopLine(sid, lid, s, True, True))
+            ids.append(sid)
+            sid += 1
+    return ids
 
 
 def route_lane_ids(route_waypoints, key_to_id) -> list[int]:
@@ -221,8 +255,13 @@ def obstacles(
     out = []
     for actor in world.get_actors():
         is_vehicle = actor.type_id.startswith("vehicle.")
-        # Scenario props (cones, warning signs, ...); generic meshes are map scenery.
-        is_prop = actor.type_id.startswith("static.prop.") and actor.type_id != "static.prop.mesh"
+        # Scenario props (cones, warning signs, ...); generic meshes are map scenery
+        # and debris is driven over.
+        is_prop = (
+            actor.type_id.startswith("static.prop.")
+            and actor.type_id != "static.prop.mesh"
+            and "debris" not in actor.type_id
+        )
         if actor.id == ego_id or not (is_vehicle or is_prop or actor.type_id.startswith("walker.")):
             continue
         tf = actor.get_transform()

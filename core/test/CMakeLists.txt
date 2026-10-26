@@ -21,6 +21,7 @@ set(FISS_PLANNER_TESTS
   test_control
   test_safety
   test_prediction
+  test_behavior
 )
 
 foreach(name ${FISS_PLANNER_TESTS})

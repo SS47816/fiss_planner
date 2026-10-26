@@ -501,7 +501,8 @@ std::optional<RouteCorridor> buildRouteCorridor(const RoadMap& map, const std::v
     const MapLane* ln = map.lane(sl.lane_id);
     double heading = 0.0;
     const Vec2 p = polylinePoint(ln->centerline, sl.s, &heading);
-    if (out.reference.project(p.x, p.y, out.ego_s).s <= out.ego_s) continue;  // already passed
+    const double s_ref = out.reference.project(p.x, p.y, out.ego_s).s;
+    if (s_ref <= out.ego_s) continue;  // already passed
     const double width =
         projectOnPolyline(ln->left, p.x, p.y).distance + projectOnPolyline(ln->right, p.x, p.y).distance;
     Obstacle ob;
@@ -511,6 +512,18 @@ std::optional<RouteCorridor> buildRouteCorridor(const RoadMap& map, const std::v
     ob.is_static = true;
     ob.prediction.push_back({0.0, p.x, p.y, heading, 0.0});
     out.stop_lines.push_back(std::move(ob));
+    out.stop_line_info.push_back({sl.id, s_ref, sl.yellow, sl.stop_sign});
+  }
+
+  // --- Junctions ----------------------------------------------------------------
+  for (size_t i = 0; i < chain.size(); ++i) {
+    if (!map.lane(chain[i])->junction) continue;
+    const double s_in = std::min(lane_s0[i], lane_s1[i]), s_out = std::max(lane_s0[i], lane_s1[i]);
+    if (!out.junctions.empty() && s_in <= out.junctions.back().second + 1.0) {
+      out.junctions.back().second = std::max(out.junctions.back().second, s_out);
+    } else {
+      out.junctions.emplace_back(s_in, s_out);
+    }
   }
   return out;
 }

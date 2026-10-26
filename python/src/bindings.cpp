@@ -535,16 +535,19 @@ NB_MODULE(_core, m) {
       .def_rw("successors", &MapLane::successors)
       .def_rw("predecessors", &MapLane::predecessors)
       .def_rw("speed_limit", &MapLane::speed_limit)
+      .def_rw("junction", &MapLane::junction)
       .def("length", &MapLane::length);
 
   nb::class_<StopLine>(m, "StopLine")
       .def(nb::init<>())
       .def(
           "__init__",
-          [](StopLine* s, int id, int lane_id, double sl, bool active) {
-            new (s) StopLine{id, lane_id, sl, active};
+          [](StopLine* s, int id, int lane_id, double sl, bool active, bool stop_sign) {
+            new (s) StopLine{id, lane_id, sl, active, false, stop_sign};
           },
-          "id"_a, "lane_id"_a, "s"_a, "active"_a = true)
+          "id"_a, "lane_id"_a, "s"_a, "active"_a = true, "stop_sign"_a = false)
+      .def_rw("yellow", &StopLine::yellow)
+      .def_rw("stop_sign", &StopLine::stop_sign)
       .def_rw("id", &StopLine::id)
       .def_rw("lane_id", &StopLine::lane_id)
       .def_rw("s", &StopLine::s)
@@ -554,7 +557,7 @@ NB_MODULE(_core, m) {
       .def(nb::init<>())
       .def("add_lane", &RoadMap::addLane, "lane"_a)
       .def("add_stop_line", &RoadMap::addStopLine, "stop_line"_a)
-      .def("set_stop_line_active", &RoadMap::setStopLineActive, "id"_a, "active"_a)
+      .def("set_stop_line_active", &RoadMap::setStopLineActive, "id"_a, "active"_a, "yellow"_a = false)
       .def("finalize", &RoadMap::finalize)
       .def(
           "lane",
@@ -706,6 +709,17 @@ NB_MODULE(_core, m) {
       .def("last_solve_ok", &MpcController::lastSolveOk);
   m.def("make_controller", &makeController, "name"_a, "vehicle"_a = VehicleParams{});
 
+  nb::class_<BehaviorConfig>(m, "BehaviorConfig")
+      .def(nb::init<>())
+      .def_rw("enabled", &BehaviorConfig::enabled)
+      .def_rw("junction_yield", &BehaviorConfig::junction_yield)
+      .def_rw("yield_lookahead", &BehaviorConfig::yield_lookahead)
+      .def_rw("crossing_gap", &BehaviorConfig::crossing_gap)
+      .def_rw("go_accel", &BehaviorConfig::go_accel)
+      .def_rw("turn_speed", &BehaviorConfig::turn_speed)
+      .def_rw("stop_margin", &BehaviorConfig::stop_margin)
+      .def_rw("comfort_decel", &BehaviorConfig::comfort_decel)
+      .def_rw("stop_sign_wait", &BehaviorConfig::stop_sign_wait);
   nb::class_<LocalPlannerConfig>(m, "LocalPlannerConfig")
       .def(nb::init<>())
       .def_rw("planner", &LocalPlannerConfig::planner)
@@ -713,6 +727,7 @@ NB_MODULE(_core, m) {
       .def_rw("stitching", &LocalPlannerConfig::stitching)
       .def_rw("path", &LocalPlannerConfig::path)
       .def_rw("smoother", &LocalPlannerConfig::smoother)
+      .def_rw("behavior", &LocalPlannerConfig::behavior)
       .def_rw("desired_speed", &LocalPlannerConfig::desired_speed)
       .def_rw("emergency_decel", &LocalPlannerConfig::emergency_decel)
       .def_rw("degraded_horizon", &LocalPlannerConfig::degraded_horizon)
@@ -767,7 +782,8 @@ NB_MODULE(_core, m) {
       .def_ro("start", &LocalPlanOutput::start)
       .def_ro("target_speed", &LocalPlanOutput::target_speed)
       .def_ro("ego_lane", &LocalPlanOutput::ego_lane)
-      .def_ro("virtual_obstacles", &LocalPlanOutput::virtual_obstacles);
+      .def_ro("virtual_obstacles", &LocalPlanOutput::virtual_obstacles)
+      .def_ro("behavior", &LocalPlanOutput::behavior);
 
   nb::class_<LocalPlanner>(m, "LocalPlanner")
       .def(nb::init<const LocalPlannerConfig&, const VehicleParams&>(), "config"_a = LocalPlannerConfig{},
@@ -784,7 +800,8 @@ NB_MODULE(_core, m) {
       .def("set_reference_path", &LocalPlanner::setReferencePath, "x"_a, "y"_a)
       .def("request_config", &LocalPlanner::requestConfig, "config"_a)
       .def("request_planner_type", &LocalPlanner::requestPlannerType, "type"_a)
-      .def("set_stop_line_active", &LocalPlanner::setStopLineActive, "stop_line_id"_a, "active"_a)
+      .def("set_stop_line_active", &LocalPlanner::setStopLineActive, "stop_line_id"_a, "active"_a,
+           "yellow"_a = false)
       .def("reset", &LocalPlanner::reset)
       .def(
           "step",

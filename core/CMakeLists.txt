@@ -47,6 +47,7 @@ add_library(fiss_planner
   src/obstacle.cpp
   src/planner.cpp
   src/planners.cpp
+  src/behavior_planner.cpp
   src/local_planner.cpp
   src/road_map.cpp
   src/route_corridor.cpp

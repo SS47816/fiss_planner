@@ -29,24 +29,30 @@ struct MapLane {
   std::vector<int> successors;
   std::vector<int> predecessors;                                 ///< filled by RoadMap::finalize() if empty
   double speed_limit = std::numeric_limits<double>::infinity();  ///< [m/s]
+  bool junction = false;  ///< inside an intersection (e.g. a lane connector)
 
   double length() const;
 };
 
 /// A stop line on a lane at arc length `s` along its centerline. Active stop
-/// lines (red light, stop sign) become virtual obstacles for the planner.
+/// lines (red light, stop sign) become virtual obstacles for the planner. A
+/// yellow light is active but may be passed if stopping is uncomfortable, and
+/// the vehicle may go on from a stop sign once it has stopped there (both
+/// decided by the behaviour layer, see BehaviorConfig).
 struct StopLine {
   int id = -1;
   int lane_id = -1;
   double s = 0.0;
   bool active = true;
+  bool yellow = false;
+  bool stop_sign = false;
 };
 
 class RoadMap {
  public:
   void addLane(MapLane lane);
   void addStopLine(const StopLine& stop_line) { stop_lines_.push_back(stop_line); }
-  bool setStopLineActive(int id, bool active);
+  bool setStopLineActive(int id, bool active, bool yellow = false);
   /// Derive predecessors from successors and validate neighbour references.
   void finalize();
 

@@ -83,6 +83,16 @@ path:
   num_right_lanes: 1
   allow_left: true
   allow_right: true
+behavior:
+  enabled: true  # junction yielding, yellow lights, stop signs
+  junction_yield: false  # Bench2Drive flows (constant velocity, ignoring the ego) leave no gaps to accept
+  yield_lookahead: 40.0
+  crossing_gap: 1.5
+  go_accel: 1.5
+  turn_speed: 6.0
+  stop_margin: 1.0
+  comfort_decel: 3.0
+  stop_sign_wait: 0.5
 smoother:
   enabled: false
   margin_lat: 0.3

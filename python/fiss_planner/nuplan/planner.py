@@ -100,9 +100,9 @@ class FissPlanner(AbstractPlanner):
         t0 = time.perf_counter()
         t_now = ego.time_point.time_s
         lights = adapter.stop_line_states(self._road, current_input.traffic_light_data)
-        for sl_id, active in lights.items():
-            self._lp.set_stop_line_active(sl_id, active)
-        self._red = [i for i, on in lights.items() if on]
+        for sl_id, (active, yellow) in lights.items():
+            self._lp.set_stop_line_active(sl_id, active, yellow)
+        self._red = [i for i, (on, _) in lights.items() if on]
         state = adapter.ego_state(ego)
         horizon = self._cfg.planner.sampling.max_t + 0.5
         obstacles = adapter.obstacles(
@@ -163,6 +163,7 @@ class FissPlanner(AbstractPlanner):
             "a": state.a,
             "kappa": state.kappa,
             "stitched": out.stitched,
+            "behavior": list(out.behavior),
             "red": self._red,
             "virtual": [[o.id, *(lambda b: [b.cx, b.cy])(o.box_at(0.0))] for o in out.virtual_obstacles],
             "start": [out.start.s, out.start.s_d, out.start.s_dd, out.start.d, out.start.d_d, out.start.d_dd],
