@@ -11,6 +11,9 @@ YAML file); see benchmarks/bench2drive/README.md.
 
 from __future__ import annotations
 
+import math
+import os
+
 import carla
 import numpy as np
 from leaderboard.autoagents.autonomous_agent import AutonomousAgent, Track
@@ -19,6 +22,8 @@ from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
 import fiss_planner as fp
 from fiss_planner.carla import adapter
 from fiss_planner.carla.closed_loop import Actuation
+
+_STOP_STATES = (carla.TrafficLightState.Red, carla.TrafficLightState.Yellow)
 
 
 def get_entry_point() -> str:
@@ -80,10 +85,7 @@ class FissAgent(AutonomousAgent):
         ego_s = adapter.ego_state(self._ego)
         if self._tick % self.plan_every == 0:
             for sid, tl in self._lights.items():
-                state = tl.get_state()
-                self._lp.set_stop_line_active(
-                    sid, state in (carla.TrafficLightState.Red, carla.TrafficLightState.Yellow)
-                )
+                self._lp.set_stop_line_active(sid, tl.get_state() in _STOP_STATES)
             obs = adapter.obstacles(
                 self._world,
                 self._ego.id,
@@ -92,16 +94,62 @@ class FissAgent(AutonomousAgent):
                 max_range=self.obstacle_range,
                 ego_xy=(ego_s.x, ego_s.y),
                 road_map=self._road,
+                ego_z=self._ego.get_location().z,
             )
             out = self._lp.step(t, ego_s, obs)
             if len(out.trajectory) >= 2:
                 self._traj, self._traj_t0 = out.trajectory, t
+            if os.environ.get("FISS_B2D_TRACE"):
+                self._trace(t, ego_s, out, obs)
         self._tick += 1
         if self._traj is None:
             return carla.VehicleControl(brake=1.0)
         cmd = self._ctrl.compute(ego_s, self._traj, t - self._traj_t0)
         v_ref = self._traj.sample(t - self._traj_t0 + 0.3).v
         return self._actuation.control(cmd, v_ref, ego_s.v, self._vehicle.max_steer)
+
+    def _trace(self, t, ego_s, out, obs) -> None:
+        """Append this cycle to $FISS_B2D_TRACE/<town>_<start>.jsonl (debugging)."""
+        import json
+
+        if not hasattr(self, "_trace_path"):
+            d = os.environ["FISS_B2D_TRACE"]
+            os.makedirs(d, exist_ok=True)
+            name = CarlaDataProvider.get_map().name.split("/")[-1]
+            self._trace_path = os.path.join(d, f"{name}_{int(self._route[0].location.x)}.jsonl")
+            route = [adapter.to_planner(tf.location.x, tf.location.y)[:2] for tf in self._route]
+            lanes = {i: self._road.lane(i).centerline.tolist() for i in self._road.lane_ids()}
+            with open(self._trace_path, "w") as f:
+                f.write(json.dumps({"route": route, "lanes": lanes}) + "\n")
+        tr = out.trajectory
+        row = {
+            "t": t,
+            "x": ego_s.x,
+            "y": ego_s.y,
+            "yaw": ego_s.yaw,
+            "v": ego_s.v,
+            "mode": "E" if out.emergency else "F" if out.fallback else "D" if out.degraded else "P",
+            "ego_lane": out.ego_lane,
+            "target": out.target_speed,
+            "rej": {k: v for k, v in out.stats.rejections.items() if v},
+            "lead": [out.stats.lead.id, out.stats.lead.gap],
+            "blocking": out.stats.blocking_id,
+            "red": [sid for sid, tl in self._lights.items() if tl.get_state() in _STOP_STATES],
+            "types": {
+                o.id: getattr(self._world.get_actor(o.id), "type_id", "?")
+                for o in obs
+                if o.box_at(0.0) is not None
+                and math.hypot(o.box_at(0.0).cx - ego_s.x, o.box_at(0.0).cy - ego_s.y) < 30
+            },
+            "traj": [list(map(float, tr.x))[::5], list(map(float, tr.y))[::5], list(map(float, tr.v))[::5]],
+            "obs": [
+                [o.id, *(lambda b: [b.cx, b.cy, b.yaw, o.length, o.width])(o.box_at(0.0))]
+                for o in obs
+                if o.box_at(0.0) is not None
+            ],
+        }
+        with open(self._trace_path, "a") as f:
+            f.write(json.dumps(row) + "\n")
 
     def destroy(self):
         self._lp = None

@@ -15,8 +15,12 @@ from pathlib import Path
 
 
 def records(run: str | Path) -> list[dict]:
-    data = json.loads((Path(run) / "results.json").read_text())
-    return data["_checkpoint"]["records"]
+    """Route records of a run directory: its results.json, or those of its
+    route directories (benchmarks/bench2drive/run_routes.sh)."""
+    out = []
+    for f in sorted(Path(run).glob("**/results.json")):
+        out += json.loads(f.read_text())["_checkpoint"]["records"]
+    return out
 
 
 def success(rd: dict) -> bool:

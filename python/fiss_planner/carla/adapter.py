@@ -204,16 +204,19 @@ def obstacles(
     road_map=None,
     prediction: str = "lane_following",
     velocities=None,
+    ego_z: float | None = None,
 ):
     """Other vehicles, walkers and static props (standing) with predictions: vehicles follow their lane on
     ``road_map`` (``prediction="lane_following"``), everything else keeps its
     velocity. `velocities` ({actor id: CARLA velocity vector}) replaces the
     simulator's report for actors moved kinematically (physics off), which CARLA
-    reports as standing still."""
+    reports as standing still. With `ego_z`, actors more than 5 m above or
+    below the ego are left out."""
     out = []
     for actor in world.get_actors():
         is_vehicle = actor.type_id.startswith("vehicle.")
-        is_prop = actor.type_id.startswith("static.prop.")
+        # Scenario props (cones, warning signs, ...); generic meshes are map scenery.
+        is_prop = actor.type_id.startswith("static.prop.") and actor.type_id != "static.prop.mesh"
         if actor.id == ego_id or not (is_vehicle or is_prop or actor.type_id.startswith("walker.")):
             continue
         tf = actor.get_transform()
@@ -222,6 +225,8 @@ def obstacles(
             and math.hypot(tf.location.x - ego_xy[0], -tf.location.y - ego_xy[1]) > max_range
         ):
             continue
+        if ego_z is not None and abs(tf.location.z - ego_z) > 5.0:
+            continue  # e.g. scenario actors parked below the map until they are triggered
         ext = actor.bounding_box.extent
         x, y, yaw = to_planner(tf.location.x, tf.location.y, tf.rotation.yaw)
         if is_prop:  # cones, barriers, warning signs: standing, footprint at least 0.5 m

@@ -10,7 +10,7 @@ b2d="${BENCH2DRIVE_ROOT:-$PIXI_PROJECT_ROOT/data/cache/bench2drive/Bench2Drive}"
 mkdir -p "$out"
 export PYTHONPATH="$PIXI_PROJECT_ROOT/python:$b2d/leaderboard:$b2d/scenario_runner:$CARLA_ROOT/PythonAPI/carla"
 export SCENARIO_RUNNER_ROOT="$b2d/scenario_runner" LEADERBOARD_ROOT="$b2d/leaderboard"
-export IS_BENCH2DRIVE=True SAVE_PATH="$out" CHALLENGE_TRACK_CODENAME=SENSORS
+export IS_BENCH2DRIVE=True SAVE_PATH="$out" CHALLENGE_TRACK_CODENAME=SENSORS PYTHONUNBUFFERED=1
 cd "$b2d"
 python leaderboard/leaderboard/leaderboard_evaluator.py \
   --routes="leaderboard/data/$routes.xml" ${subset:+--routes-subset=$subset} --repetitions=1 --track=SENSORS \
