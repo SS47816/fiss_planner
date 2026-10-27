@@ -52,8 +52,8 @@ changes must be done (see [route urgency](concepts.md#corridor-and-lanes)).
 Every `LocalPlannerConfig` setting has a YAML key named after its field, the same as the ROS 2
 parameter: the scalars (`desired_speed`, `degraded_horizon`, ...) at the top level, then the
 sections `planner`, `sampling`, `cost`, `constraints`, `collision`, `safety`, `fiss_plus`, `route`,
-`stitching`, `path`, `smoother` and `vehicle`. Missing keys keep their defaults and unknown keys
-raise an error.
+`stitching`, `path`, `behavior`, `free_space`, `smoother` and `vehicle`. Missing keys keep their
+defaults and unknown keys raise an error.
 
 ```python
 cfg, vehicle = fp.load_local_planner_config("my_config.yaml", vehicle)  # fields not in the file keep their value
@@ -67,6 +67,24 @@ shipped profiles are `commonroad` and `carla_scenarios` (see [Benchmarks](benchm
 cfg, vehicle = fp.profiles.load("carla_scenarios", vehicle)
 cfg, vehicle = fp.profiles.override(cfg, vehicle, {"cost.w_lane_change": 3.0, "desired_speed": 12.0})
 fp.profiles.config_hash(cfg, vehicle)  # fingerprint the benchmarks record with every result
+```
+
+## Free space (parking)
+
+With `cfg.free_space.enabled`, a `LocalPlanner` on a map that finds the vehicle at low speed outside
+every lane of its corridor (parked on a strip, on a shoulder) plans a Hybrid A* path, forwards and
+backwards, across the map's lanes and areas back into its lane, then hands over to the lane
+planner. Add the drivable space outside the lanes with `road_map.add_area(polygon)`. While it drives
+free space, `out.free_space` is set, `out.free_space_path` holds the path and the trajectory's speed
+is negative where it reverses. The search is also available on its own:
+
+```python
+grid = fp.OccupancyGrid(cx, cy, 50.0, 0.1)   # starts occupied
+grid.mark_free(lane_polygon)                 # (N, 2) arrays
+grid.mark_occupied(obstacle.box_at(0.0))
+grid.compute_clearance()
+path = fp.plan_hybrid_astar(grid, fp.FreeSpacePose(x, y, yaw), goal, vehicle, fp.FreeSpaceConfig())
+traj = fp.free_space_trajectory(path, v0, fp.FreeSpaceConfig(), 0.1)
 ```
 
 ## Prediction

@@ -19,6 +19,7 @@
 #include "fiss_planner/collision/box2d.hpp"
 #include "fiss_planner/common/types.hpp"
 #include "fiss_planner/control/controller.hpp"
+#include "fiss_planner/freespace/hybrid_astar.hpp"
 #include "fiss_planner/geometry/reference_line.hpp"
 #include "fiss_planner/map/road_map.hpp"
 #include "fiss_planner/map/route_corridor.hpp"
@@ -560,6 +561,17 @@ NB_MODULE(_core, m) {
       .def(nb::init<>())
       .def("add_lane", &RoadMap::addLane, "lane"_a)
       .def("add_stop_line", &RoadMap::addStopLine, "stop_line"_a)
+      .def(
+          "add_area", [](RoadMap& m, const InPoints& polygon) { m.addArea(pointsFromNumpy(polygon)); },
+          "polygon"_a,
+          "Drivable space outside the lanes (parking strip, shoulder, lot) as an (N, 2) polygon; used by "
+          "free-space planning only.")
+      .def("areas",
+           [](const RoadMap& m) {
+             std::vector<nb::object> out;
+             for (const auto& a : m.areas()) out.push_back(pointsToNumpy(a));
+             return out;
+           })
       .def("set_stop_line_active", &RoadMap::setStopLineActive, "id"_a, "active"_a, "yellow"_a = false)
       .def("finalize", &RoadMap::finalize)
       .def(
@@ -730,6 +742,47 @@ NB_MODULE(_core, m) {
       .def_rw("blocked_cost", &BehaviorConfig::blocked_cost)
       .def_rw("oncoming_cost", &BehaviorConfig::oncoming_cost)
       .def_rw("pass_standoff", &BehaviorConfig::pass_standoff);
+  nb::class_<FreeSpaceConfig>(m, "FreeSpaceConfig")
+      .def(nb::init<>())
+      .def_rw("enabled", &FreeSpaceConfig::enabled)
+      .def_rw("grid_size", &FreeSpaceConfig::grid_size)
+      .def_rw("resolution", &FreeSpaceConfig::resolution)
+      .def_rw("yaw_bins", &FreeSpaceConfig::yaw_bins)
+      .def_rw("step", &FreeSpaceConfig::step)
+      .def_rw("steer_samples", &FreeSpaceConfig::steer_samples)
+      .def_rw("reverse", &FreeSpaceConfig::reverse)
+      .def_rw("reverse_cost", &FreeSpaceConfig::reverse_cost)
+      .def_rw("switch_cost", &FreeSpaceConfig::switch_cost)
+      .def_rw("steer_cost", &FreeSpaceConfig::steer_cost)
+      .def_rw("margin", &FreeSpaceConfig::margin)
+      .def_rw("max_expansions", &FreeSpaceConfig::max_expansions)
+      .def_rw("speed", &FreeSpaceConfig::speed)
+      .def_rw("accel", &FreeSpaceConfig::accel)
+      .def_rw("goal_ahead", &FreeSpaceConfig::goal_ahead);
+  nb::class_<FreeSpacePose>(m, "FreeSpacePose")
+      .def(nb::init<>())
+      .def(
+          "__init__",
+          [](FreeSpacePose* p, double x, double y, double yaw, bool reverse) {
+            new (p) FreeSpacePose{x, y, yaw, reverse};
+          },
+          "x"_a, "y"_a, "yaw"_a, "reverse"_a = false)
+      .def_rw("x", &FreeSpacePose::x)
+      .def_rw("y", &FreeSpacePose::y)
+      .def_rw("yaw", &FreeSpacePose::yaw)
+      .def_rw("reverse", &FreeSpacePose::reverse);
+  nb::class_<OccupancyGrid>(m, "OccupancyGrid")
+      .def(nb::init<double, double, double, double>(), "cx"_a, "cy"_a, "size"_a, "resolution"_a)
+      .def(
+          "mark_free",
+          [](OccupancyGrid& g, const InPoints& polygon) { g.markFree(pointsFromNumpy(polygon)); },
+          "polygon"_a)
+      .def("mark_occupied", &OccupancyGrid::markOccupied, "box"_a, "inflation"_a = 0.0)
+      .def("compute_clearance", &OccupancyGrid::computeClearance)
+      .def("clearance", &OccupancyGrid::clearance, "x"_a, "y"_a);
+  m.def("plan_hybrid_astar", &planHybridAStar, "grid"_a, "start"_a, "goal"_a, "vehicle"_a, "config"_a,
+        "Hybrid A* path (vehicle center poses) from start to goal on the grid, or None.");
+  m.def("free_space_trajectory", &freeSpaceTrajectory, "path"_a, "v0"_a, "config"_a, "dt"_a);
   nb::class_<LocalPlannerConfig>(m, "LocalPlannerConfig")
       .def(nb::init<>())
       .def_rw("planner", &LocalPlannerConfig::planner)
@@ -738,6 +791,7 @@ NB_MODULE(_core, m) {
       .def_rw("path", &LocalPlannerConfig::path)
       .def_rw("smoother", &LocalPlannerConfig::smoother)
       .def_rw("behavior", &LocalPlannerConfig::behavior)
+      .def_rw("free_space", &LocalPlannerConfig::free_space)
       .def_rw("desired_speed", &LocalPlannerConfig::desired_speed)
       .def_rw("emergency_decel", &LocalPlannerConfig::emergency_decel)
       .def_rw("degraded_horizon", &LocalPlannerConfig::degraded_horizon)
@@ -793,7 +847,9 @@ NB_MODULE(_core, m) {
       .def_ro("target_speed", &LocalPlanOutput::target_speed)
       .def_ro("ego_lane", &LocalPlanOutput::ego_lane)
       .def_ro("virtual_obstacles", &LocalPlanOutput::virtual_obstacles)
-      .def_ro("behavior", &LocalPlanOutput::behavior);
+      .def_ro("behavior", &LocalPlanOutput::behavior)
+      .def_ro("free_space", &LocalPlanOutput::free_space)
+      .def_ro("free_space_path", &LocalPlanOutput::free_space_path);
 
   nb::class_<LocalPlanner>(m, "LocalPlanner")
       .def(nb::init<const LocalPlannerConfig&, const VehicleParams&>(), "config"_a = LocalPlannerConfig{},

@@ -109,6 +109,13 @@ void LocalPlannerConfig::validate() const {
   requireLocal(b.yield_lookahead >= 0 && b.crossing_gap >= 0 && b.go_accel > 0 && b.turn_speed > 0 &&
                    b.stop_margin >= 0 && b.comfort_decel > 0 && b.stop_sign_wait >= 0,
                "behavior settings must be positive (gaps, margins and waits >= 0)");
+  const auto& f = free_space;
+  requireLocal(
+      f.grid_size > 0 && f.resolution > 0 && f.yaw_bins >= 8 && f.step > 0 && f.steer_samples >= 1 &&
+          f.max_expansions > 0 && f.speed > 0 && f.accel > 0 && f.goal_ahead > 0,
+      "free_space sizes, steps, counts, speed, accel and goal_ahead must be positive (yaw_bins >= 8)");
+  requireLocal(f.reverse_cost >= 0 && f.switch_cost >= 0 && f.steer_cost >= 0 && f.margin >= 0,
+               "free_space costs and margin must be >= 0");
   requireLocal(desired_speed >= 0 && emergency_decel >= 0 && degraded_horizon >= 0 &&
                    envelope_retry_weight >= 0 && recovery_decel >= 0,
                "desired_speed, emergency_decel, degraded_horizon, envelope_retry_weight and "
@@ -291,6 +298,23 @@ std::vector<Section> localSections(LocalPlannerConfig& c) {
                   {"blocked_cost", field(b.blocked_cost)},
                   {"oncoming_cost", field(b.oncoming_cost)},
                   {"pass_standoff", field(b.pass_standoff)}}});
+  auto& fs = c.free_space;
+  out.push_back({"free_space",
+                 {{"enabled", field(fs.enabled)},
+                  {"grid_size", field(fs.grid_size)},
+                  {"resolution", field(fs.resolution)},
+                  {"yaw_bins", field(fs.yaw_bins)},
+                  {"step", field(fs.step)},
+                  {"steer_samples", field(fs.steer_samples)},
+                  {"reverse", field(fs.reverse)},
+                  {"reverse_cost", field(fs.reverse_cost)},
+                  {"switch_cost", field(fs.switch_cost)},
+                  {"steer_cost", field(fs.steer_cost)},
+                  {"margin", field(fs.margin)},
+                  {"max_expansions", field(fs.max_expansions)},
+                  {"speed", field(fs.speed)},
+                  {"accel", field(fs.accel)},
+                  {"goal_ahead", field(fs.goal_ahead)}}});
   out.push_back({"smoother",
                  {{"enabled", field(q.enabled)},
                   {"margin_lat", field(q.margin_lat)},

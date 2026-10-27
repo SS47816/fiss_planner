@@ -74,12 +74,42 @@ def _region_waypoints(carla_map, spacing: float, points: np.ndarray, radius: flo
     return out
 
 
+def _side_areas(lane_wps: list, min_width: float = 1.0) -> list[np.ndarray]:
+    """Polygons of the parking and shoulder lanes alongside a driving lane
+    (waypoints in driving order), as free space for parking manoeuvres."""
+    import carla
+
+    kinds = (carla.LaneType.Parking, carla.LaneType.Shoulder)
+    areas = []
+    for side in ("right", "left"):
+        run: list = []
+        for w in [*lane_wps, None]:
+            nb = None if w is None else (w.get_right_lane() if side == "right" else w.get_left_lane())
+            if nb is not None and nb.lane_type in kinds and nb.lane_width >= min_width:
+                run.append(nb)
+                continue
+            if len(run) >= 2:
+                left, right = [], []
+                for n in run:
+                    x, y, yaw = to_planner(
+                        n.transform.location.x, n.transform.location.y, n.transform.rotation.yaw
+                    )
+                    hw = 0.5 * n.lane_width
+                    left.append((x - math.sin(yaw) * hw, y + math.cos(yaw) * hw))
+                    right.append((x + math.sin(yaw) * hw, y - math.cos(yaw) * hw))
+                areas.append(np.asarray(left + right[::-1]))
+            run = []
+    return areas
+
+
 def road_map_from_carla(carla_map, spacing: float = 2.0, region: tuple | None = None):
     """Build a RoadMap from CARLA waypoints.
 
     Every (road, section, lane) of driving type becomes a lane; neighbours are
     the same-direction driving lanes on either side, and lane changes follow
     the waypoints' ``lane_change`` flags (derived from the road markings).
+    Parking and shoulder lanes alongside become areas (free space for
+    parking manoeuvres).
     `region` = (points (N, 2) in CARLA x, y; radius [m]) keeps only the lanes
     passing within the radius of the points (for large towns).
     Returns (road_map, key_to_id) so that route waypoints can be mapped."""
@@ -118,6 +148,8 @@ def road_map_from_carla(carla_map, spacing: float = 2.0, region: tuple | None = 
         lane.left = np.asarray(left)
         lane.right = np.asarray(right)
         lane.junction = any(w.is_junction for w in wps)
+        for area in _side_areas(pts):
+            road.add_area(area)
 
         mid = wps[len(wps) // 2]
         opposite = mid.get_left_lane()

@@ -61,6 +61,20 @@ profile per benchmark.
 - Adapters flag junction lanes (CARLA junction waypoints, nuPlan lane connectors), report yellow
   lights, and map CARLA stop signs to stop lines.
 
+### Free-space planning
+- Hybrid A* (`fiss_planner/freespace/hybrid_astar.hpp`): a search over vehicle poses with forward
+  and reverse motion primitives on an occupancy grid with a clearance field, a Dubins shot to the
+  goal, and a heuristic of the distance around obstacles. `freeSpaceTrajectory` times a path, coming
+  to rest at every change of direction (negative speeds drive backwards).
+- `LocalPlanner` free-space mode (`free_space.enabled`, map mode): at low speed outside every lane of
+  the corridor (e.g. parked), it plans across the map's lanes and areas (`RoadMap::addArea`:
+  parking strips, shoulders) back to the ego lane's center `goal_ahead` ahead, with standing
+  obstacles mapped and moving ones checked along the plan (it waits while they would conflict). It
+  replans when the vehicle strays or the way is blocked, and hands over to the lane planner once in
+  the lane and aligned (`LocalPlanOutput::free_space`, `free_space_path`).
+- CARLA: parking and shoulder lanes become map areas; `FreeSpaceTracker` follows free-space plans
+  with pure pursuit of the rear axle in either gear. On in the bench2drive profile.
+
 ### Configuration
 - The whole `LocalPlannerConfig` loads from YAML (`loadLocalPlannerConfig` /
   `load_local_planner_config`, `parseLocalPlannerConfig`). Keys are named after the fields, as the

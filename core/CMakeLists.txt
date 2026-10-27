@@ -36,6 +36,7 @@ endif()
 add_library(fiss_planner
   src/box2d.cpp
   src/frenet_obstacles.cpp
+  src/hybrid_astar.cpp
   src/lane_following.cpp
   src/components.cpp
   src/config.cpp

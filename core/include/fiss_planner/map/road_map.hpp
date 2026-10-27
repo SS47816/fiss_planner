@@ -5,6 +5,7 @@
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "fiss_planner/collision/box2d.hpp"
@@ -54,12 +55,16 @@ class RoadMap {
   void addLane(MapLane lane);
   void addStopLine(const StopLine& stop_line) { stop_lines_.push_back(stop_line); }
   bool setStopLineActive(int id, bool active, bool yellow = false);
+  /// Drivable space outside the lanes (parking strips, shoulders, lots) as a
+  /// polygon; used by free-space planning only.
+  void addArea(std::vector<Vec2> polygon) { areas_.push_back(std::move(polygon)); }
   /// Derive predecessors from successors and validate neighbour references.
   void finalize();
 
   const MapLane* lane(int id) const;
   const std::unordered_map<int, MapLane>& lanes() const { return lanes_; }
   const std::vector<StopLine>& stopLines() const { return stop_lines_; }
+  const std::vector<std::vector<Vec2>>& areas() const { return areas_; }
 
   /// Lane containing (x, y) with a compatible heading. Lanes in `preferred`
   /// win ties (e.g. the route or the previous ego lane). If no lane contains
@@ -70,6 +75,7 @@ class RoadMap {
  private:
   std::unordered_map<int, MapLane> lanes_;
   std::vector<StopLine> stop_lines_;
+  std::vector<std::vector<Vec2>> areas_;
 };
 
 /// Arc-length position and lateral distance of a point on a polyline.

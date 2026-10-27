@@ -105,6 +105,22 @@ behavior:
   blocked_cost: 50.0
   oncoming_cost: 10.0
   pass_standoff: 8.0
+free_space:
+  enabled: false  # nuPlan starts in the lanes and its tracker does not reverse
+  grid_size: 50.0
+  resolution: 0.1
+  yaw_bins: 72
+  step: 1.0
+  steer_samples: 5
+  reverse: true
+  reverse_cost: 2.0
+  switch_cost: 5.0
+  steer_cost: 0.5
+  margin: 0.2
+  max_expansions: 40000
+  speed: 1.5
+  accel: 1.0
+  goal_ahead: 12.0
 smoother:
   enabled: false
   margin_lat: 0.3

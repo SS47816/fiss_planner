@@ -85,6 +85,44 @@ void append(Trajectory& head, const Trajectory& tail, double offset) {
   }
 }
 
+// Free-space mode.
+constexpr double kFreeSpaceEntrySpeed = 2.0;  // [m/s] enter only below this speed
+constexpr double kBandSlack = 0.3;            // [m] inside a lane band up to this far beyond its edges
+constexpr double kHandoverOffset = 0.5;       // [m] back in the lane this close to its center ...
+constexpr double kHandoverHeading = 0.25;     // [rad] ... and this well aligned
+constexpr double kReplanDeviation = 1.0;      // [m] replan this far off the path
+constexpr double kCuspReach = 0.4;            // [m] a change of direction is reached this close ...
+constexpr double kCuspSpeed = 0.2;            // [m/s] ... at this speed
+constexpr double kSlowObstacle = 0.5;         // [m/s] slower obstacles are mapped as occupied
+constexpr double kHoldTime = 2.0;             // [s] length of a standstill plan
+constexpr double kGoalSearch = 10.0;          // [m] beyond goal_ahead to find a free goal
+
+/// Standing still at the vehicle's pose.
+Trajectory standstill(const EgoState& ego, double s, double dt) {
+  Trajectory traj;
+  for (double t : timeSamples(kHoldTime, dt)) {
+    traj.t.push_back(t);
+    traj.x.push_back(ego.x);
+    traj.y.push_back(ego.y);
+    traj.yaw.push_back(ego.yaw);
+    traj.s.push_back(s);
+  }
+  const size_t n = traj.t.size();
+  for (auto* v : {&traj.s_d, &traj.s_dd, &traj.s_ddd, &traj.d, &traj.d_d, &traj.d_dd, &traj.d_ddd, &traj.v,
+                  &traj.a, &traj.kappa}) {
+    v->assign(n, 0.0);
+  }
+  traj.end = {0.0, 0.0, kHoldTime};
+  traj.is_cartesian = true;
+  return traj;
+}
+
+std::vector<Vec2> lanePolygon(const MapLane& lane) {
+  std::vector<Vec2> poly = lane.left;
+  poly.insert(poly.end(), lane.right.rbegin(), lane.right.rend());
+  return poly;
+}
+
 }  // namespace
 
 LocalPlanner::LocalPlanner(const LocalPlannerConfig& config, const VehicleParams& vehicle)
@@ -141,6 +179,8 @@ void LocalPlanner::reset() {
   previous_.reset();
   previous_emergency_ = false;
   previous_ego_lane_ = -1;
+  free_path_.clear();
+  free_index_ = 0;
   planner_->reset();
   behavior_->reset();
 }
@@ -224,6 +264,175 @@ Trajectory LocalPlanner::emergencyStop(const FrenetState& start, const Reference
   }
   convertToCartesian(ref, traj);
   return traj;
+}
+
+bool LocalPlanner::freeSpaceStep(const EgoState& ego, const std::vector<Obstacle>& obstacles,
+                                 LocalPlanOutput& out, bool allow_handover) {
+  const FreeSpaceConfig& fc = config_.free_space;
+  const ReferenceLine& ref = *out.reference;
+  const Corridor& corridor = out.corridor;
+  const LaneBand* ego_band = corridor.egoLane();
+  if (!ego_band) {
+    free_path_.clear();
+    return false;
+  }
+  const FrenetState f = ref.toFrenet(ego);
+  if (free_path_.empty()) {
+    // Enter at low speed outside every lane of the corridor.
+    if (std::abs(ego.v) > kFreeSpaceEntrySpeed) return false;
+    for (const auto& lane : corridor.lanes()) {
+      if (f.d <= corridor.left(lane, f.s) + kBandSlack && f.d >= corridor.right(lane, f.s) - kBandSlack)
+        return false;
+    }
+  } else if (allow_handover && std::abs(f.d - corridor.center(*ego_band, f.s)) < kHandoverOffset &&
+             std::abs(normalizeAngle(ego.yaw - ref.at(f.s).yaw)) < kHandoverHeading) {
+    free_path_.clear();  // back in the lane
+    return false;
+  }
+
+  // Goal on the ego lane's center, goal_ahead ahead (further if occupied).
+  const auto lanePose = [&](double s) {
+    const RefPoint p = ref.at(s);
+    const double c = corridor.center(*ego_band, s);
+    return FreeSpacePose{p.x - c * std::sin(p.yaw), p.y + c * std::cos(p.yaw), p.yaw, false};
+  };
+  const FreeSpacePose nominal = lanePose(f.s + fc.goal_ahead);
+
+  // Grid around the vehicle and the goal: the map's lanes and areas, the
+  // vehicle's own footprint, minus standing obstacles. Moving ones are
+  // checked along the trajectory instead.
+  OccupancyGrid grid(0.5 * (ego.x + nominal.x), 0.5 * (ego.y + nominal.y), fc.grid_size, fc.resolution);
+  const double reach = fc.grid_size;  // lanes with a centerline point this close may cover the grid
+  for (const auto& [id, lane] : map_->lanes()) {
+    const bool near = std::any_of(lane.centerline.begin(), lane.centerline.end(), [&](const Vec2& p) {
+      return std::hypot(p.x - ego.x, p.y - ego.y) < reach;
+    });
+    if (near) grid.markFree(lanePolygon(lane));
+  }
+  for (const auto& area : map_->areas()) grid.markFree(area);
+  {
+    Box2d own{ego.x, ego.y, ego.yaw, vehicle_.length + 2.0 * fc.margin, vehicle_.width + 2.0 * fc.margin};
+    const auto c = own.corners();
+    grid.markFree({c.begin(), c.end()});
+  }
+  std::vector<Obstacle> moving;
+  for (const Obstacle& ob : obstacles) {
+    if (ob.prediction.empty()) continue;
+    if (ob.is_static || std::abs(ob.prediction.front().v) < kSlowObstacle) {
+      if (const auto box = ob.boxAt(0.0)) grid.markOccupied(*box);
+    } else {
+      moving.push_back(ob);
+    }
+  }
+  grid.computeClearance();
+
+  const double dt = config_.planner.sampling.dt;
+  out.free_space = true;
+  const auto hold = [&](const char* why) {
+    out.trajectory = standstill(ego, f.s, dt);
+    out.behavior.emplace_back(why);
+    out.free_space_path = free_path_;
+    return true;
+  };
+
+  // Progress along the path: the nearest segment up to the next change of
+  // direction, which is passed once reached at near standstill.
+  bool replan = free_path_.empty();
+  if (!replan) {
+    const size_t n = free_path_.size();
+    const bool dir = free_path_[std::min(free_index_ + 1, n - 1)].reverse;
+    size_t cusp = std::min(free_index_ + 1, n - 1);
+    while (cusp + 1 < n && free_path_[cusp + 1].reverse == dir) ++cusp;
+    size_t nearest = free_index_;
+    double best = std::numeric_limits<double>::infinity();
+    for (size_t i = free_index_; i < cusp; ++i) {
+      const FreeSpacePose& a = free_path_[i];
+      const FreeSpacePose& b = free_path_[i + 1];
+      const double len2 = (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y);
+      const double u =
+          len2 > 1e-9
+              ? std::clamp(((ego.x - a.x) * (b.x - a.x) + (ego.y - a.y) * (b.y - a.y)) / len2, 0.0, 1.0)
+              : 0.0;
+      const double d = std::hypot(a.x + u * (b.x - a.x) - ego.x, a.y + u * (b.y - a.y) - ego.y);
+      if (d < best) {
+        best = d;
+        nearest = i;
+      }
+    }
+    const FreeSpacePose& c = free_path_[cusp];
+    if (cusp + 1 < n && std::hypot(c.x - ego.x, c.y - ego.y) < kCuspReach && std::abs(ego.v) < kCuspSpeed) {
+      nearest = cusp;  // reached the change of direction
+    }
+    free_index_ = nearest;
+    const FreeSpacePose& last = free_path_.back();
+    if (cusp + 1 >= n && std::hypot(last.x - ego.x, last.y - ego.y) < kCuspReach &&
+        std::abs(ego.v) < kCuspSpeed) {
+      // At the end: the lane planner takes over from within the lane.
+      const double half = 0.5 * (corridor.left(*ego_band, f.s) - corridor.right(*ego_band, f.s));
+      if (allow_handover && std::abs(f.d - corridor.center(*ego_band, f.s)) < half) {
+        free_path_.clear();
+        out.free_space = false;
+        return false;
+      }
+      replan = true;
+    }
+    replan = replan || best > kReplanDeviation || free_index_ + 1 >= n;
+    // Obstacles that came into the way (the path may run closer than the
+    // margin where it starts in a tight spot).
+    for (size_t i = free_index_; !replan && i < n; ++i) {
+      replan = !freeSpaceCollisionFree(grid, free_path_[i], vehicle_, 0.0);
+    }
+  }
+  if (replan) {
+    free_path_.clear();
+    std::optional<FreeSpacePose> goal;
+    for (double ahead = 0.0; ahead <= kGoalSearch && !goal; ahead += 1.0) {
+      const FreeSpacePose g = lanePose(f.s + fc.goal_ahead + ahead);
+      if (freeSpaceCollisionFree(grid, g, vehicle_, fc.margin)) goal = g;
+    }
+    const FreeSpacePose from{ego.x, ego.y, ego.yaw, false};
+    std::optional<std::vector<FreeSpacePose>> path;
+    if (goal) {
+      // With half the margin, then none, if the full one leaves no way out
+      // (e.g. parked close to the curb in a narrow parking lane).
+      FreeSpaceConfig search = fc;
+      for (const double scale : {1.0, 0.5, 0.0}) {
+        search.margin = scale * fc.margin;
+        path = planHybridAStar(grid, from, *goal, vehicle_, search);
+        if (path || fc.margin == 0.0) break;
+      }
+    }
+    if (!path) return hold("free_space_blocked");
+    free_path_ = std::move(*path);
+    free_index_ = 0;
+  }
+
+  // The rest of the path, from the vehicle's projection onto it.
+  std::vector<FreeSpacePose> rest(free_path_.begin() + static_cast<long>(free_index_), free_path_.end());
+  if (rest.size() > 1) {
+    const FreeSpacePose& a = rest[0];
+    const FreeSpacePose& b = rest[1];
+    const double len2 = (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y);
+    const double u =
+        len2 > 1e-9 ? std::clamp(((ego.x - a.x) * (b.x - a.x) + (ego.y - a.y) * (b.y - a.y)) / len2, 0.0, 1.0)
+                    : 0.0;
+    rest[0] = {a.x + u * (b.x - a.x), a.y + u * (b.y - a.y), a.yaw + u * normalizeAngle(b.yaw - a.yaw),
+               a.reverse};
+  }
+  const bool reverse = rest.size() > 1 && rest[1].reverse;
+  Trajectory traj = freeSpaceTrajectory(rest, reverse ? -std::abs(ego.v) : std::abs(ego.v), fc, dt);
+  // Wait for moving traffic to pass.
+  int checks = 0;
+  const CollisionChecker checker(config_.planner.collision, vehicle_);
+  if (!checker.isCollisionFree(traj, moving, checks) ||
+      !checker.keepsTimeGap(traj, moving, config_.planner.safety.crossing_time_gap, checks)) {
+    return hold("free_space_yield");
+  }
+  out.success = true;
+  out.trajectory = std::move(traj);
+  out.behavior.emplace_back("free_space");
+  out.free_space_path = free_path_;
+  return true;
 }
 
 LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std::vector<Obstacle>& obstacles,
@@ -341,6 +550,28 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
     }
   }
 
+  // --- Free space (outside the lanes) ------------------------------------------
+  // Right after handing over to the lane planner, the free-space plan stays
+  // the fallback for this cycle (e.g. still alongside the parked cars).
+  std::optional<LocalPlanOutput> handover;
+  if (config_.free_space.enabled && map_) {
+    std::vector<FreeSpacePose> path = free_path_;
+    const size_t index = free_index_;
+    if (freeSpaceStep(ego, obstacles, out)) {
+      previous_ = out.trajectory;
+      previous_t0_ = t_now;
+      previous_emergency_ = false;
+      return out;
+    }
+    if (!path.empty()) {
+      std::swap(free_path_, path);
+      free_index_ = index;
+      LocalPlanOutput fs = out;
+      if (freeSpaceStep(ego, obstacles, fs, false)) handover = std::move(fs);
+      free_path_.clear();
+    }
+  }
+
   // --- Obstacles relative to the start time -----------------------------------
   std::vector<Obstacle> all = obstacles;
   all.insert(all.end(), out.virtual_obstacles.begin(), out.virtual_obstacles.end());
@@ -408,6 +639,11 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
     } else {
       out.trajectory = std::move(res.trajectory);
     }
+    previous_ = out.trajectory;
+    previous_t0_ = t_now;
+    previous_emergency_ = false;
+  } else if (handover) {
+    out = std::move(*handover);
     previous_ = out.trajectory;
     previous_t0_ = t_now;
     previous_emergency_ = false;

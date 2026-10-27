@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "fiss_planner/behavior/behavior_planner.hpp"
+#include "fiss_planner/freespace/hybrid_astar.hpp"
 #include "fiss_planner/map/road_map.hpp"
 #include "fiss_planner/map/route_corridor.hpp"
 #include "fiss_planner/planning/planner.hpp"
@@ -40,8 +41,13 @@ struct LocalPlannerConfig {
   RouteCorridorConfig route;
   StitchingConfig stitching;
   PathModeConfig path;
-  SmootherConfig smoother;       ///< optional QP refinement of the chosen trajectory
-  BehaviorConfig behavior;       ///< junction yielding, yellow lights, stop signs (map mode)
+  SmootherConfig smoother;  ///< optional QP refinement of the chosen trajectory
+  BehaviorConfig behavior;  ///< junction yielding, yellow lights, stop signs (map mode)
+  /// Hybrid A* free-space planning (map mode): when the vehicle is at low
+  /// speed outside all lanes of the corridor (e.g. parked on a parking strip),
+  /// it plans forwards and backwards across the map's lanes and areas back
+  /// into its lane, then hands over to the lane planner.
+  FreeSpaceConfig free_space;
   double desired_speed = 13.9;   ///< [m/s] used when step() gets no speed
   double emergency_decel = 0.0;  ///< [m/s^2] fail-safe braking; 0 = vehicle max_decel
   /// When no candidate is valid and the previous plan is no longer collision
@@ -94,6 +100,10 @@ struct LocalPlanOutput {
   int ego_lane = -1;
   std::vector<Obstacle> virtual_obstacles;  ///< e.g. active stop lines and behaviour stops
   std::vector<std::string> behavior;        ///< behaviours that applied this cycle (if enabled)
+  /// Planned in free space (see FreeSpaceConfig): `trajectory` follows the
+  /// Hybrid A* path, with negative speeds where it drives backwards.
+  bool free_space = false;
+  std::vector<FreeSpacePose> free_space_path;  ///< the whole path being driven
 };
 
 /// One-call planning pipeline used by the ROS nodes and the benchmarks:
@@ -130,6 +140,9 @@ class LocalPlanner {
   void applyPendingConfig();
   double targetSpeed(const ReferenceLine& ref, double s, double v, double desired, double lane_limit) const;
   Trajectory emergencyStop(const FrenetState& start, const ReferenceLine& ref) const;
+  /// Free-space mode for this cycle; false hands over to the lane planner.
+  bool freeSpaceStep(const EgoState& ego, const std::vector<Obstacle>& obstacles, LocalPlanOutput& out,
+                     bool allow_handover = true);
 
   LocalPlannerConfig config_;
   VehicleParams vehicle_;
@@ -147,6 +160,8 @@ class LocalPlanner {
   double previous_t0_ = 0.0;
   int previous_ego_lane_ = -1;
   double last_step_t_ = std::numeric_limits<double>::quiet_NaN();
+  std::vector<FreeSpacePose> free_path_;  ///< free-space path being driven; empty in lane mode
+  size_t free_index_ = 0;                 ///< progress along free_path_
 
   std::mutex pending_mutex_;
   std::optional<LocalPlannerConfig> pending_config_;

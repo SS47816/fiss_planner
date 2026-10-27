@@ -247,6 +247,78 @@ class Actuation:
         return ctrl
 
 
+class FreeSpaceTracker:
+    """Track a free-space trajectory (LocalPlanOutput.free_space; negative
+    speeds drive backwards) at low speed: pure pursuit of the rear axle along
+    the path in either gear, and a PI loop on the speed. The gear changes only
+    at standstill."""
+
+    def __init__(self, dt: float, vehicle, lookahead: float = 2.0, kp: float = 0.3, ki: float = 0.1):
+        self.dt, self.vehicle, self.lookahead, self.kp, self.ki = dt, vehicle, lookahead, kp, ki
+        self.integral = 0.0
+        self.reverse = False
+
+    def _rear(self, x: float, y: float, yaw: float) -> tuple[float, float]:
+        r = self.vehicle.rear_axle_to_center
+        return x - r * math.cos(yaw), y - r * math.sin(yaw)
+
+    def control(self, ego, v_long: float, traj, t_rel: float):
+        """`ego`: EgoState (center), `v_long`: signed speed along the heading."""
+        import carla
+
+        ctrl = carla.VehicleControl()
+        ahead = [traj.sample(t_rel + h).v for h in (0.1, 0.3, 0.6, 1.0)]
+        moving = [v for v in ahead if abs(v) > 0.05]
+        if not moving:
+            ctrl.brake, ctrl.reverse, self.integral = 1.0, self.reverse, 0.0
+            return ctrl
+        reverse = moving[0] < 0.0
+        if reverse != self.reverse and abs(v_long) > 0.2:
+            ctrl.brake, ctrl.reverse, self.integral = 1.0, self.reverse, 0.0  # stop before changing gear
+            return ctrl
+        self.reverse = reverse
+
+        # Look-ahead point on the rear axle's path, in the current direction;
+        # past the last such point, along its heading.
+        rx, ry = self._rear(ego.x, ego.y, ego.yaw)
+        sign = -1.0 if reverse else 1.0
+        tx, ty, t, last_yaw = rx, ry, t_rel, ego.yaw
+        end = t_rel + 20.0 if len(traj) == 0 else float(traj.t[-1])
+        while t < end:
+            t += 0.1
+            s = traj.sample(t)
+            if s.v * sign < -0.05:
+                break
+            tx, ty = self._rear(s.x, s.y, s.yaw)
+            last_yaw = s.yaw
+            if math.hypot(tx - rx, ty - ry) >= self.lookahead:
+                break
+        d = math.hypot(tx - rx, ty - ry)
+        if d < self.lookahead:
+            tx += sign * (self.lookahead - d) * math.cos(last_yaw)
+            ty += sign * (self.lookahead - d) * math.sin(last_yaw)
+        heading = ego.yaw + (math.pi if reverse else 0.0)
+        alpha = math.atan2(ty - ry, tx - rx) - heading
+        ld = max(math.hypot(tx - rx, ty - ry), 1e-3)
+        delta = math.atan2(2.0 * self.vehicle.wheelbase * math.sin(alpha), ld)
+        if reverse:
+            delta = -delta
+        ctrl.steer = float(np.clip(-delta / self.vehicle.max_steer, -1.0, 1.0))  # CARLA steer is clockwise
+        ctrl.reverse = reverse
+
+        v_ref = abs(traj.sample(t_rel + 0.3).v)
+        err = v_ref - abs(v_long)
+        self.integral = float(np.clip(self.integral + err * self.dt, -3.0, 3.0))
+        u = self.kp * err + self.ki * self.integral + (0.2 if v_ref > 0.1 else 0.0)
+        if v_ref < 0.05 and abs(v_long) < 0.3:
+            ctrl.brake = 1.0
+        elif u >= 0.0:
+            ctrl.throttle = float(np.clip(u, 0.0, 0.6))
+        else:
+            ctrl.brake = float(np.clip(-u, 0.0, 1.0))
+        return ctrl
+
+
 def _drive_cutter(cutter, state, ego_s, t, dt, result, speed=9.0, duration=2.5):
     """Advance the scripted cut-in vehicle by one tick. It follows its lane at
     `speed` and, once 8-20 m ahead of the ego, blends into the ego lane."""

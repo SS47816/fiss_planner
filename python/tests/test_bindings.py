@@ -93,6 +93,36 @@ def test_local_planner_closed_loop_on_map():
     assert lp.planner_type == fp.PlannerType.FOP
 
 
+def test_free_space_bindings():
+    grid = fp.OccupancyGrid(10.0, 0.0, 40.0, 0.1)
+    grid.mark_free(np.array([[-10.0, -5.0], [30.0, -5.0], [30.0, 5.0], [-10.0, 5.0]]))
+    grid.compute_clearance()
+    cfg = fp.FreeSpaceConfig()
+    path = fp.plan_hybrid_astar(
+        grid, fp.FreeSpacePose(0, 0, 0), fp.FreeSpacePose(15, 2, 0), fp.VehicleParams(), cfg
+    )
+    assert path is not None and abs(path[-1].x - 15.0) < 0.5
+    traj = fp.free_space_trajectory(path, 0.0, cfg, 0.1)
+    assert max(traj.v) <= cfg.speed + 1e-9
+
+    # Parked beside the road: drives out in free space, then the lane planner takes over.
+    m = two_lane_map()
+    m.add_area(np.array([[0.0, -4.25], [180.0, -4.25], [180.0, -1.75], [0.0, -1.75]]))
+    assert len(m.areas()) == 1
+    lcfg = fp.LocalPlannerConfig()
+    lcfg.free_space.enabled = True
+    lp = fp.LocalPlanner(lcfg)
+    lp.set_map(m, [1, 2, 3])
+    ego = fp.EgoState(36.0, -3.0, 0.0, 0.0)
+    modes = []
+    for i in range(150):
+        out = lp.step(0.1 * i, ego)
+        modes.append(out.free_space)
+        ego = out.trajectory.sample(0.1)
+    assert modes[0] and not modes[-1]
+    assert ego.y == pytest.approx(0.0, abs=0.6)
+
+
 def test_route_corridor_bindings():
     rc = fp.build_route_corridor(two_lane_map(), [], fp.EgoState(10.0, 0.0, 0.0, 5.0))
     assert rc is not None and rc.ego_lane == 1

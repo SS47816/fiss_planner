@@ -21,7 +21,7 @@ from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
 
 import fiss_planner as fp
 from fiss_planner.carla import adapter
-from fiss_planner.carla.closed_loop import Actuation
+from fiss_planner.carla.closed_loop import Actuation, FreeSpaceTracker
 
 _STOP_STATES = (carla.TrafficLightState.Red, carla.TrafficLightState.Yellow)
 
@@ -104,6 +104,8 @@ class FissAgent(AutonomousAgent):
         # pulling away and creeping use Stanley steering and PID speed control.
         self._slow_ctrl = fp.make_controller("stanley_pid", vehicle)
         self._actuation = Actuation(0.05)
+        self._free_tracker = FreeSpaceTracker(0.05, vehicle)
+        self._free = False
         self._world = world
 
     def run_step(self, input_data, timestamp):
@@ -130,11 +132,25 @@ class FissAgent(AutonomousAgent):
             out = self._lp.step(t, ego_s, obs)
             if len(out.trajectory) >= 2:
                 self._traj, self._traj_t0 = out.trajectory, t
+                self._free = out.free_space
             if os.environ.get("FISS_B2D_TRACE"):
                 self._trace(t, ego_s, out, obs)
         self._tick += 1
         if self._traj is None:
             return carla.VehicleControl(brake=1.0)
+        if self._free:
+            vel, fwd = self._ego.get_velocity(), self._ego.get_transform().get_forward_vector()
+            v_long = vel.x * fwd.x + vel.y * fwd.y
+            control = self._free_tracker.control(ego_s, v_long, self._traj, t - self._traj_t0)
+            self._last = (
+                0.0,
+                0.0,
+                self._traj.sample(t - self._traj_t0 + 0.3).v,
+                control.throttle,
+                control.brake,
+                control.steer,
+            )
+            return control
         ctrl = self._ctrl if ego_s.v >= self.mpc_min_speed else self._slow_ctrl
         cmd = ctrl.compute(ego_s, self._traj, t - self._traj_t0)
         v_ref = self._traj.sample(t - self._traj_t0 + 0.3).v
@@ -201,6 +217,33 @@ class FissAgent(AutonomousAgent):
                 if o.box_at(0.0) is not None
             ],
         }
+        if "free_space_blocked" in out.behavior and not getattr(self, "_scene_dumped", False):
+            # The free-space scene, to replay the search offline.
+            self._scene_dumped = True
+            near = [
+                i
+                for i in self._road.lane_ids()
+                if np.min(np.hypot(*(self._road.lane(i).centerline - [ego_s.x, ego_s.y]).T)) < 60.0
+            ]
+            ref = out.reference
+            ego_band = next(b for b in out.corridor.lanes if b.offset == 0)
+            row["scene"] = {
+                "lanes": {
+                    i: [self._road.lane(i).left.tolist(), self._road.lane(i).right.tolist()] for i in near
+                },
+                "areas": [a.tolist() for a in self._road.areas()],
+                "obstacles": [
+                    [
+                        o.is_static,
+                        o.prediction[0].v,
+                        *(lambda b: [b.cx, b.cy, b.yaw, b.length, b.width])(o.box_at(0.0)),
+                    ]
+                    for o in obs
+                    if o.box_at(0.0) is not None
+                ],
+                "reference": ref.sample(1.0)[:, :4].tolist(),
+                "band_center": [list(out.corridor.stations), list(ego_band.center)],
+            }
         with open(self._trace_path, "a") as f:
             f.write(json.dumps(row) + "\n")
 

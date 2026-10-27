@@ -277,9 +277,9 @@ std::optional<RouteCorridor> buildRouteCorridor(const RoadMap& map, const std::v
       const double nan = std::numeric_limits<double>::quiet_NaN();
       const double sa = out.reference.project(c.front().x, c.front().y, reversed ? nan : lane_s0[i]).s;
       const double sb = out.reference.project(c.back().x, c.back().y, reversed ? nan : lane_s1[i]).s;
-      const double hint = reversed ? sa : lane_s0[i];
-      sampleBoundary(out.reference, ln->left, hint, std::min(sa, sb), std::max(sa, sb), stations, b.left);
-      sampleBoundary(out.reference, ln->right, hint, std::min(sa, sb), std::max(sa, sb), stations, b.right);
+      const double s_hint = reversed ? sa : lane_s0[i];
+      sampleBoundary(out.reference, ln->left, s_hint, std::min(sa, sb), std::max(sa, sb), stations, b.left);
+      sampleBoundary(out.reference, ln->right, s_hint, std::min(sa, sb), std::max(sa, sb), stations, b.right);
     }
     const size_t gap = static_cast<size_t>(std::ceil(3.0 / cfg.station_ds));
     fillSmallGaps(b.left, gap);

@@ -445,3 +445,47 @@ TEST(LocalPlanner, FallsBackToPreviousPlanWhenItIsStillSafe) {
   EXPECT_TRUE(out.fallback);
   EXPECT_FALSE(out.emergency);
 }
+
+TEST(LocalPlanner, DrivesOutOfAParkingSpotInFreeSpace) {
+  // Parked on a strip right of the road (y in [-4.25, -1.75]) between two
+  // cars with 1.5 m to spare ahead and behind.
+  auto map = std::make_shared<RoadMap>(twoLaneRoad());
+  map->addArea({{0.0, -4.25}, {180.0, -4.25}, {180.0, -1.75}, {0.0, -1.75}});
+  LocalPlannerConfig cfg;
+  cfg.desired_speed = 8.0;
+  cfg.free_space.enabled = true;
+  Loop loop(cfg, {36.0, -3.0, 0.0, 0.0, 0.0, 0.0});
+  loop.planner.setMap(map, {1, 2, 3});
+  const std::vector<Obstacle> world = {predictConstantVelocity(1, 30.0, -3.0, 0.0, 0.0, 4.5, 1.9, 60.0, 0.1),
+                                       predictConstantVelocity(2, 42.0, -3.0, 0.0, 0.0, 4.5, 1.9, 60.0, 0.1)};
+  int free_space = 0, handover = -1;
+  for (int i = 0; i < 400 && handover < 0; ++i) {
+    const auto out = loop.step(world);
+    ASSERT_FALSE(overlapsAny(loop.ego, world, loop.t)) << "collision at t=" << loop.t;
+    if (out.free_space) {
+      ++free_space;
+      EXPECT_TRUE(out.success);
+      EXPECT_FALSE(out.free_space_path.empty());
+    } else if (free_space > 0) {
+      handover = i;
+    }
+  }
+  EXPECT_GT(free_space, 0);
+  ASSERT_GE(handover, 0);
+  EXPECT_NEAR(loop.ego.y, 0.0, 0.6);  // in the right lane
+  EXPECT_LT(std::abs(loop.ego.yaw), 0.3);
+  // The lane planner takes over from there.
+  for (int i = 0; i < 50; ++i) EXPECT_FALSE(loop.step(world).free_space);
+  EXPECT_GT(loop.ego.x, 60.0);
+}
+
+TEST(LocalPlanner, FreeSpaceStaysOffInTheLanes) {
+  auto map = std::make_shared<RoadMap>(twoLaneRoad());
+  LocalPlannerConfig cfg;
+  cfg.free_space.enabled = true;
+  LocalPlanner planner(cfg, VehicleParams{});
+  planner.setMap(map, {1, 2, 3});
+  EXPECT_FALSE(planner.step(0.0, at(20.0, 0.0, 0.0), {}).free_space);
+  EXPECT_FALSE(planner.step(0.1, at(20.0, 3.5, 0.0), {}).free_space);   // the left lane
+  EXPECT_FALSE(planner.step(0.2, at(20.0, -2.5, 5.0), {}).free_space);  // too fast
+}
