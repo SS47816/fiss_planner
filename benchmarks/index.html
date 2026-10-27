@@ -1,0 +1,1498 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Fast Iterative Search and Sampling trajectory planners (FISS, FISS+, FOP) for autonomous driving">
+      
+      
+      
+      
+        <link rel="prev" href="../ros/">
+      
+      
+        <link rel="next" href="../foxglove/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Benchmarks - FISS Planner</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#benchmarks" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="FISS Planner" class="md-header__button md-logo" aria-label="FISS Planner" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            FISS Planner
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Benchmarks
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/SS47816/fiss_planner" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="FISS Planner" class="md-nav__button md-logo" aria-label="FISS Planner" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    FISS Planner
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/SS47816/fiss_planner" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../python/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ros/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ROS 1 / ROS 2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#profiles-splits-and-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profiles, splits and tuning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commonroad-closed-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CommonRoad, closed loop
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CommonRoad, closed loop">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#main-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Main results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ablations-fiss_plus-with-the-qp-smoother" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ablations (fiss_plus with the QP smoother)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ros-2-bag-replay-open-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ROS 2 bag replay (open loop)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#carla" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CARLA
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CARLA">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#planners-mpc-controller-town04" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Planners (MPC controller, Town04)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dense-traffic-ten-seeds-fiss-mpc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dense traffic, ten seeds (FISS+, MPC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#controllers-fiss-planner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controllers (FISS+ planner)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../foxglove/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Foxglove
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#profiles-splits-and-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profiles, splits and tuning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commonroad-closed-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CommonRoad, closed loop
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CommonRoad, closed loop">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#main-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Main results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ablations-fiss_plus-with-the-qp-smoother" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ablations (fiss_plus with the QP smoother)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ros-2-bag-replay-open-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ROS 2 bag replay (open loop)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#carla" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CARLA
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CARLA">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#planners-mpc-controller-town04" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Planners (MPC controller, Town04)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dense-traffic-ten-seeds-fiss-mpc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dense traffic, ten seeds (FISS+, MPC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#controllers-fiss-planner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controllers (FISS+ planner)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="benchmarks">Benchmarks</h1>
+<p>All numbers were measured on one machine: an Intel Core i9-12900K (24 threads) with an RTX 3090 Ti
+for CARLA, running Ubuntu 24.04. Each planning cycle runs on a single core.
+Raw per-run results are in <a href="https://github.com/SS47816/fiss_planner/tree/main/benchmarks/results"><code>benchmarks/results/</code></a>.</p>
+<h2 id="profiles-splits-and-tuning">Profiles, splits and tuning</h2>
+<p>Each benchmark runs with its own planner profile (<code>python/fiss_planner/profiles/</code>, chosen with
+<code>--profile</code>), and every result records the profile and a hash of the resolved settings. A profile is
+tuned only on its benchmark's development split and checked on a second held-out split. The test
+split is run once per release.</p>
+<table>
+<thead>
+<tr>
+<th>Benchmark</th>
+<th>Profile</th>
+<th>Tuning split</th>
+<th>Check split</th>
+<th>Test split</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CommonRoad</td>
+<td><code>commonroad</code></td>
+<td><code>benchmarks/commonroad/dev_set.txt</code> (100 hand-crafted)</td>
+<td><code>check_set.txt</code> (103 hand-crafted)</td>
+<td><code>bench_set.txt</code> (280)</td>
+</tr>
+<tr>
+<td>CARLA scenarios</td>
+<td><code>carla_scenarios</code></td>
+<td>–</td>
+<td>–</td>
+<td>lead vehicle, parked car, cut-in; traffic seeds 0–9</td>
+</tr>
+<tr>
+<td>nuPlan</td>
+<td><code>nuplan</code></td>
+<td><code>mini_dev14</code> (Val14 filter on 44 mini logs of the train split)</td>
+<td>–</td>
+<td>Val14, Test14-hard</td>
+</tr>
+<tr>
+<td>Bench2Drive</td>
+<td><code>bench2drive</code></td>
+<td><code>bench2drive_0.0.4_val</code> (220 routes)</td>
+<td>–</td>
+<td><code>bench2drive220</code> (220 routes)</td>
+</tr>
+</tbody>
+</table>
+<p>The CommonRoad splits are disjoint, and the benchmark reads them directly
+(<code>--scenarios benchmarks/commonroad/dev_set.txt</code>). Tuning uses Optuna (TPE) over a search space
+declared per benchmark in <code>benchmarks/tuning/</code>, and the first trial is the current profile:</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>benchmarks/tune.py<span class="w"> </span>benchmarks/tuning/commonroad.yaml<span class="w"> </span>--trials<span class="w"> </span><span class="m">60</span><span class="w"> </span>--jobs<span class="w"> </span><span class="m">16</span><span class="w"> </span>--out<span class="w"> </span>results/tune/commonroad
+</code></pre></div>
+<p>The tuner writes three things: the best settings as a complete profile with their provenance, a
+table of all trials, and the scores of the current and the best profile on the check split. It
+refuses test splits.</p>
+<h2 id="commonroad-closed-loop">CommonRoad, closed loop</h2>
+<p><strong>Scenarios.</strong> The set is 280 public scenarios from
+<a href="https://gitlab.lrz.de/tum-cps/commonroad-scenarios">commonroad-scenarios</a> (commit <code>2416dc2</code>): all 130 NGSIM
+recordings (US-101, Lankershim, Peachtree) and 150 hand-crafted scenarios drawn with seed 0 (list in
+<code>benchmarks/commonroad/bench_set.txt</code>).</p>
+<p><strong>Protocol.</strong>
+- At every 0.1 s step the planner receives the ego state and all obstacles, then the ego moves to its planned state one step later (perfect tracking, as in the FISS / FISS+ papers).
+- Traffic is the recorded, non-reactive log.
+- Obstacle predictions are ground truth unless stated otherwise.
+- The vehicle is CommonRoad's VW Vanagon, and the grid is 5×5×5 per lane.
+- The route comes from CommonRoad's route planner. The planner's goal point, where the route's lane changes must be done, is the point of the goal region the ego would pass in the middle of the time window at its initial speed, kept one second of driving inside the region's ends. The target speed brings the ego there in time, given that the planner reaches a new speed within its mean horizon, and stays within the goal speed interval.</p>
+<p><strong>Metrics.</strong>
+- <em>Success</em>: the official <code>GoalRegion.is_reached</code> check, covering position, time window, speed and heading, with no collision and no road-boundary violation (CommonRoad drivability checker).
+- <em>Headway &lt; 1 s</em>: time per scenario spent less than 1 s behind the vehicle ahead in the ego's path, while keeping the lane (overtaking pull-outs excluded).
+- <em>Min TTC &lt; 2 s</em>: share of scenarios whose minimum time to collision with that vehicle drops below 2 s.
+- <em>Within 0.5 m</em>: share of scenarios in which the ego's footprint comes within 0.5 m of another road user's at the same instant.</p>
+<p>Weights and thresholds of the distance keeping were fixed a priori (1.5 s desired headway, 4 s desired
+TTC, 2 m / 1.5 s hard floor) and checked on a separate development set of 100 hand-crafted scenarios
+that are not part of the benchmark; they were not tuned on these 280. The time gap to crossing
+traffic (0.75 s) was chosen on the development set as well. The route urgency (a 10 s ramp per lane
+change), the reference smoothing (20 m, 0.1 m) and the goal point were set a priori and checked on the
+development set and on 103 further hand-crafted scenarios outside the benchmark (zipper merges, highway
+and urban scenes, T-junctions). The two sets are listed in <code>benchmarks/commonroad/dev_set.txt</code> and
+<code>check_set.txt</code>.</p>
+<h3 id="main-results">Main results</h3>
+<table>
+<thead>
+<tr>
+<th>Planner</th>
+<th style="text-align: right;">Success</th>
+<th style="text-align: right;">Collision</th>
+<th style="text-align: right;">Timeout</th>
+<th style="text-align: right;">Plan time mean / p95</th>
+<th style="text-align: right;">Generated / validated</th>
+<th style="text-align: right;">Headway &lt; 1 s</th>
+<th style="text-align: right;">Min TTC &lt; 2 s</th>
+<th style="text-align: right;">Within 0.5 m</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>fop</td>
+<td style="text-align: right;">66.4 %</td>
+<td style="text-align: right;">2.1 %</td>
+<td style="text-align: right;">26.8 %</td>
+<td style="text-align: right;">9.24 / 13.96 ms</td>
+<td style="text-align: right;">209 / 209</td>
+<td style="text-align: right;">0.15 s</td>
+<td style="text-align: right;">17.5 %</td>
+<td style="text-align: right;">6.4 %</td>
+</tr>
+<tr>
+<td>fop_plus</td>
+<td style="text-align: right;">66.4 %</td>
+<td style="text-align: right;">2.1 %</td>
+<td style="text-align: right;">26.8 %</td>
+<td style="text-align: right;">1.27 / 2.21 ms</td>
+<td style="text-align: right;">209 / 15</td>
+<td style="text-align: right;">0.15 s</td>
+<td style="text-align: right;">17.5 %</td>
+<td style="text-align: right;">6.4 %</td>
+</tr>
+<tr>
+<td>fiss</td>
+<td style="text-align: right;">65.4 %</td>
+<td style="text-align: right;">1.8 %</td>
+<td style="text-align: right;">28.2 %</td>
+<td style="text-align: right;">0.66 / 1.39 ms</td>
+<td style="text-align: right;">19 / 13</td>
+<td style="text-align: right;">0.17 s</td>
+<td style="text-align: right;">16.4 %</td>
+<td style="text-align: right;">5.4 %</td>
+</tr>
+<tr>
+<td>fiss_plus</td>
+<td style="text-align: right;">65.7 %</td>
+<td style="text-align: right;">2.1 %</td>
+<td style="text-align: right;">27.9 %</td>
+<td style="text-align: right;">0.92 / 1.92 ms</td>
+<td style="text-align: right;">44 / 17</td>
+<td style="text-align: right;">0.16 s</td>
+<td style="text-align: right;">14.3 %</td>
+<td style="text-align: right;">7.1 %</td>
+</tr>
+<tr>
+<td>fop + QP</td>
+<td style="text-align: right;">76.1 %</td>
+<td style="text-align: right;">2.1 %</td>
+<td style="text-align: right;">16.8 %</td>
+<td style="text-align: right;">9.11 / 13.48 ms</td>
+<td style="text-align: right;">210 / 210</td>
+<td style="text-align: right;">0.13 s</td>
+<td style="text-align: right;">15.4 %</td>
+<td style="text-align: right;">7.5 %</td>
+</tr>
+<tr>
+<td>fop_plus + QP</td>
+<td style="text-align: right;">76.1 %</td>
+<td style="text-align: right;">2.1 %</td>
+<td style="text-align: right;">16.8 %</td>
+<td style="text-align: right;">1.16 / 2.04 ms</td>
+<td style="text-align: right;">210 / 14</td>
+<td style="text-align: right;">0.13 s</td>
+<td style="text-align: right;">15.4 %</td>
+<td style="text-align: right;">7.5 %</td>
+</tr>
+<tr>
+<td>fiss + QP</td>
+<td style="text-align: right;">75.7 %</td>
+<td style="text-align: right;">1.8 %</td>
+<td style="text-align: right;">17.9 %</td>
+<td style="text-align: right;">0.65 / 1.35 ms</td>
+<td style="text-align: right;">19 / 13</td>
+<td style="text-align: right;">0.13 s</td>
+<td style="text-align: right;">15.4 %</td>
+<td style="text-align: right;">6.8 %</td>
+</tr>
+<tr>
+<td>fiss_plus + QP</td>
+<td style="text-align: right;">74.6 %</td>
+<td style="text-align: right;">2.1 %</td>
+<td style="text-align: right;">18.2 %</td>
+<td style="text-align: right;">0.86 / 1.73 ms</td>
+<td style="text-align: right;">44 / 17</td>
+<td style="text-align: right;">0.14 s</td>
+<td style="text-align: right;">12.1 %</td>
+<td style="text-align: right;">7.9 %</td>
+</tr>
+</tbody>
+</table>
+<p>The four search strategies reach practically the same solutions. FISS generates about 11× fewer
+trajectories than FOP and plans about 14× faster. The QP smoother adds 9–10 points of success,
+mostly by converting timeouts.</p>
+<p>Most of the remaining failures are timeouts in the NGSIM recordings, whose goals combine a place, a
+time window of 0.1–1 s and a speed interval in dense traffic. All collisions of FISS+ with the QP
+smoother except the two short urban scenarios (<code>ZAM_Urban-4/5_1_S-1</code>, within 1.2 s of the start) are
+recorded vehicles running into the ego from behind: three times while it waits at a red light, once
+after it brakes with a faster vehicle closing in behind. Replayed traffic cannot react to the ego.</p>
+<h3 id="ablations-fiss_plus-with-the-qp-smoother">Ablations (fiss_plus with the QP smoother)</h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th style="text-align: right;">Success</th>
+<th style="text-align: right;">Collision</th>
+<th style="text-align: right;">Timeout</th>
+<th style="text-align: right;">Headway &lt; 1 s</th>
+<th style="text-align: right;">Min TTC &lt; 2 s</th>
+<th style="text-align: right;">Within 0.5 m</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>default: ego and adjacent lanes, ground-truth prediction</td>
+<td style="text-align: right;">74.6 %</td>
+<td style="text-align: right;">2.1 %</td>
+<td style="text-align: right;">18.2 %</td>
+<td style="text-align: right;">0.14 s</td>
+<td style="text-align: right;">12.1 %</td>
+<td style="text-align: right;">7.9 %</td>
+</tr>
+<tr>
+<td>without the safety envelope and proximity cost</td>
+<td style="text-align: right;">80.4 %</td>
+<td style="text-align: right;">2.1 %</td>
+<td style="text-align: right;">12.9 %</td>
+<td style="text-align: right;">0.47 s</td>
+<td style="text-align: right;">22.5 %</td>
+<td style="text-align: right;">20.7 %</td>
+</tr>
+<tr>
+<td>ego lane only (as in the papers)</td>
+<td style="text-align: right;">67.1 %</td>
+<td style="text-align: right;">3.9 %</td>
+<td style="text-align: right;">24.3 %</td>
+<td style="text-align: right;">0.23 s</td>
+<td style="text-align: right;">17.5 %</td>
+<td style="text-align: right;">8.6 %</td>
+</tr>
+<tr>
+<td>lane-following prediction</td>
+<td style="text-align: right;">70.7 %</td>
+<td style="text-align: right;">8.6 %</td>
+<td style="text-align: right;">13.6 %</td>
+<td style="text-align: right;">0.13 s</td>
+<td style="text-align: right;">1.1 %</td>
+<td style="text-align: right;">10.0 %</td>
+</tr>
+<tr>
+<td>constant-velocity prediction</td>
+<td style="text-align: right;">69.3 %</td>
+<td style="text-align: right;">10.0 %</td>
+<td style="text-align: right;">14.6 %</td>
+<td style="text-align: right;">0.12 s</td>
+<td style="text-align: right;">1.4 %</td>
+<td style="text-align: right;">9.3 %</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Keeping distance</strong> cuts the time spent below 1 s of headway to under a third, the share of runs
+  that get within 2 s TTC of the vehicle ahead almost by half, and the share that come within 0.5 m
+  of another road user by more than half, at the same collision rate. In the replayed logs it costs
+  5.8 points of success: 18 runs in dense NGSIM traffic time out because the gaps their lane changes
+  need before the goal window closes are refused, and recorded traffic does not open them.</li>
+<li><strong>Route lane changes.</strong> The planner counts the lane changes the route still needs and makes them in
+  time for the goal: several changes start earlier than one, and a slower target lane does not hold
+  them back once they are due (see <a href="../concepts/#corridor-and-lanes">route urgency</a>).</li>
+<li><strong>Turning across traffic.</strong> The time gap to crossing and oncoming vehicles is part of the safety
+  envelope. On the development set it brings the runs within 0.5 m of another vehicle from 30 to 0
+  (of 100) at the same success rate. In the T-junction of the gallery (<code>ZAM_Tjunction-1_101</code>) the
+  closest approach during the left turn grows from 0.3 m to 1.0 m, and the time gap from 0.2 s to
+  1.0 s. Larger gaps backfire in replayed logs, where traffic does not yield: the ego starts to give
+  way and then stops in the vehicle's path. At 1 s one development scenario ends in a collision, at
+  1.5 s five do.</li>
+<li><strong>Map-aware lane sampling</strong> (adjacent lanes) avoids conflicts the ego lane alone cannot.</li>
+<li><strong>Prediction.</strong> With predictions from the current state only, as a deployed system has them,
+  lane-following prediction gains 1.4 points of success over constant-velocity prediction, with
+  8.6 % instead of 10.0 % collisions. Recorded traffic still does not react to the ego, so the remaining
+  gap to ground-truth predictions is largely the replay itself. TTC values are measured from each
+  cycle's predictions, so they are comparable within a prediction mode only.</li>
+</ul>
+<h2 id="ros-2-bag-replay-open-loop">ROS 2 bag replay (open loop)</h2>
+<p><code>fiss_planner.bags.from_commonroad</code> turns NGSIM recordings into MCAP bags. A logged vehicle is the
+ego (<code>/odom</code>), its lane chain is the reference (<code>/planning/reference_path</code>), and all other traffic is
+published with constant-velocity predictions (<code>/perception/obstacles</code>). <code>bag_replay_eval.py</code> plays
+each bag through the real ROS 2 node (<code>plan_on_odom</code>, sim time) and compares every plan with where
+the logged driver went.</p>
+<table>
+<thead>
+<tr>
+<th>Planner</th>
+<th style="text-align: right;">Cycles with a plan</th>
+<th style="text-align: right;">Emergency stops</th>
+<th style="text-align: right;">ADE 3 s</th>
+<th style="text-align: right;">FDE 3 s</th>
+<th style="text-align: right;">Node cycle mean / p95</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>fop</td>
+<td style="text-align: right;">84.0 %</td>
+<td style="text-align: right;">3.8 %</td>
+<td style="text-align: right;">1.45 m</td>
+<td style="text-align: right;">4.02 m</td>
+<td style="text-align: right;">10.9 / 17.1 ms</td>
+</tr>
+<tr>
+<td>fop_plus</td>
+<td style="text-align: right;">83.6 %</td>
+<td style="text-align: right;">3.7 %</td>
+<td style="text-align: right;">1.37 m</td>
+<td style="text-align: right;">3.96 m</td>
+<td style="text-align: right;">3.2 / 6.7 ms</td>
+</tr>
+<tr>
+<td>fiss</td>
+<td style="text-align: right;">83.3 %</td>
+<td style="text-align: right;">3.6 %</td>
+<td style="text-align: right;">1.33 m</td>
+<td style="text-align: right;">4.33 m</td>
+<td style="text-align: right;">2.6 / 7.3 ms</td>
+</tr>
+<tr>
+<td>fiss_plus</td>
+<td style="text-align: right;">83.2 %</td>
+<td style="text-align: right;">3.2 %</td>
+<td style="text-align: right;">1.29 m</td>
+<td style="text-align: right;">4.21 m</td>
+<td style="text-align: right;">2.4 / 5.7 ms</td>
+</tr>
+</tbody>
+</table>
+<p>The replay is open loop: the ego follows the log, not the plan. A missing plan therefore mostly
+means the logged driver's situation, for example a gap closing under constant-velocity prediction,
+violates the planner's margins.</p>
+<h2 id="carla">CARLA</h2>
+<p>CARLA 0.9.16 runs headless and synchronously (20 Hz physics) on Town04. Every 0.1 s the planner gets
+the ego state, the CARLA map as a <code>RoadMap</code>, with lane-change rules from the road markings and the route
+from CARLA's <code>GlobalRoutePlanner</code>, and all actors with lane-following predictions on that map. CARLA
+traffic reacts to the ego, so followers in its own lane are left to keep their distance
+(<code>ignore_rear_in_lane</code>). The controller tracks the plan at 20 Hz. Collisions and lane invasions come
+from CARLA sensors; time headway and time to collision are measured to the vehicle ahead in the ego's
+path every planning cycle.</p>
+<p>Scenarios:
+- <em>lead vehicle</em>: a slower car ahead.
+- <em>parked car</em>: a stopped car in the ego lane.
+- <em>cut-in</em>: a scripted car drives at 9 m/s in the adjacent lane, then merges into the ego lane 8–20 m ahead within 2.5 s.
+- <em>traffic</em>: 49 Traffic Manager vehicles, 60 s along a cross-map route.</p>
+<table>
+<thead>
+<tr>
+<th>Chase camera</th>
+<th>Bird's-eye (planner view)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="FISS+ reacting to a cut-in in CARLA" src="../media/carla_cut_in.webp" /></td>
+<td><img alt="Bird's-eye view of the same cut-in" src="../media/carla_birdseye_cut_in.gif" /></td>
+</tr>
+</tbody>
+</table>
+<p>Full-length videos (cut-in, parked car, traffic) are attached to the GitHub release; regenerate them with
+<code>python -m fiss_planner.carla.record --scenario &lt;name&gt; --mp4 &lt;file&gt;</code>.</p>
+<h3 id="planners-mpc-controller-town04">Planners (MPC controller, Town04)</h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Planner</th>
+<th style="text-align: right;">Collisions</th>
+<th style="text-align: right;">Plan success</th>
+<th style="text-align: right;">Emergency</th>
+<th style="text-align: right;">Min TTC</th>
+<th style="text-align: right;">Min headway</th>
+<th style="text-align: right;">Min clearance</th>
+<th style="text-align: right;">Mean speed</th>
+<th style="text-align: right;">Plan time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>lead vehicle</td>
+<td>fop</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100.0 %</td>
+<td style="text-align: right;">0.0 %</td>
+<td style="text-align: right;">3.7 s</td>
+<td style="text-align: right;">1.8 s</td>
+<td style="text-align: right;">1.9 m</td>
+<td style="text-align: right;">12.2 m/s</td>
+<td style="text-align: right;">4.95 ms</td>
+</tr>
+<tr>
+<td>lead vehicle</td>
+<td>fop_plus</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100.0 %</td>
+<td style="text-align: right;">0.0 %</td>
+<td style="text-align: right;">11.3 s</td>
+<td style="text-align: right;">11.3 s</td>
+<td style="text-align: right;">1.3 m</td>
+<td style="text-align: right;">12.2 m/s</td>
+<td style="text-align: right;">0.53 ms</td>
+</tr>
+<tr>
+<td>lead vehicle</td>
+<td>fiss</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100.0 %</td>
+<td style="text-align: right;">0.0 %</td>
+<td style="text-align: right;">4.5 s</td>
+<td style="text-align: right;">1.9 s</td>
+<td style="text-align: right;">1.3 m</td>
+<td style="text-align: right;">11.3 m/s</td>
+<td style="text-align: right;">0.19 ms</td>
+</tr>
+<tr>
+<td>lead vehicle</td>
+<td>fiss_plus</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100.0 %</td>
+<td style="text-align: right;">0.0 %</td>
+<td style="text-align: right;">3.7 s</td>
+<td style="text-align: right;">1.8 s</td>
+<td style="text-align: right;">1.9 m</td>
+<td style="text-align: right;">12.2 m/s</td>
+<td style="text-align: right;">0.28 ms</td>
+</tr>
+<tr>
+<td>parked car</td>
+<td>fop</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100.0 %</td>
+<td style="text-align: right;">0.0 %</td>
+<td style="text-align: right;">7.6 s</td>
+<td style="text-align: right;">7.6 s</td>
+<td style="text-align: right;">1.2 m</td>
+<td style="text-align: right;">12.2 m/s</td>
+<td style="text-align: right;">4.35 ms</td>
+</tr>
+<tr>
+<td>parked car</td>
+<td>fop_plus</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100.0 %</td>
+<td style="text-align: right;">0.0 %</td>
+<td style="text-align: right;">7.6 s</td>
+<td style="text-align: right;">7.6 s</td>
+<td style="text-align: right;">1.2 m</td>
+<td style="text-align: right;">12.2 m/s</td>
+<td style="text-align: right;">0.55 ms</td>
+</tr>
+<tr>
+<td>parked car</td>
+<td>fiss</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100.0 %</td>
+<td style="text-align: right;">0.0 %</td>
+<td style="text-align: right;">7.6 s</td>
+<td style="text-align: right;">7.6 s</td>
+<td style="text-align: right;">1.2 m</td>
+<td style="text-align: right;">12.2 m/s</td>
+<td style="text-align: right;">0.14 ms</td>
+</tr>
+<tr>
+<td>parked car</td>
+<td>fiss_plus</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100.0 %</td>
+<td style="text-align: right;">0.0 %</td>
+<td style="text-align: right;">4.9 s</td>
+<td style="text-align: right;">4.9 s</td>
+<td style="text-align: right;">1.8 m</td>
+<td style="text-align: right;">12.4 m/s</td>
+<td style="text-align: right;">0.29 ms</td>
+</tr>
+<tr>
+<td>cut-in (scripted)</td>
+<td>fop</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">98.3 %</td>
+<td style="text-align: right;">1.3 %</td>
+<td style="text-align: right;">1.3 s</td>
+<td style="text-align: right;">0.1 s</td>
+<td style="text-align: right;">0.5 m</td>
+<td style="text-align: right;">10.5 m/s</td>
+<td style="text-align: right;">5.79 ms</td>
+</tr>
+<tr>
+<td>cut-in (scripted)</td>
+<td>fop_plus</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">99.0 %</td>
+<td style="text-align: right;">0.7 %</td>
+<td style="text-align: right;">1.2 s</td>
+<td style="text-align: right;">0.3 s</td>
+<td style="text-align: right;">0.7 m</td>
+<td style="text-align: right;">10.9 m/s</td>
+<td style="text-align: right;">0.77 ms</td>
+</tr>
+<tr>
+<td>cut-in (scripted)</td>
+<td>fiss</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">99.0 %</td>
+<td style="text-align: right;">0.7 %</td>
+<td style="text-align: right;">1.1 s</td>
+<td style="text-align: right;">0.2 s</td>
+<td style="text-align: right;">0.7 m</td>
+<td style="text-align: right;">10.8 m/s</td>
+<td style="text-align: right;">0.34 ms</td>
+</tr>
+<tr>
+<td>cut-in (scripted)</td>
+<td>fiss_plus</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">98.3 %</td>
+<td style="text-align: right;">0.3 %</td>
+<td style="text-align: right;">1.3 s</td>
+<td style="text-align: right;">0.5 s</td>
+<td style="text-align: right;">0.7 m</td>
+<td style="text-align: right;">11.2 m/s</td>
+<td style="text-align: right;">0.39 ms</td>
+</tr>
+<tr>
+<td>traffic (49 TM vehicles, 60 s)</td>
+<td>fop</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100.0 %</td>
+<td style="text-align: right;">0.0 %</td>
+<td style="text-align: right;">7.2 s</td>
+<td style="text-align: right;">3.8 s</td>
+<td style="text-align: right;">1.8 m</td>
+<td style="text-align: right;">13.3 m/s</td>
+<td style="text-align: right;">4.75 ms</td>
+</tr>
+<tr>
+<td>traffic (49 TM vehicles, 60 s)</td>
+<td>fop_plus</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100.0 %</td>
+<td style="text-align: right;">0.0 %</td>
+<td style="text-align: right;">4.6 s</td>
+<td style="text-align: right;">2.2 s</td>
+<td style="text-align: right;">1.6 m</td>
+<td style="text-align: right;">13.3 m/s</td>
+<td style="text-align: right;">0.55 ms</td>
+</tr>
+<tr>
+<td>traffic (49 TM vehicles, 60 s)</td>
+<td>fiss</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100.0 %</td>
+<td style="text-align: right;">0.0 %</td>
+<td style="text-align: right;">4.5 s</td>
+<td style="text-align: right;">2.1 s</td>
+<td style="text-align: right;">1.5 m</td>
+<td style="text-align: right;">13.4 m/s</td>
+<td style="text-align: right;">0.20 ms</td>
+</tr>
+<tr>
+<td>traffic (49 TM vehicles, 60 s)</td>
+<td>fiss_plus</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100.0 %</td>
+<td style="text-align: right;">0.0 %</td>
+<td style="text-align: right;">2.0 s</td>
+<td style="text-align: right;">0.9 s</td>
+<td style="text-align: right;">1.4 m</td>
+<td style="text-align: right;">13.3 m/s</td>
+<td style="text-align: right;">0.33 ms</td>
+</tr>
+</tbody>
+</table>
+<p>The Stanley+PID runs are in the JSON file; they give the same picture. Minimum TTC and headway are
+measured to the vehicle ahead while keeping the lane. The scripted cut-in merges 8–20 m ahead within
+2.5 s, closing at several metres per second: every planner brakes (the emergency cycles), then follows
+or moves over a lane, without a collision. It is the tightest scenario. When the car merges, no plan
+can keep the safety envelope; the retry that keeps it as a cost then brakes firmly towards the
+car's speed, and the closest approach (box to box) is 0.5–0.8 m over all planners and both
+controllers. Varying the reference line by a few centimetres keeps the FISS+ result between 0.6 m
+and 0.9 m.</p>
+<h3 id="dense-traffic-ten-seeds-fiss-mpc">Dense traffic, ten seeds (FISS+, MPC)</h3>
+<p>Traffic Manager behaviour differs from run to run, so configurations are compared over ten seeds of the
+60 s traffic scenario rather than single runs. The second row switches off map-aware prediction,
+distance keeping, the rear-vehicle rule and the fallback retries.</p>
+<table>
+<thead>
+<tr>
+<th>Configuration</th>
+<th style="text-align: right;">Runs</th>
+<th style="text-align: right;">Collisions</th>
+<th style="text-align: right;">Plan success</th>
+<th style="text-align: right;">Emergency</th>
+<th style="text-align: right;">Fallback</th>
+<th style="text-align: right;">Headway &lt; 1 s</th>
+<th style="text-align: right;">Median min TTC</th>
+<th style="text-align: right;">Distance</th>
+<th style="text-align: right;">Plan time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>default</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">99.5 %</td>
+<td style="text-align: right;">0.00 %</td>
+<td style="text-align: right;">0.50 %</td>
+<td style="text-align: right;">0.00 s</td>
+<td style="text-align: right;">4.03 s</td>
+<td style="text-align: right;">666 m</td>
+<td style="text-align: right;">0.42 ms</td>
+</tr>
+<tr>
+<td>constant-velocity prediction, no distance keeping, no rear rule, no retries</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">99.8 %</td>
+<td style="text-align: right;">0.05 %</td>
+<td style="text-align: right;">0.20 %</td>
+<td style="text-align: right;">4.66 s</td>
+<td style="text-align: right;">4.07 s</td>
+<td style="text-align: right;">672 m</td>
+<td style="text-align: right;">0.54 ms</td>
+</tr>
+</tbody>
+</table>
+<p>Both configurations plan almost every cycle. Without distance keeping the ego spends 4.7 s per run
+less than 1 s behind the vehicle ahead, with the defaults none, and its predictions of vehicles in
+the next lane sweep across its own lane instead of following theirs. The routes cross the town, and
+the ego takes their turns at junctions.</p>
+<p>Two runs end in a jam: in seed 7 the ego queues behind a stopped car, in seed 9 it waits at a junction
+for traffic crossing its path. It comes to rest about 3.5 m behind the stopped car (the desired gap
+is 3 m) and plans 98.7 % and 97.5 % of the cycles of these runs; the other eight plan 99.9 %, with no
+emergency braking.</p>
+<h3 id="controllers-fiss-planner">Controllers (FISS+ planner)</h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Controller</th>
+<th style="text-align: right;">Collisions</th>
+<th style="text-align: right;">Lateral error RMS</th>
+<th style="text-align: right;">Along-track lag RMS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cruise</td>
+<td>mpc</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.4 cm</td>
+<td style="text-align: right;">1.04 m</td>
+</tr>
+<tr>
+<td>cruise</td>
+<td>stanley_pid</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">12.4 cm</td>
+<td style="text-align: right;">0.85 m</td>
+</tr>
+<tr>
+<td>parked car</td>
+<td>mpc</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.5 cm</td>
+<td style="text-align: right;">1.05 m</td>
+</tr>
+<tr>
+<td>parked car</td>
+<td>stanley_pid</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">12.6 cm</td>
+<td style="text-align: right;">0.85 m</td>
+</tr>
+<tr>
+<td>cut-in (scripted)</td>
+<td>mpc</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8 cm</td>
+<td style="text-align: right;">0.87 m</td>
+</tr>
+<tr>
+<td>cut-in (scripted)</td>
+<td>stanley_pid</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">6.5 cm</td>
+<td style="text-align: right;">0.70 m</td>
+</tr>
+<tr>
+<td>traffic (30 s)</td>
+<td>mpc</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.1 cm</td>
+<td style="text-align: right;">1.01 m</td>
+</tr>
+<tr>
+<td>traffic (30 s)</td>
+<td>stanley_pid</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">8.5 cm</td>
+<td style="text-align: right;">0.98 m</td>
+</tr>
+</tbody>
+</table>
+<p>Lane invasions are not shown in the tables because evasive lane changes and overtakes trigger them by design. They are
+included in the JSON files. The along-track lag is mostly the 0.05 s latency compensation in the
+stitching plus the simple throttle/brake mapping of the runner (<code>Actuation</code>); lateral tracking is the
+controller's job, and the MPC holds it to 1–2 cm.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "content.code.copy"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>
