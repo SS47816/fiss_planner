@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Evaluate routes one by one, each in its own directory with a time limit and one retry
 # (CARLA occasionally hangs); finished routes are skipped (inside `pixi run -e carla`):
-#   benchmarks/bench2drive/run_routes.sh <routes> <out_dir> [profile] [route ids ...]
+#   [PORT=20000] benchmarks/bench2drive/run_routes.sh <routes> <out_dir> [profile] [route ids ...]
 set -uo pipefail
 routes=$1 out=$2 profile=${3:-bench2drive}
 shift 3 2>/dev/null || shift $#
@@ -15,7 +15,7 @@ for id in "${ids[@]}"; do
   for attempt in 1 2; do
     if [ -f "$dir/results.json" ] && grep -q '"route_id"' "$dir/results.json"; then break; fi
     rm -rf "$dir"
-    timeout --kill-after=30 "${ROUTE_TIMEOUT:-900}" bash "$here/run.sh" "$routes" "$dir" "$profile" "$id" > "$dir.log" 2>&1
+    timeout --kill-after=30 "${ROUTE_TIMEOUT:-900}" bash "$here/run.sh" "$routes" "$dir" "$profile" "$id" "${PORT:-20000}" > "$dir.log" 2>&1
     # a timed-out evaluator leaves its CARLA server behind
     for p in $(ps -eo pid,args | awk -v port="carla-rpc-port=${PORT:-20000}" '$0 ~ port && /CarlaUE4-Linux/ {print $1}'); do kill -9 "$p"; done
   done
