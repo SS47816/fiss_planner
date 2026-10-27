@@ -510,7 +510,10 @@ std::optional<RouteCorridor> buildRouteCorridor(const RoadMap& map, const std::v
     ob.length = 1.0;
     ob.width = std::max(width, 1.0);
     ob.is_static = true;
-    ob.prediction.push_back({0.0, p.x, p.y, heading, 0.0});
+    // The planner stops a gap short of obstacles; the offset brings the front to the line.
+    const double off = cfg.stop_line_offset;
+    ob.prediction.push_back(
+        {0.0, p.x + off * std::cos(heading), p.y + off * std::sin(heading), heading, 0.0});
     out.stop_lines.push_back(std::move(ob));
     out.stop_line_info.push_back({sl.id, s_ref, sl.yellow, sl.stop_sign});
   }

@@ -91,8 +91,9 @@ void LocalPlannerConfig::validate() const {
   requireLocal(r.smoothing_length >= 0 && (r.smoothing_length == 0 || r.smoothing_tolerance > 0),
                "need route.smoothing_length >= 0 and route.smoothing_tolerance > 0");
   requireLocal(r.max_adjacent_lanes >= 0, "route.max_adjacent_lanes must be >= 0");
-  requireLocal(r.w_route_urgency >= 0 && r.urgency_distance > 0 && r.urgency_time >= 0,
-               "need route.w_route_urgency >= 0, route.urgency_distance > 0 and route.urgency_time >= 0");
+  requireLocal(
+      r.w_route_urgency >= 0 && r.urgency_distance > 0 && r.urgency_time >= 0 && r.stop_line_offset >= 0,
+      "need route.w_route_urgency >= 0, route.urgency_distance > 0 and route.urgency_time >= 0");
   requireLocal(
       stitching.latency >= 0 && stitching.max_position_error >= 0 && stitching.max_heading_error >= 0,
       "stitching latency and thresholds must be >= 0");
@@ -259,7 +260,8 @@ std::vector<Section> localSections(LocalPlannerConfig& c) {
                   {"max_adjacent_lanes", field(r.max_adjacent_lanes)},
                   {"w_route_urgency", field(r.w_route_urgency)},
                   {"urgency_distance", field(r.urgency_distance)},
-                  {"urgency_time", field(r.urgency_time)}}});
+                  {"urgency_time", field(r.urgency_time)},
+                  {"stop_line_offset", field(r.stop_line_offset)}}});
   out.push_back({"stitching",
                  {{"enabled", field(st.enabled)},
                   {"latency", field(st.latency)},

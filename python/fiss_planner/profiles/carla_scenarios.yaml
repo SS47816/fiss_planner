@@ -72,6 +72,7 @@ route:
   w_route_urgency: 10.0
   urgency_distance: 80.0
   urgency_time: 10.0
+  stop_line_offset: 0.0
 stitching:
   enabled: true
   latency: 0.05  # one control step between planning and actuation

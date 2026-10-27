@@ -145,10 +145,14 @@ def traffic_light_stop_lines(road, key_to_id, lights, first_id: int = 1) -> dict
     return out
 
 
-def stop_sign_stop_lines(road, key_to_id, carla_map, signs, first_id: int) -> list[int]:
+def stop_sign_stop_lines(road, key_to_id, carla_map, signs, first_id: int, ahead: float = 3.5) -> list[int]:
     """Add a stop-sign stop line where each sign's trigger area meets the
-    driving lanes it covers (same direction as the lane under its center);
-    returns the new stop line ids."""
+    driving lanes it covers (same direction as the lane under its center),
+    `ahead` [m] beyond the area's center along each branch (into a junction
+    if need be): the planner stops a few meters short of a stop line, and the
+    leaderboard counts a stop only with the vehicle's center within 4 m of
+    that center.
+    Returns the new stop line ids."""
     import carla
 
     ids, sid = [], first_id
@@ -164,17 +168,19 @@ def stop_sign_stop_lines(road, key_to_id, carla_map, signs, first_id: int) -> li
                     lanes.append(w)
                 w = getattr(w, step)()
         for w in lanes:
-            lid = key_to_id.get(_lane_key(w))
-            lane = road.lane(lid) if lid is not None else None
-            if lane is None:
-                continue
-            x, y, _ = to_planner(w.transform.location.x, w.transform.location.y)
-            cl = lane.centerline
-            k = int(np.argmin(np.hypot(cl[:, 0] - x, cl[:, 1] - y)))
-            s = float(np.sum(np.hypot(*np.diff(cl[: k + 1], axis=0).T))) if k > 0 else 0.0
-            road.add_stop_line(fp.StopLine(sid, lid, s, True, True))
-            ids.append(sid)
-            sid += 1
+            # `ahead` further along every branch the lane continues into
+            for t in w.next(ahead) or [w]:
+                lid = key_to_id.get(_lane_key(t))
+                lane = road.lane(lid) if lid is not None else None
+                if lane is None:
+                    continue
+                x, y, _ = to_planner(t.transform.location.x, t.transform.location.y)
+                cl = lane.centerline
+                k = int(np.argmin(np.hypot(cl[:, 0] - x, cl[:, 1] - y)))
+                s_lane = float(np.sum(np.hypot(*np.diff(cl[: k + 1], axis=0).T))) if k > 0 else 0.0
+                road.add_stop_line(fp.StopLine(sid, lid, s_lane, True, True))
+                ids.append(sid)
+                sid += 1
     return ids
 
 

@@ -76,6 +76,7 @@ route:
   w_route_urgency: 33.172927058569506
   urgency_distance: 128.87328120197742
   urgency_time: 14.028907278384747
+  stop_line_offset: 0.0
 stitching:
   enabled: true
   latency: 0.0

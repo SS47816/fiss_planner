@@ -611,7 +611,8 @@ NB_MODULE(_core, m) {
       .def_rw("max_adjacent_lanes", &RouteCorridorConfig::max_adjacent_lanes)
       .def_rw("w_route_urgency", &RouteCorridorConfig::w_route_urgency)
       .def_rw("urgency_distance", &RouteCorridorConfig::urgency_distance)
-      .def_rw("urgency_time", &RouteCorridorConfig::urgency_time);
+      .def_rw("urgency_time", &RouteCorridorConfig::urgency_time)
+      .def_rw("stop_line_offset", &RouteCorridorConfig::stop_line_offset);
 
   nb::class_<RouteCorridor>(m, "RouteCorridor")
       .def_ro("reference", &RouteCorridor::reference)

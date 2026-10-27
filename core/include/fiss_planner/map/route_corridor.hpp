@@ -23,6 +23,9 @@ struct RouteCorridorConfig {
   double w_route_urgency = 10.0;     ///< cost per lane change still needed with half its ramp distance left
   double urgency_distance = 80.0;    ///< distance over which the urgency of one lane change ramps up [m] ...
   double urgency_time = 10.0;        ///< ... or the distance driven in this time, if longer [s]
+  /// Stop lines become obstacles this far beyond the line [m], so that the
+  /// vehicle, which stops a gap short of obstacles, stops close to the line.
+  double stop_line_offset = 0.0;
 };
 
 /// Everything the planner needs from the map for one cycle.
