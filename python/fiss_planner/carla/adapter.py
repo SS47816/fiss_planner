@@ -27,6 +27,31 @@ def _lane_key(wp) -> tuple[int, int, int]:
     return (wp.road_id, wp.section_id, wp.lane_id)
 
 
+def _next_until_lane_end(wp, spacing: float) -> list:
+    """`wp.next_until_lane_end(spacing)`, also for lanes without a successor
+    (CARLA's own crashes on those)."""
+    lane, w = [], wp
+    while True:
+        nxt = w.next(spacing)
+        if len(nxt) != 1 or nxt[0].road_id != wp.road_id:
+            break
+        w = nxt[0]
+        lane.append(w)
+    if nxt:
+        return wp.next_until_lane_end(spacing)
+    # dead end: approach the lane's end in shrinking steps
+    end, step = w, 0.5 * spacing
+    while step > 0.05:
+        nxt = end.next(step)
+        if len(nxt) == 1 and nxt[0].road_id == wp.road_id:
+            end = nxt[0]
+        else:
+            step *= 0.5
+    if end is not w:
+        lane.append(end)
+    return lane
+
+
 def _region_waypoints(carla_map, spacing: float, points: np.ndarray, radius: float) -> list:
     """Waypoints of the lanes passing within `radius` of `points` (CARLA x, y),
     walked from the map topology instead of sampling the whole map."""
@@ -43,7 +68,7 @@ def _region_waypoints(carla_map, spacing: float, points: np.ndarray, radius: flo
         if key in seen:
             continue
         seen.add(key)
-        lane = [a] + a.next_until_lane_end(spacing)
+        lane = [a] + _next_until_lane_end(a, spacing)
         if any(dist(w.transform.location) <= radius for w in lane):
             out.extend(lane)
     return out
