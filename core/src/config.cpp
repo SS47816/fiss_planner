@@ -210,6 +210,7 @@ std::vector<Section> plannerSections(PlannerConfig& c) {
         {"w_clearance", field(w.w_clearance)},
         {"desired_clearance", field(w.desired_clearance)},
         {"follow_time", field(w.follow_time)},
+        {"follow_standing", field(w.follow_standing)},
         {"w_road_edge", field(w.w_road_edge)}}},
       {"constraints",
        {{"check_curvature", field(k.check_curvature)},
@@ -261,7 +262,8 @@ std::vector<Section> localSections(LocalPlannerConfig& c) {
                   {"w_route_urgency", field(r.w_route_urgency)},
                   {"urgency_distance", field(r.urgency_distance)},
                   {"urgency_time", field(r.urgency_time)},
-                  {"stop_line_offset", field(r.stop_line_offset)}}});
+                  {"stop_line_offset", field(r.stop_line_offset)},
+                  {"oncoming_lane", field(r.oncoming_lane)}}});
   out.push_back({"stitching",
                  {{"enabled", field(st.enabled)},
                   {"latency", field(st.latency)},
@@ -283,7 +285,12 @@ std::vector<Section> localSections(LocalPlannerConfig& c) {
                   {"turn_speed", field(b.turn_speed)},
                   {"stop_margin", field(b.stop_margin)},
                   {"comfort_decel", field(b.comfort_decel)},
-                  {"stop_sign_wait", field(b.stop_sign_wait)}}});
+                  {"stop_sign_wait", field(b.stop_sign_wait)},
+                  {"pass_blocked", field(b.pass_blocked)},
+                  {"blocked_lookahead", field(b.blocked_lookahead)},
+                  {"blocked_cost", field(b.blocked_cost)},
+                  {"oncoming_cost", field(b.oncoming_cost)},
+                  {"pass_standoff", field(b.pass_standoff)}}});
   out.push_back({"smoother",
                  {{"enabled", field(q.enabled)},
                   {"margin_lat", field(q.margin_lat)},

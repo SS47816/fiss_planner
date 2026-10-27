@@ -13,9 +13,12 @@ using behavior::Status;
 using Board = BehaviorPlanner::Board;
 
 namespace {
-constexpr double kStandstill = 0.1;            // [m/s]
-constexpr double kMovingSpeed = 0.5;           // [m/s]
-constexpr double kStopGap = 3.0;               // [m] standstill gap the planner keeps to a stop
+constexpr double kStandstill = 0.1;       // [m/s]
+constexpr double kMovingSpeed = 0.5;      // [m/s]
+constexpr double kPassMargin = 0.3;       // [m] lateral room on each side to pass an obstacle within a lane
+constexpr double kOncoming = 0.75 * kPi;  // [rad] heading against the ego lane
+constexpr double kQueueReach = 25.0;  // [m] standing vehicles this close before a junction or stop line queue
+constexpr double kStopGap = 3.0;      // [m] standstill gap the planner keeps to a stop
 constexpr double kSignReach = kStopGap + 2.0;  // [m] stopped this close before a stop sign counts
 constexpr double kSameDirection =
     0.5;  // [rad] traffic within this heading of the ego lane is followed, not yielded to
@@ -79,9 +82,22 @@ BehaviorPlanner::BehaviorPlanner(const BehaviorConfig& config, const VehiclePara
         return Status::kSuccess;
       }));
 
+  auto blocked = sequence<Board>(
+      "pass blocked lane",
+      condition<Board>("ego lane blocked", [this](const Board& b) { return cfg_.pass_blocked && b.blocked; }),
+      action<Board>("leave the lane", [this](Board& b) {
+        b.out.pass_blocked = true;
+        b.out.blocked_s = b.blocked_s;
+        b.out.blocked_end = b.blocked_end;
+        b.out.oncoming_allowed = oncomingClear(*b.in, b);
+        b.out.active.push_back("pass_blocked");
+        return Status::kSuccess;
+      }));
+
   tree_ = sequence<Board>(
       "behaviour", optional<Board>("yellow", std::move(yellow)), optional<Board>("sign", std::move(sign)),
-      optional<Board>("junction", std::move(junction)), action<Board>("proceed", [](Board& b) {
+      optional<Board>("junction", std::move(junction)), optional<Board>("blocked", std::move(blocked)),
+      action<Board>("proceed", [](Board& b) {
         if (b.out.active.empty()) b.out.active.push_back("proceed");
         return Status::kSuccess;
       }));
@@ -115,8 +131,55 @@ BehaviorDirective BehaviorPlanner::plan(const BehaviorInput& in) {
       break;
     }
   }
+  b.blocked = in.corridor != nullptr && in.obstacles != nullptr && laneBlocked(in, b);
   tree_->tick(b);
   return b.out;
+}
+
+bool BehaviorPlanner::laneBlocked(const BehaviorInput& in, Board& b) const {
+  const LaneBand* ego = in.corridor->egoLane();
+  if (ego == nullptr) return false;
+  const ReferenceLine& ref = *in.reference;
+  const double L = vehicle_.length;
+  const double needed = vehicle_.width + 2.0 * kPassMargin;
+  bool found = false;
+  for (const auto& ob : *in.obstacles) {
+    if (ob.id < 0 || ob.prediction.empty()) continue;
+    const bool standing = std::all_of(ob.prediction.begin(), ob.prediction.end(),
+                                      [](const ObstacleState& p) { return p.v < kMovingSpeed; });
+    if (!standing) continue;
+    const auto& p = ob.prediction.front();
+    const auto f = ref.project(p.x, p.y);
+    // From alongside the ego (still passing) to the lookahead.
+    if (f.s < in.start.s - L || f.s > in.start.s + cfg_.blocked_lookahead) continue;
+    const double rel = normalizeAngle(p.yaw - ref.at(f.s).yaw);
+    const double half_d = 0.5 * (ob.width * std::abs(std::cos(rel)) + ob.length * std::abs(std::sin(rel)));
+    const double lo = in.corridor->right(*ego, f.s), hi = in.corridor->left(*ego, f.s);
+    if (f.d + half_d <= lo || f.d - half_d >= hi) continue;
+    if (std::max(hi - (f.d + half_d), (f.d - half_d) - lo) >= needed) continue;  // room to pass in the lane
+    // Standing short of a junction or an active stop line is queueing.
+    bool queue = false;
+    if (in.junctions != nullptr) {
+      for (const auto& [s_in, s_out] : *in.junctions) {
+        if (s_out > f.s && s_in - f.s < kQueueReach) queue = true;
+      }
+    }
+    if (in.stop_lines != nullptr) {
+      for (const auto& sl : *in.stop_lines) {
+        if (sl.s > f.s && sl.s - f.s < kQueueReach) queue = true;
+      }
+    }
+    if (queue) continue;
+    const double half_s = 0.5 * (ob.length * std::abs(std::cos(rel)) + ob.width * std::abs(std::sin(rel)));
+    if (!found) {
+      b.blocked_s = f.s - half_s;
+      b.blocked_end = f.s + half_s;
+    }
+    found = true;
+    b.blocked_s = std::min(b.blocked_s, f.s - half_s);
+    b.blocked_end = std::max(b.blocked_end, f.s + half_s);
+  }
+  return found;
 }
 
 bool BehaviorPlanner::canStopBefore(const BehaviorInput& in, double s, double decel) const {
@@ -164,6 +227,29 @@ bool BehaviorPlanner::crossingTraffic(const BehaviorInput& in, double s_in, doub
     }
   }
   return false;
+}
+
+bool BehaviorPlanner::oncomingClear(const BehaviorInput& in, const Board& b) const {
+  const ReferenceLine& ref = *in.reference;
+  const double L = vehicle_.length;
+  if (const LaneBand* ego = in.corridor->egoLane()) {
+    // Passing already (mostly beside the ego lane): finish it.
+    const double center = 0.5 * (in.corridor->left(*ego, in.start.s) + in.corridor->right(*ego, in.start.s));
+    if (in.start.d > center + 0.5 * vehicle_.width) return true;
+  }
+  const double pass_end = b.blocked_end + L;
+  const double t_pass = arrival(in, pass_end) + cfg_.crossing_gap;
+  for (const auto& ob : *in.obstacles) {
+    if (ob.id < 0 || ob.prediction.empty()) continue;
+    const auto& p = ob.prediction.front();
+    if (p.v < kMovingSpeed) continue;
+    const auto f = ref.project(p.x, p.y);
+    if (f.s < in.start.s - L || f.d < 0.0) continue;  // behind the ego, or on its right
+    if (std::abs(normalizeAngle(p.yaw - ref.at(f.s).yaw)) < kOncoming) continue;
+    // It meets the ego before the ego is past the stretch.
+    if (f.s < pass_end || (f.s - pass_end) / p.v < t_pass) return false;
+  }
+  return true;
 }
 
 }  // namespace fiss_planner

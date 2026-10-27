@@ -120,7 +120,8 @@ PlanResult Planner::plan(const PlanningInput& input) {
       const double center = input.corridor->center(lane, input.start.s);
       const LeadGap lead = gaps_.leadGap(input.start.s, center, input.start.s_d, frenet, 0.0, right, left);
       double speed = input.target_speed;
-      if (lead.id >= 0) {
+      constexpr double kStanding = 0.5;  // [m/s]
+      if (lead.id >= 0 && (w.follow_standing || lead.speed >= kStanding)) {
         const double desired = w.desired_gap + w.desired_time_headway * lead.speed;
         speed = std::clamp(lead.speed + (lead.gap - desired) / w.follow_time, 0.0, input.target_speed);
       }

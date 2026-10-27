@@ -26,6 +26,22 @@ from fiss_planner.carla.closed_loop import Actuation
 _STOP_STATES = (carla.TrafficLightState.Red, carla.TrafficLightState.Yellow)
 
 
+_COST_TERMS = ("time", "speed", "lateral", "lane_change", "proximity", "accel", "jerk")
+
+
+def _best_per_lane(candidates) -> dict:
+    """{lane offset: [total cost, end speed, horizon, cost terms...] of its best valid candidate} (trace)."""
+    best = {}
+    for c in candidates:
+        if not str(c.rejection).endswith("OK"):
+            continue
+        row = [round(c.total_cost(), 2), round(c.end.s_d, 1), round(c.end.T, 1)]
+        row += [round(getattr(c.cost, k), 2) for k in _COST_TERMS]
+        if str(c.lane) not in best or row[0] < best[str(c.lane)][0]:
+            best[str(c.lane)] = row
+    return best
+
+
 def get_entry_point() -> str:
     return "FissAgent"
 
@@ -78,6 +94,7 @@ class FissAgent(AutonomousAgent):
         route_wps = [carla_map.get_waypoint(tf.location) for tf in self._route]
         route = adapter.route_lane_ids(route_wps, key_to_id)
         cfg, vehicle = fp.profiles.load(self._profile, adapter.vehicle_params(self._ego))
+        cfg.planner.keep_candidates = bool(os.environ.get("FISS_B2D_TRACE"))
         self._cfg, self._vehicle = cfg, vehicle
         self._lp = fp.LocalPlanner(cfg, vehicle)
         goal = adapter.to_planner(self._route[-1].location.x, self._route[-1].location.y)
@@ -164,6 +181,12 @@ class FissAgent(AutonomousAgent):
             "blocking": out.stats.blocking_id,
             "red": [sid for sid, tl in self._lights.items() if tl.get_state() in _STOP_STATES],
             "behavior": list(out.behavior),
+            "lane_best": _best_per_lane(out.candidates),
+            "lane_rej": [[c.lane, str(c.rejection).split(".")[-1], c.blocking_id] for c in out.candidates],
+            "bands": [
+                [b.offset, b.lane_id, b.change_allowed, round(b.extra_cost, 2)]
+                for b in sorted(out.corridor.lanes, key=lambda b: b.offset)
+            ],
             "control": list(getattr(self, "_last", ())),
             "types": {
                 o.id: getattr(self._world.get_actor(o.id), "type_id", "?")

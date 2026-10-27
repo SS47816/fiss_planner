@@ -266,19 +266,20 @@ std::optional<RouteCorridor> buildRouteCorridor(const RoadMap& map, const std::v
   };
   std::vector<Band> bands;
   bands.reserve(1 + 2 * static_cast<size_t>(std::max(0, cfg.max_adjacent_lanes)));
-  const auto sample_band = [&](Band& b) {
+  // `reversed`: the band's lanes run the other way (projected without hints).
+  const auto sample_band = [&](Band& b, bool reversed = false) {
     b.left.assign(stations.size(), kNaN);
     b.right.assign(stations.size(), kNaN);
     for (size_t i = 0; i < chain.size(); ++i) {
       if (b.lanes[i] < 0) continue;
       const MapLane* ln = map.lane(b.lanes[i]);
       const auto& c = ln->centerline;
-      const double sa = out.reference.project(c.front().x, c.front().y, lane_s0[i]).s;
-      const double sb = out.reference.project(c.back().x, c.back().y, lane_s1[i]).s;
-      sampleBoundary(out.reference, ln->left, lane_s0[i], std::min(sa, sb), std::max(sa, sb), stations,
-                     b.left);
-      sampleBoundary(out.reference, ln->right, lane_s0[i], std::min(sa, sb), std::max(sa, sb), stations,
-                     b.right);
+      const double nan = std::numeric_limits<double>::quiet_NaN();
+      const double sa = out.reference.project(c.front().x, c.front().y, reversed ? nan : lane_s0[i]).s;
+      const double sb = out.reference.project(c.back().x, c.back().y, reversed ? nan : lane_s1[i]).s;
+      const double hint = reversed ? sa : lane_s0[i];
+      sampleBoundary(out.reference, ln->left, hint, std::min(sa, sb), std::max(sa, sb), stations, b.left);
+      sampleBoundary(out.reference, ln->right, hint, std::min(sa, sb), std::max(sa, sb), stations, b.right);
     }
     const size_t gap = static_cast<size_t>(std::ceil(3.0 / cfg.station_ds));
     fillSmallGaps(b.left, gap);
@@ -486,6 +487,51 @@ std::optional<RouteCorridor> buildRouteCorridor(const RoadMap& map, const std::v
     lane.urgency = u.urgency;
     lane.extra_cost = u.cost + (u.off_route ? cfg.w_route_urgency : 0.0);
     corridor.addLane(std::move(lane));
+  }
+
+  // --- Oncoming lane --------------------------------------------------------------
+  if (cfg.oncoming_lane) {
+    int outer = 0;
+    const Band* left_band = &bands.front();
+    for (const auto& b : bands) {
+      if (b.offset > outer) {
+        outer = b.offset;
+        left_band = &b;
+      }
+    }
+    Band b{outer + 1, std::vector<int>(chain.size(), -1), {}, {}, false};
+    bool any = false;
+    for (size_t i = 0; i < chain.size(); ++i) {
+      if (left_band->lanes[i] < 0) continue;
+      b.lanes[i] = map.lane(left_band->lanes[i])->left_opposite;
+      any |= b.lanes[i] >= 0;
+    }
+    if (any) {
+      sample_band(b, true);
+      for (size_t s = 0; s < stations.size(); ++s) {
+        if (std::isnan(b.left[s]) || std::isnan(b.right[s])) {
+          b.left[s] = b.right[s] = left_band->left[s];
+        } else if (b.left[s] < b.right[s]) {
+          std::swap(b.left[s], b.right[s]);  // its left boundary is on the ego's side
+        }
+      }
+      LaneBand lane;
+      lane.offset = b.offset;
+      lane.change_allowed = false;
+      lane.oncoming = true;
+      lane.left = b.left;
+      lane.right = b.right;
+      lane.center.resize(stations.size());
+      for (size_t s = 0; s < stations.size(); ++s) lane.center[s] = 0.5 * (b.left[s] + b.right[s]);
+      for (size_t i = i0; i < chain.size(); ++i) {
+        if (b.lanes[i] >= 0) {
+          lane.lane_id = b.lanes[i];
+          lane.speed_limit = map.lane(b.lanes[i])->speed_limit;
+          break;
+        }
+      }
+      corridor.addLane(std::move(lane));
+    }
   }
   out.corridor = std::move(corridor);
 

@@ -39,6 +39,7 @@ cost:
   w_clearance: 5.0
   desired_clearance: 1.0
   follow_time: 3.0
+  follow_standing: true
   w_road_edge: 0.0
 constraints:
   check_curvature: true
@@ -73,6 +74,7 @@ route:
   urgency_distance: 80.0
   urgency_time: 10.0
   stop_line_offset: 0.0
+  oncoming_lane: false
 stitching:
   enabled: true
   latency: 0.05  # one control step between planning and actuation
@@ -94,6 +96,11 @@ behavior:
   stop_margin: 1.0
   comfort_decel: 3.0
   stop_sign_wait: 0.5
+  pass_blocked: true
+  blocked_lookahead: 50.0
+  blocked_cost: 50.0
+  oncoming_cost: 10.0
+  pass_standoff: 8.0
 smoother:
   enabled: false
   margin_lat: 0.3

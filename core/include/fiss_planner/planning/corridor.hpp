@@ -16,6 +16,10 @@ struct LaneBand {
   bool change_allowed = true;  ///< whether the planner may sample/enter this lane
   double extra_cost = 0.0;     ///< added to trajectories ending in this lane (e.g. route urgency)
   double urgency = 0.0;        ///< how soon the route requires leaving this lane: 0 = no need, 1 = now
+  bool oncoming = false;       ///< a lane driving the other way (entered only to pass, see BehaviorConfig)
+  /// Trajectories ending in this lane keep their front short of this station
+  /// (e.g. waiting behind a blocked stretch with room to pull out).
+  double end_s = std::numeric_limits<double>::infinity();
   double speed_limit = std::numeric_limits<double>::infinity();  ///< [m/s]
   std::vector<double> center, left, right;                       ///< lateral offsets per station [m]
 };

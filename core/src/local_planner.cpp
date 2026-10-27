@@ -301,9 +301,23 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
     bi.stop_lines = &stop_line_info;
     bi.junctions = &junctions;
     bi.obstacles = &obstacles;
+    bi.corridor = &out.corridor;
     if (std::isfinite(previous_step_t)) bi.dt = std::clamp(t_now - previous_step_t, 0.0, 1.0);
     const BehaviorDirective directive = behavior_->plan(bi);
     out.behavior = directive.active;
+    for (auto& lane : out.corridor.lanes()) {
+      if (lane.oncoming) {
+        lane.change_allowed = directive.pass_blocked && directive.oncoming_allowed;
+        lane.extra_cost = config_.behavior.oncoming_cost;
+      } else if (lane.offset == 0 && directive.pass_blocked) {
+        // Leave the lane, or wait in it with room to pull out.
+        lane.extra_cost += config_.behavior.blocked_cost;
+        const double v = std::max(0.0, out.start.s_d);
+        const double can_stop =
+            out.start.s + 0.5 * vehicle_.length + v * v / (2.0 * config_.behavior.comfort_decel);
+        lane.end_s = std::max(directive.blocked_s - config_.behavior.pass_standoff, can_stop + 1.0);
+      }
+    }
     for (const int id : directive.released_stop_lines) {
       auto& v = out.virtual_obstacles;
       v.erase(std::remove_if(v.begin(), v.end(), [id](const Obstacle& o) { return o.id == -1000 - id; }),

@@ -281,6 +281,7 @@ NB_MODULE(_core, m) {
       .def_rw("change_allowed", &LaneBand::change_allowed)
       .def_rw("extra_cost", &LaneBand::extra_cost)
       .def_rw("urgency", &LaneBand::urgency)
+      .def_rw("oncoming", &LaneBand::oncoming)
       .def_rw("speed_limit", &LaneBand::speed_limit)
       .def_rw("center", &LaneBand::center)
       .def_rw("left", &LaneBand::left)
@@ -342,7 +343,8 @@ NB_MODULE(_core, m) {
       .def_rw("w_clearance", &CostConfig::w_clearance)
       .def_rw("desired_clearance", &CostConfig::desired_clearance)
       .def_rw("follow_time", &CostConfig::follow_time)
-      .def_rw("w_road_edge", &CostConfig::w_road_edge);
+      .def_rw("w_road_edge", &CostConfig::w_road_edge)
+      .def_rw("follow_standing", &CostConfig::follow_standing);
   nb::class_<ConstraintConfig>(m, "ConstraintConfig")
       .def(nb::init<>())
       .def_rw("check_curvature", &ConstraintConfig::check_curvature)
@@ -532,6 +534,7 @@ NB_MODULE(_core, m) {
       .def_rw("right_neighbor", &MapLane::right_neighbor)
       .def_rw("can_change_left", &MapLane::can_change_left)
       .def_rw("can_change_right", &MapLane::can_change_right)
+      .def_rw("left_opposite", &MapLane::left_opposite)
       .def_rw("successors", &MapLane::successors)
       .def_rw("predecessors", &MapLane::predecessors)
       .def_rw("speed_limit", &MapLane::speed_limit)
@@ -612,7 +615,8 @@ NB_MODULE(_core, m) {
       .def_rw("w_route_urgency", &RouteCorridorConfig::w_route_urgency)
       .def_rw("urgency_distance", &RouteCorridorConfig::urgency_distance)
       .def_rw("urgency_time", &RouteCorridorConfig::urgency_time)
-      .def_rw("stop_line_offset", &RouteCorridorConfig::stop_line_offset);
+      .def_rw("stop_line_offset", &RouteCorridorConfig::stop_line_offset)
+      .def_rw("oncoming_lane", &RouteCorridorConfig::oncoming_lane);
 
   nb::class_<RouteCorridor>(m, "RouteCorridor")
       .def_ro("reference", &RouteCorridor::reference)
@@ -720,7 +724,12 @@ NB_MODULE(_core, m) {
       .def_rw("turn_speed", &BehaviorConfig::turn_speed)
       .def_rw("stop_margin", &BehaviorConfig::stop_margin)
       .def_rw("comfort_decel", &BehaviorConfig::comfort_decel)
-      .def_rw("stop_sign_wait", &BehaviorConfig::stop_sign_wait);
+      .def_rw("stop_sign_wait", &BehaviorConfig::stop_sign_wait)
+      .def_rw("pass_blocked", &BehaviorConfig::pass_blocked)
+      .def_rw("blocked_lookahead", &BehaviorConfig::blocked_lookahead)
+      .def_rw("blocked_cost", &BehaviorConfig::blocked_cost)
+      .def_rw("oncoming_cost", &BehaviorConfig::oncoming_cost)
+      .def_rw("pass_standoff", &BehaviorConfig::pass_standoff);
   nb::class_<LocalPlannerConfig>(m, "LocalPlannerConfig")
       .def(nb::init<>())
       .def_rw("planner", &LocalPlannerConfig::planner)

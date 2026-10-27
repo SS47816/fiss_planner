@@ -164,3 +164,94 @@ TEST(Behavior, StopsAtAStopSignThenGoes) {
   ASSERT_EQ(d.released_stop_lines.size(), 1u);
   EXPECT_EQ(d.released_stop_lines[0], 4);
 }
+
+namespace {
+
+/// Two lanes along x: lane 1 eastbound (y = 0) and lane 2 westbound (y = 3.5) beside it.
+std::shared_ptr<RoadMap> twoWayRoad() {
+  auto map = std::make_shared<RoadMap>();
+  const double w = 3.5;
+  MapLane east, west;
+  east.id = 1;
+  west.id = 2;
+  for (double x = 0.0; x <= 200.0 + 1e-9; x += 2.0) {
+    east.centerline.push_back({x, 0.0});
+    east.left.push_back({x, w / 2});
+    east.right.push_back({x, -w / 2});
+  }
+  for (double x = 200.0; x >= -1e-9; x -= 2.0) {
+    west.centerline.push_back({x, w});
+    west.left.push_back({x, w / 2});
+    west.right.push_back({x, 1.5 * w});
+  }
+  east.left_opposite = 2;
+  west.left_opposite = 1;
+  map->addLane(std::move(east));
+  map->addLane(std::move(west));
+  map->finalize();
+  return map;
+}
+
+LocalPlannerConfig passingConfig() {
+  LocalPlannerConfig cfg = behaviorConfig();
+  cfg.route.oncoming_lane = true;
+  return cfg;
+}
+
+const LaneBand* oncomingBand(const LocalPlanOutput& out) {
+  for (const auto& lane : out.corridor.lanes()) {
+    if (lane.oncoming) return &lane;
+  }
+  return nullptr;
+}
+
+}  // namespace
+
+TEST(Behavior, PassesABlockedLaneThroughTheOncomingLane) {
+  LocalPlanner lp(passingConfig(), VehicleParams{});
+  lp.setMap(twoWayRoad(), {1});
+  Obstacle blocker = predictConstantVelocity(5, 60.0, 0.0, 0.0, 0.0, 4.5, 2.0, 6.0, 0.1);
+  blocker.is_static = true;
+  const auto out = lp.step(0.0, EgoState{30.0, 0.0, 0.0, 6.0}, {blocker});
+  EXPECT_TRUE(has(out.behavior, "pass_blocked"));
+  const LaneBand* band = oncomingBand(out);
+  ASSERT_NE(band, nullptr);
+  EXPECT_TRUE(band->change_allowed);
+  EXPECT_NEAR(out.corridor.center(*band, 40.0), 3.5, 0.2);
+  EXPECT_GT(out.trajectory.y.back(), 1.75);  // heads into the oncoming lane
+
+  // Nothing blocks: the oncoming lane stays closed.
+  LocalPlanner free(passingConfig(), VehicleParams{});
+  free.setMap(twoWayRoad(), {1});
+  const auto go = free.step(0.0, EgoState{30.0, 0.0, 0.0, 6.0}, {});
+  EXPECT_FALSE(has(go.behavior, "pass_blocked"));
+  ASSERT_NE(oncomingBand(go), nullptr);
+  EXPECT_FALSE(oncomingBand(go)->change_allowed);
+  EXPECT_LT(std::abs(go.trajectory.y.back()), 0.5);
+}
+
+TEST(Behavior, DoesNotPassAQueueBeforeAJunction) {
+  auto map = junctionRoad();
+  LocalPlanner lp(behaviorConfig(), VehicleParams{});
+  lp.setMap(map, {1, 2, 3});
+  // A car standing 10 m before the junction is queueing, not blocking.
+  const Obstacle queued = predictConstantVelocity(5, 50.0, 0.0, 0.0, 0.0, 4.5, 1.9, 6.0, 0.1);
+  const auto out = lp.step(0.0, EgoState{20.0, 0.0, 0.0, 5.0}, {queued});
+  EXPECT_FALSE(has(out.behavior, "pass_blocked"));
+}
+
+TEST(Behavior, WaitsForOncomingTrafficBeforePassing) {
+  Obstacle blocker = predictConstantVelocity(5, 60.0, 0.0, 0.0, 0.0, 4.5, 2.0, 6.0, 0.1);
+  for (const double x_oncoming : {100.0, 190.0}) {
+    LocalPlanner lp(passingConfig(), VehicleParams{});
+    lp.setMap(twoWayRoad(), {1});
+    // Oncoming at 10 m/s: at x = 100 it meets the ego in the blocked stretch, at x = 190 it does not.
+    const Obstacle oncoming = predictConstantVelocity(6, x_oncoming, 3.5, kPi, 10.0, 4.5, 1.9, 6.0, 0.1);
+    const auto out = lp.step(0.0, EgoState{40.0, 0.0, 0.0, 3.0}, {blocker, oncoming});
+    EXPECT_TRUE(has(out.behavior, "pass_blocked"));
+    ASSERT_NE(oncomingBand(out), nullptr);
+    EXPECT_EQ(oncomingBand(out)->change_allowed, x_oncoming > 150.0) << x_oncoming;
+    if (x_oncoming < 150.0)
+      EXPECT_LT(out.trajectory.x.back() + 2.5, 60.0 - 2.25);  // waits behind the blocker
+  }
+}

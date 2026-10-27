@@ -91,6 +91,7 @@ void RoadMap::finalize() {
     drop_missing(lane.predecessors);
     if (lane.left_neighbor >= 0 && !lanes_.count(lane.left_neighbor)) lane.left_neighbor = -1;
     if (lane.right_neighbor >= 0 && !lanes_.count(lane.right_neighbor)) lane.right_neighbor = -1;
+    if (lane.left_opposite >= 0 && !lanes_.count(lane.left_opposite)) lane.left_opposite = -1;
     if (lane.left_neighbor < 0) lane.can_change_left = false;
     if (lane.right_neighbor < 0) lane.can_change_right = false;
   }

@@ -26,6 +26,7 @@ struct MapLane {
   int right_neighbor = -1;
   bool can_change_left = false;  ///< traffic rules allow changing into left_neighbor
   bool can_change_right = false;
+  int left_opposite = -1;  ///< adjacent lane on the left driving the other way, or -1
   std::vector<int> successors;
   std::vector<int> predecessors;                                 ///< filled by RoadMap::finalize() if empty
   double speed_limit = std::numeric_limits<double>::infinity();  ///< [m/s]

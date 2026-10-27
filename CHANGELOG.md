@@ -50,6 +50,14 @@ profile per benchmark.
 - Junction yielding (`behavior.junction_yield`, map lanes flagged `MapLane::junction`): stop before
   the entry while moving traffic would be in the ego's path through the junction within
   `behavior.crossing_gap`; committed once inside or when stopping would be uncomfortable.
+- Passing a blocked lane (`behavior.pass_blocked`): standing obstacles that leave no room in the ego
+  lane (not a queue before a junction or stop line) make the ego lane cost `blocked_cost` more and
+  end `pass_standoff` before them (`LaneBand::end_s`), so the ego waits with room to pull out. The
+  lane beside the leftmost band that drives the other way (`route.oncoming_lane`,
+  `MapLane::left_opposite`) opens while no oncoming vehicle would meet the ego before it has passed
+  the blocked stretch, and stays open while the ego is passing.
+- `cost.follow_standing`: whether standing obstacles set a lane's pace; obstacles at a lane's edge
+  that leave room to pass within it no longer do.
 - Adapters flag junction lanes (CARLA junction waypoints, nuPlan lane connectors), report yellow
   lights, and map CARLA stop signs to stop lines.
 

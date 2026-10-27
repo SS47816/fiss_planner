@@ -253,6 +253,14 @@ Rejection ConstraintValidator::check(const Trajectory& traj, const Corridor* cor
     }
   }
 
+  if (corridor != nullptr) {
+    for (const auto& lane : corridor->lanes()) {
+      if (lane.offset != traj.lane || !std::isfinite(lane.end_s)) continue;
+      for (size_t i = 0; i < n; ++i) {
+        if (traj.s[i] + 0.5 * vehicle_.length > lane.end_s) return Rejection::kOffRoad;
+      }
+    }
+  }
   if (cfg_.check_road_bounds && corridor != nullptr && !corridor->empty()) {
     // Lateral half-extent of the footprint given its heading relative to the
     // reference line. A start state that already violates the bounds may not

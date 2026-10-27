@@ -70,6 +70,9 @@ struct CostConfig {
   double w_clearance = 5.0;           ///< lateral gap to obstacles alongside
   double desired_clearance = 1.0;     ///< [m]
   double follow_time = 3.0;           ///< [s]; 0 = always score against the desired speed
+  /// Standing obstacles (below 0.5 m/s) set a lane's pace too. Without, a lane
+  /// is judged by how far its candidates get past them (blocked lanes, cones).
+  bool follow_standing = true;
   /// Mean squared distance [m^2] the footprint extends beyond the road edges
   /// along the trajectory (e.g. while recovering from a wide turn). 0 = off.
   double w_road_edge = 0.0;

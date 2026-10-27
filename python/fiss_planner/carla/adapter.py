@@ -95,6 +95,13 @@ def road_map_from_carla(carla_map, spacing: float = 2.0, region: tuple | None = 
         lane.junction = any(w.is_junction for w in wps)
 
         mid = wps[len(wps) // 2]
+        opposite = mid.get_left_lane()
+        if (
+            opposite is not None
+            and opposite.lane_type == carla.LaneType.Driving
+            and opposite.lane_id * mid.lane_id < 0
+        ):
+            lane.left_opposite = key_to_id.get(_lane_key(opposite), -1)
         # CARLA "left" is the driver's left in its frame, which remains the
         # driver's left after mirroring.
         for side in ("left", "right"):

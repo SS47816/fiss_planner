@@ -26,6 +26,10 @@ struct RouteCorridorConfig {
   /// Stop lines become obstacles this far beyond the line [m], so that the
   /// vehicle, which stops a gap short of obstacles, stops close to the line.
   double stop_line_offset = 0.0;
+  /// Add the lane beside the leftmost band that drives the other way, as a
+  /// band the planner may only enter when the behaviour layer allows it
+  /// (passing a blocked lane).
+  bool oncoming_lane = false;
 };
 
 /// Everything the planner needs from the map for one cycle.

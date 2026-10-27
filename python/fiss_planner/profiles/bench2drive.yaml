@@ -22,7 +22,7 @@ sampling:
   min_speed: 0.0
   lane_margin: 0.15
   follow_lead: true
-  low_speed: 0.0
+  low_speed: 4.0  # [m/s] lateral motion over the distance driven below this speed
 cost:
   w_time: 1.0
   w_speed: 1.0
@@ -39,6 +39,7 @@ cost:
   w_clearance: 5.0
   desired_clearance: 1.0
   follow_time: 3.0
+  follow_standing: false  # standing obstacles (cones, accidents) do not set a lane's pace
   w_road_edge: 0.0
 constraints:
   check_curvature: true
@@ -73,6 +74,7 @@ route:
   urgency_distance: 80.0
   urgency_time: 10.0
   stop_line_offset: 2.5  # stop close to the line (stop signs count only within 4 m of their area)
+  oncoming_lane: true  # passing blocked lanes (behavior.pass_blocked)
 stitching:
   enabled: true
   latency: 0.05  # one control step between planning and actuation
@@ -94,6 +96,11 @@ behavior:
   stop_margin: 1.0
   comfort_decel: 3.0
   stop_sign_wait: 0.5
+  pass_blocked: true
+  blocked_lookahead: 50.0
+  blocked_cost: 50.0
+  oncoming_cost: 10.0
+  pass_standoff: 14.0  # wait this far back from a blocked stretch, with room to pull out
 smoother:
   enabled: false
   margin_lat: 0.3

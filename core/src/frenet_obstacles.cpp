@@ -248,6 +248,9 @@ LeadGap GapEvaluator::leadGap(double s, double d, double s_d, const FrenetObstac
     if (lane_mode) {
       const double center = 0.5 * (fb.d_min + fb.d_max);
       if (center < band_lo || center > band_hi) continue;
+      // An obstacle at the lane's edge (a cone, a parked car's mirror) that leaves
+      // room to pass within the lane does not set its pace.
+      if (std::max(band_hi - fb.d_max, fb.d_min - band_lo) >= 2.0 * half_band_) continue;
     } else if (fb.d_max <= d - half_band_ || fb.d_min >= d + half_band_) {
       continue;
     }
