@@ -4,7 +4,8 @@
         --out results/tune/commonroad
 
 The search-space file names the benchmark (commonroad: scenario listings;
-nuplan: scenario filters, run in the pixi nuplan environment), the base profile, the tuning split,
+nuplan: scenario filters, run in the pixi nuplan environment; bench2drive: listings of
+validation route ids, run in the pixi carla environment), the base profile, the tuning split,
 an optional check split, settings fixed for every trial, the objective and the
 searched settings by their profile keys (see benchmarks/tuning/). The first
 trial evaluates the base profile, so the best settings score at least as well
@@ -166,7 +167,92 @@ class NuplanEvaluator:
         pass
 
 
-EVALUATORS = {"commonroad": CommonRoadEvaluator, "nuplan": NuplanEvaluator}
+class Bench2DriveEvaluator:
+    """Bench2Drive routes (benchmarks/bench2drive/run_routes.sh in the pixi carla
+    environment; CARLA_ROOT must be set) split over --jobs CARLA servers on
+    ports $B2D_PORT (default 30000), +2000, ... Score: the Driving Score over
+    the listed routes, a route without a result counting 0."""
+
+    test_splits = {"bench2drive220"}
+
+    def __init__(self, space: dict, args: argparse.Namespace):
+        self.routes = space.get("routes", "bench2drive_0.0.4_val")
+        if self.routes in self.test_splits or "test" in self.routes:
+            sys.exit(f"refusing to tune on the test routes '{self.routes}'")
+        if "CARLA_ROOT" not in os.environ:
+            sys.exit("set CARLA_ROOT to the CARLA 0.9.15 directory")
+        self.jobs, self.limit, self.seed = args.jobs, args.limit, args.seed
+        self.port = int(os.environ.get("B2D_PORT", "30000"))
+        self.pixi = os.environ.get("PIXI_EXE", "pixi")
+        here = Path(__file__).resolve().parent / "bench2drive"
+        sys.path.insert(0, str(here))
+        import summarize
+
+        self.summarize = summarize
+        self.runner = here / "run_routes.sh"
+
+    def split(self, name: str) -> list[str]:
+        listing = Path(name)
+        if listing.stem in self.test_splits or "test" in listing.stem:
+            sys.exit(f"refusing to tune on the test split '{listing}'")
+        ids = [line.split("#")[0].strip() for line in listing.read_text().splitlines()]
+        ids = [i for i in ids if i]
+        if self.limit:
+            rng = np.random.default_rng(self.seed)
+            ids = sorted(rng.permutation(ids)[: self.limit].tolist())
+        return ids
+
+    def __call__(self, profile: Path, ids: list[str]) -> dict:
+        out = (profile.parent / f"{profile.stem}_routes").resolve()
+        procs = []
+        for k in range(min(self.jobs, len(ids))):
+            env = dict(os.environ, PORT=str(self.port + 2000 * k))
+            cmd = [
+                self.pixi,
+                "run",
+                "--frozen",
+                "-e",
+                "carla",
+                "bash",
+                str(self.runner),
+                self.routes,
+                str(out),
+            ]
+            procs.append(
+                subprocess.Popen(
+                    [*cmd, str(profile.resolve()), *ids[k :: self.jobs]],
+                    env=env,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            )
+        for p in procs:
+            p.wait()
+        rds = self.summarize.records(out)
+        n = len(ids)
+        return {
+            "routes": n,
+            "results": len(rds),
+            "driving_score": sum(rd["scores"]["score_composed"] for rd in rds) / n,
+            "success_%": 100.0 * sum(self.summarize.success(rd) for rd in rds) / n,
+            "route_completion": sum(rd["scores"]["score_route"] for rd in rds) / n,
+        }
+
+    def score(self, m: dict) -> float:
+        return m["driving_score"]
+
+    def describe(self, m: dict) -> str:
+        return f"driving score {m['driving_score']:.1f}, success {m['success_%']:.1f} %"
+
+    def close(self) -> None:
+        pass
+
+
+EVALUATORS = {
+    "commonroad": CommonRoadEvaluator,
+    "nuplan": NuplanEvaluator,
+    "bench2drive": Bench2DriveEvaluator,
+}
 
 
 def _suggest(trial: optuna.Trial, key: str, spec: dict):

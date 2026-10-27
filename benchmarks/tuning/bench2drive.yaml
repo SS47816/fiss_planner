@@ -1,0 +1,22 @@
+# Search space for tuning the bench2drive profile (CARLA_ROOT=... python benchmarks/tune.py
+# benchmarks/tuning/bench2drive.yaml --jobs 4 --trials 30 --out results/tune/bench2drive).
+benchmark: bench2drive
+profile: bench2drive                          # base profile: settings not searched keep its values
+routes: bench2drive_0.0.4_val                 # validation routes (bench2drive220 is refused)
+split: benchmarks/bench2drive/tune_routes.txt # one route per scenario type; the Driving Score is the objective
+params:                                       # profile key: {low, high, log, int} or {choices}
+  desired_speed: {low: 10.0, high: 18.0}
+  cost.w_speed: {low: 0.3, high: 3.0, log: true}
+  cost.w_lateral: {low: 0.5, high: 8.0, log: true}
+  cost.w_lane_change: {low: 1.0, high: 15.0, log: true}
+  cost.w_headway: {low: 1.0, high: 30.0, log: true}
+  cost.w_ttc: {low: 1.0, high: 20.0, log: true}
+  cost.w_clearance: {low: 1.0, high: 20.0, log: true}
+  safety.min_gap: {low: 1.0, high: 3.0}
+  safety.min_ttc: {low: 0.8, high: 2.5}
+  safety.crossing_time_gap: {low: 0.0, high: 1.5}
+  route.w_route_urgency: {low: 3.0, high: 50.0, log: true}
+  route.urgency_distance: {low: 40.0, high: 150.0}
+  behavior.pass_standoff: {low: 6.0, high: 20.0}
+  behavior.oncoming_cost: {low: 1.0, high: 50.0, log: true}
+  sampling.low_speed: {low: 0.0, high: 6.0}

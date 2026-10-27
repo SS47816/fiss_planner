@@ -101,7 +101,10 @@ profile per benchmark.
   (the map around the route, traffic lights as stop lines, actors and static props as obstacles,
   MPC tracking); profile `bench2drive`, scripts in `benchmarks/bench2drive/`. The CARLA adapter
   builds lane maps of a region around a route (large towns) and the traffic lights' stop lines.
-- `benchmarks/tune.py` also tunes nuPlan profiles (search space `benchmarks/tuning/nuplan.yaml`).
+- `benchmarks/tune.py` also tunes nuPlan profiles (search space `benchmarks/tuning/nuplan.yaml`) and
+  Bench2Drive profiles on validation routes spread over several CARLA servers
+  (`benchmarks/tuning/bench2drive.yaml`, one route per scenario type in
+  `benchmarks/bench2drive/tune_routes.txt`).
 - The ROS 1/2 nodes pass the goal pose to the planner; the CARLA runner passes the route's end.
 - CommonRoad benchmark: the planner gets the goal region as its destination, and the target speed
   aims for the point of the region the ego reaches in the middle of the time window.

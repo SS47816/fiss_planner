@@ -22,7 +22,20 @@ CARLA_ROOT=/path/to/CARLA_0.9.15 pixi run -e carla bash benchmarks/bench2drive/r
 pixi run -e bench python benchmarks/bench2drive/summarize.py results/b2d/val --routes
 ```
 
-The evaluator starts CARLA itself. **Splits:** `bench2drive_0.0.4_val` (220 routes, 44 scenario
-types x 5) for tuning, `bench2drive220` (the 220 benchmark routes) as the test split.
+The evaluator starts CARLA itself. `run_routes.sh` evaluates routes one by one, each in its own
+directory with a time limit and a retry, on the CARLA port `$PORT` (default 20000; run several on
+ports 4000 apart). **Splits:** `bench2drive_0.0.4_val` (220 routes over 42 scenario types) for
+tuning, `bench2drive220` (the 220 benchmark routes) as the test split.
 **Metrics:** Driving Score (route completion x infraction penalty) and Success Rate (route
 completed without infractions other than minimum speed), as in Bench2Drive's `tools/`.
+
+## Tuning
+
+```bash
+CARLA_ROOT=/path/to/CARLA_0.9.15 pixi run -e bench python benchmarks/tune.py \
+    benchmarks/tuning/bench2drive.yaml --jobs 4 --trials 30 --out results/tune/bench2drive
+```
+
+Each trial drives `tune_routes.txt` (the first validation route of every scenario type) on `--jobs`
+CARLA servers (ports `$B2D_PORT`, default 30000, 2000 apart); a route without a result scores 0.
+The planner code is loaded from the working tree, so leave it unchanged while a study runs.
