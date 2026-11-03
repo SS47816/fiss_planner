@@ -39,7 +39,14 @@ jobs:
       - run: pip install ".[commonroad,test]"
       - name: Profile integration test
         run: pytest -q python/tests/test_profiles.py::test_benchmark_options_override_the_profile
+      - name: Cache pinned scenarios
+        id: scenarios
+        uses: actions/cache@v4
+        with:
+          path: data/cache/scenarios/hand-crafted
+          key: commonroad-hand-crafted-${{ hashFiles('benchmarks/commonroad/fetch_scenarios.py') }}
       - name: Fetch pinned scenarios
+        if: steps.scenarios.outputs.cache-hit != 'true'
         run: python benchmarks/commonroad/fetch_scenarios.py --subset hand-crafted --out data/cache/scenarios
       - name: Closed-loop benchmark (smoke)
         run: |
@@ -48,6 +55,7 @@ jobs:
           python - <<'PY'
           import pandas as pd
           df = pd.read_csv("results/ci.csv")
+          assert len(df) == 80, f"expected 20 scenarios x 4 planners, got {len(df)} rows"
           assert (df.status != "error").all(), df[df.status == "error"]
           print(df.groupby("planner").success.mean())
           PY
