@@ -70,3 +70,43 @@ def test_fetch_extracts_the_pinned_subset(monkeypatch, tmp_path):
     assert (tmp_path / "hand-crafted/example.xml").read_bytes() == b"<scenario/>"
     assert not (tmp_path / "README.md").exists()
     download.assert_called_once_with(fetcher.URL.format(c=fetcher.COMMIT, sub="hand-crafted"))
+
+
+PREPARE_SOURCE = SOURCE.with_name("prepare_ci_scenarios.py")
+prepare_spec = importlib.util.spec_from_file_location("prepare_ci_scenarios", PREPARE_SOURCE)
+preparer = importlib.util.module_from_spec(prepare_spec)
+prepare_spec.loader.exec_module(preparer)
+
+
+def test_ci_snapshot_prepares_all_original_scenarios_offline(monkeypatch, tmp_path):
+    import json
+
+    request = Mock(side_effect=AssertionError("CI fixtures must not require network access"))
+    monkeypatch.setattr(fetcher.urllib.request, "urlopen", request)
+    manifest = json.loads((preparer.ROOT / "ci_scenarios.json").read_text())
+    assert manifest["upstream_commit"] == fetcher.COMMIT
+    assert manifest["selection"]["seed"] == 1
+    assert manifest["selection"]["limit"] == 20
+    assert preparer.prepare(tmp_path) == 20
+    assert {p.name for p in tmp_path.glob("*.xml")} == set(manifest["files"])
+    request.assert_not_called()
+
+
+@pytest.mark.parametrize("corrupt_archive", [True, False])
+def test_ci_snapshot_rejects_corruption_before_writing(monkeypatch, tmp_path, corrupt_archive):
+    import json
+
+    manifest = json.loads((preparer.ROOT / "ci_scenarios.json").read_text())
+    data = (preparer.ROOT / "ci_scenarios.tar.gz").read_bytes()
+    if corrupt_archive:
+        data = data[:-1] + bytes([data[-1] ^ 1])
+    else:
+        first = next(iter(manifest["files"]))
+        manifest["files"][first] = "0" * 64
+    (tmp_path / "ci_scenarios.tar.gz").write_bytes(data)
+    (tmp_path / "ci_scenarios.json").write_text(json.dumps(manifest))
+    monkeypatch.setattr(preparer, "ROOT", tmp_path)
+    out = tmp_path / "scenarios"
+    with pytest.raises(ValueError, match="checksum mismatch"):
+        preparer.prepare(out)
+    assert not out.exists()

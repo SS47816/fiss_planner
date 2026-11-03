@@ -14,9 +14,11 @@ remain separate work.
   latest-release lookup and ROS repository-package download, which failed with
   HTTP 404 before the Humble build. The images already provide ROS, colcon and
   rosdep; dependency installation still runs for the repository's package manifests.
-- Retry transient CommonRoad scenario-download failures up to three times and
-  cache the pinned scenario subset in CI. The smoke gate still requires all
+- Retry transient full-dataset download failures up to three times. CI uses a
+  checked-in, hash-verified archive of the exact original seed-1 selection to
+  avoid the GitLab outage on cold runs. The smoke gate still requires the same
   20 scenarios across four planners (80 result rows), with no evaluation errors.
+  Scenario provenance and the retained upstream license accompany the archive.
 - Keep base profile tests independent of CommonRoad and run the optional integration
   test explicitly in CommonRoad CI. All four profiles are checked in installed wheels.
 - Recheck oncoming clearance until the measured footprint leaves the lane, including

@@ -39,15 +39,8 @@ jobs:
       - run: pip install ".[commonroad,test]"
       - name: Profile integration test
         run: pytest -q python/tests/test_profiles.py::test_benchmark_options_override_the_profile
-      - name: Cache pinned scenarios
-        id: scenarios
-        uses: actions/cache@v4
-        with:
-          path: data/cache/scenarios/hand-crafted
-          key: commonroad-hand-crafted-${{ hashFiles('benchmarks/commonroad/fetch_scenarios.py') }}
-      - name: Fetch pinned scenarios
-        if: steps.scenarios.outputs.cache-hit != 'true'
-        run: python benchmarks/commonroad/fetch_scenarios.py --subset hand-crafted --out data/cache/scenarios
+      - name: Prepare pinned smoke scenarios
+        run: python benchmarks/commonroad/prepare_ci_scenarios.py --out data/cache/scenarios/hand-crafted
       - name: Closed-loop benchmark (smoke)
         run: |
           python -m fiss_planner.commonroad.benchmark --scenarios data/cache/scenarios/hand-crafted \
