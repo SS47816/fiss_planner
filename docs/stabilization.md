@@ -9,6 +9,11 @@ remain separate work.
 - Pin Pixi 0.82.1 in the manifest and CI. Map conda `ray-core` only to PyPI `ray`:
   the previous hash mapping also claimed bundled packages such as `aiohttp` at
   Ray's version, invalidating the lockfile whenever it was checked.
+- Run ROS 2 CI in the official Humble/Jammy and Jazzy/Noble ROS base images,
+  retaining both build/test jobs. This removes the setup action's unauthenticated
+  latest-release lookup and ROS repository-package download, which failed with
+  HTTP 404 before the Humble build. The images already provide ROS, colcon and
+  rosdep; dependency installation still runs for the repository's package manifests.
 - Keep base profile tests independent of CommonRoad and run the optional integration
   test explicitly in CommonRoad CI. All four profiles are checked in installed wheels.
 - Recheck oncoming clearance until the measured footprint leaves the lane, including

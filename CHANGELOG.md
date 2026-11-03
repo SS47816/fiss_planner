@@ -4,6 +4,8 @@
 
 ### Stabilization
 - Pin Pixi 0.82.1 and correct Ray's conda-to-PyPI mapping so locked CI installs work.
+- Run ROS 2 CI in official distro-matched ROS base images, avoiding the setup
+  action's failing latest-release discovery and repository-package download.
 - Keep base-package profile tests independent of optional CommonRoad dependencies;
   run the CommonRoad integration test separately and verify all four packaged profiles.
 - Recheck passing clearance until the measured footprint enters the oncoming lane;
