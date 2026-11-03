@@ -6,6 +6,8 @@ results do not move when a default changes. Shipped profiles::
 
     commonroad       CommonRoad scenarios (closed loop, recorded traffic)
     carla_scenarios  the CARLA closed-loop scenarios (fiss_planner.carla.closed_loop)
+    nuplan           nuPlan closed-loop simulations
+    bench2drive      CARLA Leaderboard 2.0 / Bench2Drive validation routes
 
 Each profile is tuned only on its benchmark's development split (see
 ``benchmarks/tune.py``)::

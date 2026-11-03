@@ -1,10 +1,9 @@
 import fiss_planner as fp
 import pytest
-from fiss_planner.commonroad.benchmark import Options, make_config
 
 
 def test_shipped_profiles_load():
-    assert {"commonroad", "carla_scenarios"} <= set(fp.profiles.names())
+    assert {"commonroad", "carla_scenarios", "nuplan", "bench2drive"} <= set(fp.profiles.names())
     for name in fp.profiles.names():
         cfg, _ = fp.profiles.load(name)
         cfg.validate()
@@ -64,6 +63,9 @@ def test_config_hash_tracks_planning_settings_only():
 
 
 def test_benchmark_options_override_the_profile():
+    pytest.importorskip("commonroad")
+    from fiss_planner.commonroad.benchmark import Options, make_config
+
     cfg, _ = make_config(Options())
     default = fp.LocalPlannerConfig()
     assert fp.to_yaml(cfg) == fp.to_yaml(default)  # the commonroad profile pins the defaults

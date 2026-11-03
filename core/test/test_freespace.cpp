@@ -2,9 +2,11 @@
 // Copyright (c) 2021-2026 Shuo Sun
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 
 #include "fiss_planner/freespace/hybrid_astar.hpp"
+#include "fiss_planner/planning/local_planner.hpp"
 
 using namespace fiss_planner;
 
@@ -148,4 +150,77 @@ TEST(FreeSpaceTrajectory, StopsAtEveryChangeOfDirection) {
   EXPECT_TRUE(forward);
   EXPECT_TRUE(backward);
   EXPECT_NEAR(x_max, 3.0, 0.05);
+}
+
+namespace {
+std::shared_ptr<RoadMap> recoveryRoad() {
+  auto map = std::make_shared<RoadMap>();
+  MapLane lane;
+  lane.id = 1;
+  lane.centerline = {{-20, 1.75}, {80, 1.75}};
+  lane.left = {{-20, 3.5}, {80, 3.5}};
+  lane.right = {{-20, 0}, {80, 0}};
+  map->addLane(lane);
+  map->addArea(rect(-20, -2.5, 80, 0));
+  map->finalize();
+  return map;
+}
+
+LocalPlannerConfig recoveryConfig() {
+  LocalPlannerConfig cfg;
+  cfg.free_space.enabled = true;
+  cfg.free_space.margin = 0.1;
+  cfg.free_space.resolution = 0.2;
+  cfg.stitching.enabled = false;
+  return cfg;
+}
+
+bool active(const LocalPlanOutput& out, const std::string& name) {
+  return std::find(out.behavior.begin(), out.behavior.end(), name) != out.behavior.end();
+}
+}  // namespace
+
+TEST(FreeSpaceLocalPlanner, EntersFromParkingAndHandsOverWhenAligned) {
+  LocalPlanner lp(recoveryConfig(), car());
+  lp.setMap(recoveryRoad(), {1});
+  const auto out = lp.step(0.0, {5.5, -1.25, 0, 0}, {});
+  ASSERT_TRUE(out.free_space);
+  ASSERT_TRUE(out.success);
+  ASSERT_FALSE(out.free_space_path.empty());
+  EXPECT_TRUE(active(out, "free_space"));
+  const auto goal = out.free_space_path.back();
+  const auto handover = lp.step(0.1, {goal.x, goal.y, goal.yaw, 0}, {});
+  EXPECT_FALSE(handover.free_space);
+  EXPECT_TRUE(handover.free_space_path.empty());
+  EXPECT_TRUE(handover.success);
+  lp.reset();
+  const auto in_lane = lp.step(0.2, {10, 1.75, 0, 0}, {});
+  EXPECT_FALSE(in_lane.free_space);
+}
+
+TEST(FreeSpaceLocalPlanner, HoldsForMovingTrafficThenResumes) {
+  LocalPlanner lp(recoveryConfig(), car());
+  lp.setMap(recoveryRoad(), {1});
+  // Moving traffic crosses the recovery path just ahead of the ego.
+  const auto traffic = predictConstantVelocity(8, 9.0, -6.0, M_PI / 2, 2.0, 4.5, 1.9, 12.0, 0.1);
+  const auto out = lp.step(0.0, {5.5, -1.25, 0, 0}, {traffic});
+  EXPECT_TRUE(out.free_space);
+  EXPECT_TRUE(active(out, "free_space_yield"));
+  for (double v : out.trajectory.v) EXPECT_DOUBLE_EQ(v, 0.0);
+  const auto go = lp.step(0.1, {5.5, -1.25, 0, 0}, {});
+  EXPECT_TRUE(go.free_space);
+  EXPECT_TRUE(go.success);
+  EXPECT_TRUE(active(go, "free_space"));
+}
+
+TEST(FreeSpaceLocalPlanner, HoldsWhenTheExitIsBlocked) {
+  LocalPlanner lp(recoveryConfig(), car());
+  lp.setMap(recoveryRoad(), {1});
+  auto blocker = predictConstantVelocity(9, 17, 1.75, 0, 0, 40, 3.5, 12.0, 0.1);
+  blocker.is_static = true;
+  const auto out = lp.step(0.0, {5.5, -1.25, 0, 0}, {blocker});
+  EXPECT_TRUE(out.free_space);
+  EXPECT_FALSE(out.success);
+  EXPECT_TRUE(active(out, "free_space_blocked"));
+  for (double v : out.trajectory.v) EXPECT_DOUBLE_EQ(v, 0.0);
 }

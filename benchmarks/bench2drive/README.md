@@ -39,3 +39,19 @@ CARLA_ROOT=/path/to/CARLA_0.9.15 pixi run -e bench python benchmarks/tune.py \
 Each trial drives `tune_routes.txt` (the first validation route of every scenario type) on `--jobs`
 CARLA servers (ports `$B2D_PORT`, default 30000, 2000 apart); a route without a result scores 0.
 The planner code is loaded from the working tree, so leave it unchanged while a study runs.
+
+## Resume and process cleanup
+
+`run_routes.sh` delegates to a Linux Python supervisor. It skips a checkpoint
+only when `entry_status` is `Finished`, progress is `[1, 1]`, and the matching
+route record is terminal. Completed driving failures (including infractions or
+blocked vehicles) remain results. Malformed, partial, crashed and rejected
+checkpoints are retried once; incomplete evaluations make the runner exit nonzero.
+
+Each attempt has its own log. Incomplete route directories move to a sibling
+`<out_dir>.incomplete/` directory so they remain inspectable and are excluded
+from result aggregation. The supervisor reaps only its descendants, including
+CARLA servers that start new sessions, after completion, timeout or interruption.
+Existing servers on other invocations are left alone.
+
+Test this without CARLA: `pixi run -e bench pytest -q python/tests/test_bench2drive_runner.py`.

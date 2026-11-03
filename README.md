@@ -146,7 +146,9 @@ costs success, because recorded traffic does not open the gaps it asks for. With
 current state only, map-aware lane-following prediction succeeds in 70.7 % against 69.3 % for
 constant velocity, with fewer collisions.
 
-**CARLA 0.9.16, closed loop.**
+**CARLA 0.9.16, closed loop (historical results).**
+The current development environment uses CARLA 0.9.15 for Bench2Drive compatibility;
+the figures below were measured on 0.9.16.
 - **Runs:** 40 runs, all collision-free: lead vehicle, parked car, scripted cut-in and dense traffic, with every planner and both controllers. In the scripted cut-in, the tightest, the car stays 0.5–0.8 m away.
 - **Dense traffic, ten seeds:** no collisions, no emergency braking, no time below 1 s of headway, and no stops for passing traffic. 99.5 % of cycles are planned; in queues the ego stops a few metres behind the car ahead.
 - **Planning time:** 0.1–0.7 ms (FISS/FISS+).

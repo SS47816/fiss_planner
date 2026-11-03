@@ -507,6 +507,8 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
     BehaviorInput bi;
     bi.reference = &ref;
     bi.start = out.start;
+    // Passing commitment follows the measured footprint, not a stitched future departure.
+    bi.start.d = ref.project(ego.x, ego.y, out.start.s).d;
     bi.stop_lines = &stop_line_info;
     bi.junctions = &junctions;
     bi.obstacles = &obstacles;
@@ -516,7 +518,7 @@ LocalPlanOutput LocalPlanner::step(double t_now, const EgoState& ego, const std:
     out.behavior = directive.active;
     for (auto& lane : out.corridor.lanes()) {
       if (lane.oncoming) {
-        lane.change_allowed = directive.pass_blocked && directive.oncoming_allowed;
+        lane.change_allowed = directive.oncoming_allowed;
         lane.extra_cost = config_.behavior.oncoming_cost;
       } else if (lane.offset == 0 && directive.pass_blocked) {
         // Leave the lane, or wait in it with room to pull out.

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Stabilization
+- Pin Pixi 0.82.1 and correct Ray's conda-to-PyPI mapping so locked CI installs work.
+- Keep base-package profile tests independent of optional CommonRoad dependencies;
+  run the CommonRoad integration test separately and verify all four packaged profiles.
+- Recheck passing clearance until the measured footprint enters the oncoming lane;
+  retain commitment only for the same blockers, and clear it on return or reset.
+- Cover parking recovery and handover through LocalPlanner integration tests.
+- Supervise Bench2Drive evaluator descendants through timeout and interruption,
+  validate checkpoint completion, and preserve incomplete attempts outside result aggregation.
+
+
 Lane changes planned along the route, following and stopping behind the vehicle ahead, a safety
 envelope that also guides the fallbacks, smooth reference lines on noisy maps, and a tuned planner
 profile per benchmark.

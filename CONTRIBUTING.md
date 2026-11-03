@@ -5,7 +5,12 @@ few lines of Python) are the most useful thing you can send.
 
 ## Development setup
 
-[pixi](https://pixi.sh) provides every toolchain without root:
+[pixi](https://pixi.sh) **0.82.1** provides every toolchain without root. The
+manifest and CI pin this version. After dependency changes, run `pixi lock`, then
+`pixi lock --check` and `pixi install --locked` before submitting the lockfile.
+The explicit Ray package mapping prevents bundled dependencies from being
+incorrectly identified as PyPI packages at Ray's version. See
+[Pixi's mapping documentation](https://pixi.prefix.dev/dev/reference/pixi_manifest/#conda-pypi-map-optional).
 
 | Task | Command |
 |---|---|

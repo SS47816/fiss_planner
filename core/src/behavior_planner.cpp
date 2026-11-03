@@ -89,7 +89,16 @@ BehaviorPlanner::BehaviorPlanner(const BehaviorConfig& config, const VehiclePara
         b.out.pass_blocked = true;
         b.out.blocked_s = b.blocked_s;
         b.out.blocked_end = b.blocked_end;
-        b.out.oncoming_allowed = oncomingClear(*b.in, b);
+        // Permission can be withdrawn until the footprint enters the oncoming band.
+        // Once there, finish this stretch; collision validation still applies.
+        const bool same_pass = std::any_of(passing_obstacles_.begin(), passing_obstacles_.end(),
+                                           [&](int id) { return b.blockers.count(id) != 0; });
+        if (!b.in_oncoming || !same_pass) passing_obstacles_.clear();
+        const bool permitted = std::any_of(permitted_obstacles_.begin(), permitted_obstacles_.end(),
+                                           [&](int id) { return b.blockers.count(id) != 0; });
+        if (b.in_oncoming && permitted && passing_obstacles_.empty()) passing_obstacles_ = b.blockers;
+        b.out.oncoming_allowed = !passing_obstacles_.empty() || oncomingClear(*b.in, b);
+        permitted_obstacles_ = b.out.oncoming_allowed ? b.blockers : std::unordered_set<int>{};
         b.out.active.push_back("pass_blocked");
         return Status::kSuccess;
       }));
@@ -106,6 +115,8 @@ BehaviorPlanner::BehaviorPlanner(const BehaviorConfig& config, const VehiclePara
 void BehaviorPlanner::reset() {
   served_signs_.clear();
   standing_ = 0.0;
+  permitted_obstacles_.clear();
+  passing_obstacles_.clear();
 }
 
 BehaviorDirective BehaviorPlanner::plan(const BehaviorInput& in) {
@@ -131,8 +142,19 @@ BehaviorDirective BehaviorPlanner::plan(const BehaviorInput& in) {
       break;
     }
   }
+  if (in.corridor != nullptr) {
+    for (const auto& lane : in.corridor->lanes()) {
+      if (lane.oncoming && in.start.d + 0.5 * vehicle_.width > in.corridor->right(lane, in.start.s))
+        b.in_oncoming = true;
+    }
+  }
   b.blocked = in.corridor != nullptr && in.obstacles != nullptr && laneBlocked(in, b);
+  if (!b.blocked || !cfg_.pass_blocked) permitted_obstacles_.clear();
+  if (!b.in_oncoming || !cfg_.pass_blocked) passing_obstacles_.clear();
   tree_->tick(b);
+  // Once past the blockers, keep room to merge back. The ego lane is no longer
+  // penalized or truncated, so a return is preferred over staying oncoming.
+  if (!b.blocked && !passing_obstacles_.empty()) b.out.oncoming_allowed = true;
   return b.out;
 }
 
@@ -176,6 +198,7 @@ bool BehaviorPlanner::laneBlocked(const BehaviorInput& in, Board& b) const {
       b.blocked_end = f.s + half_s;
     }
     found = true;
+    b.blockers.insert(ob.id);
     b.blocked_s = std::min(b.blocked_s, f.s - half_s);
     b.blocked_end = std::max(b.blocked_end, f.s + half_s);
   }
@@ -232,11 +255,6 @@ bool BehaviorPlanner::crossingTraffic(const BehaviorInput& in, double s_in, doub
 bool BehaviorPlanner::oncomingClear(const BehaviorInput& in, const Board& b) const {
   const ReferenceLine& ref = *in.reference;
   const double L = vehicle_.length;
-  if (const LaneBand* ego = in.corridor->egoLane()) {
-    // Passing already (mostly beside the ego lane): finish it.
-    const double center = 0.5 * (in.corridor->left(*ego, in.start.s) + in.corridor->right(*ego, in.start.s));
-    if (in.start.d > center + 0.5 * vehicle_.width) return true;
-  }
   const double pass_end = b.blocked_end + L;
   const double t_pass = arrival(in, pass_end) + cfg_.crossing_gap;
   for (const auto& ob : *in.obstacles) {

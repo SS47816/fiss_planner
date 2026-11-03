@@ -36,7 +36,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install ".[commonroad]"
+      - run: pip install ".[commonroad,test]"
+      - name: Profile integration test
+        run: pytest -q python/tests/test_profiles.py::test_benchmark_options_override_the_profile
       - name: Fetch pinned scenarios
         run: python benchmarks/commonroad/fetch_scenarios.py --subset hand-crafted --out data/cache/scenarios
       - name: Closed-loop benchmark (smoke)
