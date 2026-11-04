@@ -17,6 +17,8 @@ import argparse
 import io
 import shutil
 import tarfile
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -28,9 +30,26 @@ URL = (
 SUBSETS = ["NGSIM", "hand-crafted"]
 
 
+def download(url: str) -> bytes:
+    """Retry transient transport/server failures, but surface permanent HTTP errors."""
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(url, timeout=60) as response:
+                return response.read()
+        except urllib.error.HTTPError as error:
+            if error.code != 429 and not 500 <= error.code < 600:
+                raise
+            if attempt == 2:
+                raise
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            if attempt == 2:
+                raise
+        time.sleep(2 ** (attempt + 1))
+    raise AssertionError("unreachable")
+
+
 def fetch(subset: str, out: Path) -> int:
-    with urllib.request.urlopen(URL.format(c=COMMIT, sub=subset), timeout=600) as r:
-        data = r.read()
+    data = download(URL.format(c=COMMIT, sub=subset))
     n = 0
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
         for m in tar.getmembers():

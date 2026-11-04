@@ -255,3 +255,100 @@ TEST(Behavior, WaitsForOncomingTrafficBeforePassing) {
       EXPECT_LT(out.trajectory.x.back() + 2.5, 60.0 - 2.25);  // waits behind the blocker
   }
 }
+
+TEST(Behavior, RechecksClearanceUntilDepartureAndFinishesOnlyTheSamePass) {
+  auto cfg = passingConfig();
+  BehaviorPlanner bp(cfg.behavior, VehicleParams{});
+  const ReferenceLine ref(std::vector<double>{0.0, 200.0}, std::vector<double>{0.0, 0.0});
+  auto corridor = Corridor::parallelLanes(0.0, 200.0, 3.5, 1, 0);
+  corridor.lanes().back().oncoming = true;
+  const auto blocker = predictConstantVelocity(5, 60.0, 0.0, 0.0, 0.0, 4.5, 2.0, 6.0, 0.1);
+  const auto traffic = predictConstantVelocity(6, 100.0, 3.5, kPi, 10.0, 4.5, 1.9, 6.0, 0.1);
+  std::vector<Obstacle> obstacles{blocker};
+  BehaviorInput in;
+  in.reference = &ref;
+  in.corridor = &corridor;
+  in.obstacles = &obstacles;
+  in.start.s = 40.0;
+  in.start.s_d = 3.0;
+  EXPECT_TRUE(bp.plan(in).oncoming_allowed);
+  // A clear cycle alone does not commit: still in the lane when traffic appears.
+  obstacles.push_back(traffic);
+  EXPECT_FALSE(bp.plan(in).oncoming_allowed);
+  obstacles.pop_back();
+  EXPECT_TRUE(bp.plan(in).oncoming_allowed);
+  in.start.d = 1.2;  // footprint crosses into the oncoming band
+  obstacles.push_back(traffic);
+  EXPECT_TRUE(bp.plan(in).oncoming_allowed);
+  in.start.d = 3.5;
+  EXPECT_TRUE(bp.plan(in).oncoming_allowed);
+  // A different blockage cannot inherit clearance even with no empty cycle.
+  obstacles[0] = predictConstantVelocity(7, 85.0, 0.0, 0.0, 0.0, 4.5, 2.0, 6.0, 0.1);
+  EXPECT_FALSE(bp.plan(in).oncoming_allowed);
+  obstacles[0] = blocker;
+  obstacles.pop_back();
+  in.start.d = 0.0;
+  EXPECT_TRUE(bp.plan(in).oncoming_allowed);
+  in.start.d = 1.2;
+  EXPECT_TRUE(bp.plan(in).oncoming_allowed);
+  // Reset while outside must discard both permission and commitment.
+  bp.reset();
+  obstacles.push_back(traffic);
+  EXPECT_FALSE(bp.plan(in).oncoming_allowed);
+}
+
+TEST(Behavior, CompletesPassAndResetsOnMapReplacement) {
+  LocalPlanner lp(passingConfig(), VehicleParams{});
+  lp.setMap(twoWayRoad(), {1});
+  const auto blocker = predictConstantVelocity(5, 60.0, 0.0, 0.0, 0.0, 4.5, 2.0, 6.0, 0.1);
+  const auto traffic = predictConstantVelocity(6, 100.0, 3.5, kPi, 10.0, 4.5, 1.9, 6.0, 0.1);
+  EXPECT_TRUE(oncomingBand(lp.step(0.0, {40, 0, 0, 3}, {blocker}))->change_allowed);
+  auto committed = lp.step(0.1, {42, 1.2, 0, 3}, {blocker, traffic});
+  ASSERT_NE(oncomingBand(committed), nullptr);
+  EXPECT_TRUE(oncomingBand(committed)->change_allowed);
+  // Even when committed, every returned trajectory must avoid oncoming traffic.
+  int checks = 0;
+  CollisionChecker checker(passingConfig().planner.collision, VehicleParams{});
+  EXPECT_TRUE(checker.isCollisionFree(committed.trajectory, {blocker, traffic}, checks));
+  auto returning = lp.step(0.2, {70, 3.5, 0, 3}, {blocker});
+  EXPECT_FALSE(has(returning.behavior, "pass_blocked"));
+  ASSERT_NE(oncomingBand(returning), nullptr);
+  EXPECT_TRUE(oncomingBand(returning)->change_allowed);
+  EXPECT_GT(returning.corridor.egoLane()->end_s, 70.0);  // home lane is open for the return
+  auto done = lp.step(0.3, {72, 0, 0, 3}, {blocker});
+  EXPECT_FALSE(has(done.behavior, "pass_blocked"));
+  EXPECT_FALSE(oncomingBand(done)->change_allowed);
+  auto later = lp.step(0.4, {40, 0, 0, 3}, {blocker, traffic});
+  EXPECT_FALSE(oncomingBand(later)->change_allowed);
+  lp.step(0.5, {40, 0, 0, 3}, {blocker});
+  lp.step(0.6, {42, 1.2, 0, 3}, {blocker});
+  lp.setMap(twoWayRoad(), {1});
+  auto replaced = lp.step(0.7, {42, 1.2, 0, 3}, {blocker, traffic});
+  EXPECT_FALSE(oncomingBand(replaced)->change_allowed);
+}
+
+TEST(Behavior, FutureStitchedDepartureDoesNotCommitBeforeMeasuredDeparture) {
+  auto cfg = passingConfig();
+  cfg.stitching.enabled = true;
+  cfg.stitching.latency = 0.4;
+  const auto blocker = predictConstantVelocity(5, 60.0, 0.0, 0.0, 0.0, 4.5, 2.0, 6.0, 0.1);
+  const auto traffic = predictConstantVelocity(6, 100.0, 3.5, kPi, 10.0, 4.5, 1.9, 6.0, 0.1);
+  LocalPlanner initial(cfg, VehicleParams{});
+  initial.setMap(twoWayRoad(), {1});
+  const auto first = initial.step(0.0, {40, 0, 0, 3}, {blocker});
+  const double edge = 1.75 - 0.5 * VehicleParams{}.width;
+  double departure = -1.0;
+  for (double t = 0.05; t + cfg.stitching.latency < first.trajectory.t.back(); t += 0.05) {
+    if (sampleTrajectory(first.trajectory, t).y <= edge &&
+        sampleTrajectory(first.trajectory, t + cfg.stitching.latency).y > edge) {
+      departure = t;
+      break;
+    }
+  }
+  ASSERT_GT(departure, 0.0);
+  auto out = initial.step(departure, sampleTrajectory(first.trajectory, departure), {blocker, traffic});
+  ASSERT_TRUE(out.stitched);
+  ASSERT_GT(out.start.d, edge);  // future planning start has already departed
+  ASSERT_NE(oncomingBand(out), nullptr);
+  EXPECT_FALSE(oncomingBand(out)->change_allowed);  // measured vehicle can still wait
+}

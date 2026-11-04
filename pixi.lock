@@ -8896,15 +8896,7 @@ packages:
   license: Apache-2.0
   license_family: Apache
   purls:
-  - pkg:pypi/aiohttp?source=hash-mapping
-  - pkg:pypi/aiosignal?source=hash-mapping
-  - pkg:pypi/async-timeout?source=hash-mapping
-  - pkg:pypi/attrs?source=hash-mapping
-  - pkg:pypi/frozenlist?source=hash-mapping
-  - pkg:pypi/idna?source=hash-mapping
-  - pkg:pypi/multidict?source=hash-mapping
-  - pkg:pypi/ray?source=hash-mapping
-  - pkg:pypi/yarl?source=hash-mapping
+  - pkg:pypi/ray?source=project-defined-mapping
   run_exports: {}
   size: 27902424
   timestamp: 1705766997807

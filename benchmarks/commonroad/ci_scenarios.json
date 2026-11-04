@@ -1,0 +1,34 @@
+{
+  "upstream_repository": "https://gitlab.lrz.de/tum-cps/commonroad-scenarios",
+  "upstream_commit": "2416dc27faf3ee36b6799f42712da72a34a2c8fd",
+  "subset": "scenarios/recorded/hand-crafted",
+  "source_scenario_count": 635,
+  "selection": {
+    "seed": 1,
+    "limit": 20,
+    "algorithm": "sorted(numpy.random.default_rng(1).permutation(sorted(files))[:20])"
+  },
+  "archive_sha256": "bbd4ce3fdd5eaeb381386a1f4111ecac6b0f0242a424b5656129191d0bdc4cf9",
+  "files": {
+    "ZAM_Tjunction-1_127_T-1.xml": "7bbfa1226689923a322f4e607c5a41655eeb35883a7c3eadb7aa7efc1a8e31a0",
+    "ZAM_Tjunction-1_156_T-1.xml": "f2372755f81ea1bc8cfaed3b1a673704c42b3c80a7cdf3c8cc588ef2c9760fb6",
+    "ZAM_Tjunction-1_158_T-1.xml": "55ec942db37fbf3777c8e9659ee9d3a30ed8cd6766fe6324f95fe5339d826e25",
+    "ZAM_Tjunction-1_219_T-1.xml": "d617bb2304f8d5fe92a47829bd910f9c283a06303cdb202e9e64a1af52b6da70",
+    "ZAM_Tjunction-1_254_T-1.xml": "62f8cbe6e00b33ff85e934c928f9d8875757c91f812208d518548e3c1f79a98e",
+    "ZAM_Tjunction-1_266_T-1.xml": "b218c3d6cb45de5983599e23ef85b7ffd63c67182254c820f2019601f1ed4b28",
+    "ZAM_Tjunction-1_299_T-1.xml": "7b64f2faa86ada9f7b566bc55b31ade2569edbaa2dad9f2ddeab762b3cfbfe3a",
+    "ZAM_Tjunction-1_29_T-1.xml": "3ecfdf176b1b2c0adc5174d5770780c2a88d4f1a4cd0b2cfc70d2d54ee5aa463",
+    "ZAM_Tjunction-1_339_T-1.xml": "f141cfc5de9fdf6e3a185176bc40787e3167141b8e5b8e0a40efd6c46a242b73",
+    "ZAM_Tjunction-1_35_T-1.xml": "92ef4097d8d5ecb1dc8bbec14784544e007b714b6d42d0524fa4a32f6b7f077d",
+    "ZAM_Tjunction-1_370_T-1.xml": "9e74200a1d4682606493a99d2d432710cc4c696b3e17b3b512787474c4cb0000",
+    "ZAM_Tjunction-1_442_T-1.xml": "4be233ddda3113baabe6bd211b08e1563a67ed63d4484324acfa3145cd29c976",
+    "ZAM_Tjunction-1_454_T-1.xml": "1cc2e022802ee10b9a63d21f4fc1c9cfffac3c527a1011a67bb7cb71d414084d",
+    "ZAM_Tjunction-1_458_T-1.xml": "4886ab4f3cf068dbdb6de75eb5e3a1cfc9342551e67d9693a76f23f7ad4ee659",
+    "ZAM_Tjunction-1_516_T-1.xml": "4fdcc89445fcf8e3ce2257fe3863515ea1a82d919f2002db127cc895a536601c",
+    "ZAM_Tjunction-1_530_T-1.xml": "a75a83b4f67cfb0fc5c8dd3d6a0a492be1a37358fa188aa495194d764c1d9b0f",
+    "ZAM_Tjunction-1_54_T-1.xml": "152cb7d22107017670aa67e093fff64fa1f63781f0bec364e6e3c7b21028f87c",
+    "ZAM_Tjunction-1_63_T-1.xml": "ee971ed854b45c1791d014811f5f83854324b6a4c4cc301914f79cd75317cc57",
+    "ZAM_Tjunction-1_95_T-1.xml": "13a3ac0cc3da142c96ebaef548256f0d29145b1fe65ca16e2a7fc0e1a2b3cfe5",
+    "ZAM_Zip-1_5_T-1.xml": "e63020fdf9b205d956073cbc9132b8db4da14aee4af0d43679d9fe60bc77d70c"
+  }
+}

@@ -61,7 +61,7 @@ print(fp.to_yaml(cfg))                                                   # every
 ```
 
 A *profile* is such a file with every setting pinned, tuned for one benchmark or simulator. The
-shipped profiles are `commonroad` and `carla_scenarios` (see [Benchmarks](benchmarks.md#profiles-splits-and-tuning)):
+shipped profiles are `commonroad`, `carla_scenarios`, `nuplan` and `bench2drive` (see [Benchmarks](benchmarks.md#profiles-splits-and-tuning)):
 
 ```python
 cfg, vehicle = fp.profiles.load("carla_scenarios", vehicle)

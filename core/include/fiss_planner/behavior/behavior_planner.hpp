@@ -67,7 +67,7 @@ struct BehaviorDirective {
   bool pass_blocked = false;             ///< the ego lane is blocked: prefer other lanes, oncoming ones too
   /// The blocked stretch on the reference: from the nearest blocker's rear to the farthest's front.
   double blocked_s = 0.0, blocked_end = 0.0;
-  /// No oncoming traffic before the ego can pass the stretch (or it is passing already).
+  /// No oncoming traffic before the ego can pass, or a committed pass still needs to return.
   bool oncoming_allowed = false;
   std::vector<std::string> active;  ///< behaviours that applied, in tree order
 };
@@ -92,9 +92,11 @@ class BehaviorPlanner {
     BehaviorDirective out;
     int sign = -1;  ///< nearest unserved stop sign ahead (index into stop_lines)
     int yellow = -1;
-    int junction = -1;     ///< next junction not yet entered (index into junctions)
-    bool blocked = false;  ///< the ego lane is blocked ahead
+    int junction = -1;         ///< next junction not yet entered (index into junctions)
+    bool in_oncoming = false;  ///< measured footprint overlaps the oncoming band
+    bool blocked = false;      ///< the ego lane is blocked ahead
     double blocked_s = 0.0, blocked_end = 0.0;
+    std::unordered_set<int> blockers;
   };
 
  private:
@@ -110,7 +112,9 @@ class BehaviorPlanner {
   VehicleParams vehicle_;
   behavior::NodePtr<Board> tree_;
   std::unordered_set<int> served_signs_;
-  double standing_ = 0.0;  ///< time standing at the current stop sign [s]
+  double standing_ = 0.0;                        ///< time standing at the current stop sign [s]
+  std::unordered_set<int> permitted_obstacles_;  ///< clearance granted on the preceding cycle
+  std::unordered_set<int> passing_obstacles_;    ///< blockers of the committed pass
 };
 
 }  // namespace fiss_planner

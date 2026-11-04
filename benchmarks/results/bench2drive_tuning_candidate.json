@@ -1,0 +1,48 @@
+{
+  "status": "candidate; not adopted or validated against current source",
+  "code_revision": null,
+  "source_checkout": "/home/shuo/ss_ws/fiss_tune",
+  "source_artifacts": "results/tune/bench2drive/{study.json,trials.csv,best.yaml}",
+  "benchmark": "bench2drive",
+  "routes": "bench2drive_0.0.4_val",
+  "split": "benchmarks/bench2drive/tune_routes.txt",
+  "trials": 30,
+  "seed": 0,
+  "best": {
+    "trial": 29,
+    "score": 75.40999926190477,
+    "params": {
+      "desired_speed": 11.980385848210757,
+      "cost.w_speed": 1.140900370733662,
+      "cost.w_lateral": 5.025857490355377,
+      "cost.w_lane_change": 5.450043715383352,
+      "cost.w_headway": 1.1048335455839313,
+      "cost.w_ttc": 11.628738433223017,
+      "cost.w_clearance": 5.115691310481169,
+      "safety.min_gap": 2.0796700669023664,
+      "safety.min_ttc": 2.412224343628892,
+      "safety.crossing_time_gap": 0.9317638894798742,
+      "route.w_route_urgency": 3.878427701193509,
+      "route.urgency_distance": 90.10125000334185,
+      "behavior.pass_standoff": 17.47796994093444,
+      "behavior.oncoming_cost": 1.482619444979753,
+      "sampling.low_speed": 3.748883419662041
+    },
+    "routes": 42,
+    "results": 42,
+    "driving_score": 75.40999926190477,
+    "success_%": 54.76190476190476,
+    "route_completion": 79.36404761904764,
+    "wall_s": 1957.4049942493439
+  },
+  "base": {
+    "score": 69.28277245238095,
+    "routes": 42,
+    "results": 42,
+    "driving_score": 69.28277245238095,
+    "success_%": 42.857142857142854,
+    "route_completion": 73.9742857142857,
+    "wall_s": 2325.0207285881042
+  },
+  "limitation": "Tuning scores on 42 validation routes; no held-out check and no recorded source revision. Parameters are overrides of that study base, not a complete reproducible profile."
+}

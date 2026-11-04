@@ -225,3 +225,19 @@ included in the JSON files. The along-track lag is mostly the 0.05 s latency com
 stitching plus the simple throttle/brake mapping of the runner (`Actuation`); lateral tracking is the
 controller's job, and the MPC holds it to 1–2 cm.
 
+
+## Stabilization and unpublished tuning
+
+The CARLA 0.9.16 figures above describe historical runs. The current `carla` Pixi
+environment uses CARLA 0.9.15 for Bench2Drive compatibility; these are distinct
+evaluation environments.
+
+A local Bench2Drive study completed 30 trials on 42 validation routes, with a
+best tuning Driving Score of 75.41 versus 69.28 for its base profile. These are
+tuning scores, not held-out benchmark results. Its recorded search-space path
+points to a separate `fiss_tune` checkout, and its code revision is unrecorded.
+A portable [candidate summary](https://github.com/SS47816/fiss_planner/blob/main/benchmarks/results/bench2drive_tuning_candidate.json)
+records the settings and provenance; full local artifacts remain under
+`results/tune/bench2drive/`. It has not replaced the
+shipped profile and needs validation against the current source before adoption.
+See the [stabilization handoff](stabilization.md) for checks and limitations.

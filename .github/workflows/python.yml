@@ -36,9 +36,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install ".[commonroad]"
-      - name: Fetch pinned scenarios
-        run: python benchmarks/commonroad/fetch_scenarios.py --subset hand-crafted --out data/cache/scenarios
+      - run: pip install ".[commonroad,test]"
+      - name: Profile integration test
+        run: pytest -q python/tests/test_profiles.py::test_benchmark_options_override_the_profile
+      - name: Prepare pinned smoke scenarios
+        run: python benchmarks/commonroad/prepare_ci_scenarios.py --out data/cache/scenarios/hand-crafted
       - name: Closed-loop benchmark (smoke)
         run: |
           python -m fiss_planner.commonroad.benchmark --scenarios data/cache/scenarios/hand-crafted \
@@ -46,6 +48,7 @@ jobs:
           python - <<'PY'
           import pandas as pd
           df = pd.read_csv("results/ci.csv")
+          assert len(df) == 80, f"expected 20 scenarios x 4 planners, got {len(df)} rows"
           assert (df.status != "error").all(), df[df.status == "error"]
           print(df.groupby("planner").success.mean())
           PY

@@ -1,4 +1,4 @@
-"""Closed-loop driving in CARLA 0.9.16 with the FISS planner and a tracking controller.
+"""Closed-loop driving in CARLA 0.9.15 with the FISS planner and a tracking controller.
 
 The simulator runs in synchronous mode. Every planning period the planner
 gets the ego state, the CARLA map (as a RoadMap with route and lane-change
